@@ -1,0 +1,7 @@
+temperature: 1.33
+top_p: 0.79
+min_p: 0.04
+top_k: 79
+repetition_penalty: 1.09
+presence_penalty: 0.1
+repetition_penalty_range: 0

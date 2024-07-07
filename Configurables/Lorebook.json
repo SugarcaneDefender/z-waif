@@ -1,0 +1,27 @@
+[
+    {
+        "0": "Z-Waif",
+        "1": "Your main program to run your AI system. Has functions such as memory, UI, ect.",
+        "2": 0
+    },
+	{
+        "0": "VTube Studio",
+        "1": "Your program for your avatar. Runs your emotes, and your animations. You look great!",
+        "2": 0
+    },
+	{
+        "0": "RVC",
+        "1": "Runs your voicebox, converting the text you make to audio!",
+        "2": 0
+    },
+	{
+        "0": "Whisper",
+        "1": "The voice translation program you are equipped with. It's pretty accurate! Translates our human voice to text for you to understand. Has a tendency to repeat things over and over at the end.",
+        "2": 0
+    },
+    {
+        "0": "Oobabooga",
+        "1": "The loader for your language model. Has a variety of settings, such as temperature, which determines randomness.",
+        "2": 0
+    }
+]

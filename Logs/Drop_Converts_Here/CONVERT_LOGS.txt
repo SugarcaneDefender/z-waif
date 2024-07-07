@@ -1,0 +1,5 @@
+Put logs to convert in here.
+Must be in TavernChats format.
+
+Remove the logs from here after, or they will be force recalculated every time!
+Also, logs only matter for the RAG memory, so if you have that module, don't bother.
