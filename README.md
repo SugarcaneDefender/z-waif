@@ -1,9 +1,7 @@
 # z-waif
-Fully local &amp; openscr AI Waifu
+Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), VTube Studio, alarm, and plenty more! Has a WebUI and hotkey shortcuts.
 
-Uses Oobabooga, RVC, and Whisper
-
-Discord, Minecraft, custom made RAG (long term memory), VTube Studio, alarm, and plenty more!
+Uses Oobabooga, RVC, and Whisper.
 
 
 Requires;
@@ -11,6 +9,10 @@ Requires;
 - ~11 GB VRAM (Reccomended 16GB)
 
 
-I am currently working on editing tutorials on how to install...
 
-Check back in a week!
+YouTube Install Tutorial:
+
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](http://www.youtube.com/watch?v=IGMregWfhGI "Z-Waif Install")
+
+
+Docs, links, and other important info soon!
