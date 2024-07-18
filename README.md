@@ -14,8 +14,8 @@ YouTube Install Tutorial:
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](http://www.youtube.com/watch?v=IGMregWfhGI "Z-Waif Install")
 
-
-Docs, links, and other important info soon!
+# Links
+Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation!
 
 Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot) for making the original base code/skeleton used here!
 
