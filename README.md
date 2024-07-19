@@ -4,6 +4,11 @@ Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom
 Uses Oobabooga, RVC, and Whisper to run AI.
 
 
+|<img src="https://i.imgur.com/rAdzGaa.jpeg" alt="drawing" width="400"/> | <img src="https://i.imgur.com/SLoy7ko.jpeg" alt="drawing" width="400"/> |
+|:---:|:---:|
+|<img src="https://i.imgur.com/paMSUiy.jpeg" alt="drawing" width="400"/> | <img src="https://i.imgur.com/vXx1vXm.jpeg" alt="drawing" width="400"/> |
+
+
 Requires;
 - Windows 10/11
 - ~11 GB VRAM (Reccomended 16GB)
