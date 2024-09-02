@@ -35,3 +35,5 @@ Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual
 - Re-Add support for multimodal A.K.A. support for sending images
 - Fix issues where leaving the bot on for a while can cause a bit more lag between messages
 - Fix issues where leaving the WebUI open a long time can freeze it and spike CPU usage
+- Create more Youtube tutorials and other related content
+- Create more documentation, both in the ReadMe and in the Google Doc
