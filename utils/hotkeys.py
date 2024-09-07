@@ -16,7 +16,6 @@ RATE_LEVEL = 0
 NEXT_PRESSED = False
 
 REDO_PRESSED = False
-REDO_ALLOWED = False
 
 
 BACKSLASH_PRESSED = False
@@ -33,6 +32,7 @@ SPEAKING_VOLUME_SENSITIVITY_PRESSED = False
 SOFT_RESET_PRESSED = False
 
 VIEW_IMAGE_PRESSED = False
+CANCEL_IMAGE_PRESSED = False
 
 BLANK_MESSAGE_PRESSED = False
 
@@ -71,7 +71,8 @@ keyboard.on_press_key("S", lambda _:input_change_listener_sensitivity())
 
 keyboard.on_press_key("R", lambda _:input_soft_reset())
 
-#keyboard.on_press_key("C", lambda _:input_view_image())
+keyboard.on_press_key("C", lambda _:input_view_image())
+keyboard.on_press_key("X", lambda _:input_cancel_image())
 
 keyboard.on_press_key("B", lambda _:input_send_blank())
 
@@ -112,13 +113,11 @@ def redo_input():
     if utils.settings.hotkeys_locked:
         return
 
-    global REDO_ALLOWED, REDO_PRESSED
+    global REDO_PRESSED
 
     #   Ensure we sent a message to redo, so we don't clear past 1 ever
 
-    if REDO_ALLOWED:
-
-        REDO_PRESSED = True
+    REDO_PRESSED = True
 
 def get_speak_input():
     if SPEAKING_TIMER_COOLDOWN > 0:
@@ -139,6 +138,10 @@ def speak_input_toggle_from_ui():
 
     SPEAK_TOGGLED = not SPEAK_TOGGLED
 
+def speak_input_on_from_cam_direct_talk():
+    global SPEAK_TOGGLED
+
+    SPEAK_TOGGLED = True
 
 
 def lock_inputs():
@@ -172,10 +175,38 @@ def input_lock_backslash():
 def input_view_image():
     global VIEW_IMAGE_PRESSED
 
-    if utils.settings.hotkeys_locked:
+    # additional lockout for if the vision system is offline
+    if utils.settings.hotkeys_locked or utils.settings.vision_enabled == False:
         return
 
     VIEW_IMAGE_PRESSED = True
+
+def input_cancel_image():
+    global CANCEL_IMAGE_PRESSED
+
+    # additional lockout for if the vision system is offline
+    if utils.settings.hotkeys_locked or utils.settings.vision_enabled == False:
+        return
+
+    CANCEL_IMAGE_PRESSED = True
+
+def view_image_from_ui():
+    global VIEW_IMAGE_PRESSED
+
+    VIEW_IMAGE_PRESSED = True
+
+def cancel_image_from_ui():
+    global CANCEL_IMAGE_PRESSED
+
+    CANCEL_IMAGE_PRESSED = True
+
+def clear_camera_inputs():
+    global CANCEL_IMAGE_PRESSED, VIEW_IMAGE_PRESSED
+
+    CANCEL_IMAGE_PRESSED = False
+    VIEW_IMAGE_PRESSED = False
+
+
 
 def input_send_blank():
     global BLANK_MESSAGE_PRESSED
@@ -290,19 +321,14 @@ def input_soft_reset():
     SOFT_RESET_PRESSED = True
 
 
-
 def chat_input_await():
     input_found = False
 
     while not input_found:
-        global RATE_PRESSED, NEXT_PRESSED, REDO_PRESSED, REDO_ALLOWED, SOFT_RESET_PRESSED, VIEW_IMAGE_PRESSED, BLANK_MESSAGE_PRESSED
+        global RATE_PRESSED, NEXT_PRESSED, REDO_PRESSED, SOFT_RESET_PRESSED, VIEW_IMAGE_PRESSED, BLANK_MESSAGE_PRESSED
 
 
         if get_speak_input():
-
-            # Ensure we allow a redo now that we are sending speak
-            REDO_ALLOWED = True
-
 
             return "CHAT"
 
@@ -318,7 +344,6 @@ def chat_input_await():
 
         elif REDO_PRESSED:
             REDO_PRESSED = False
-            REDO_ALLOWED = False
             return "REDO"
 
         elif SOFT_RESET_PRESSED:

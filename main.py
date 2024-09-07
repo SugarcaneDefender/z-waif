@@ -33,7 +33,7 @@ char_name = os.environ.get("CHAR_NAME")
 
 stored_transcript = "Issue with message cycling!"
 
-undo_allowed = True
+undo_allowed = False
 
 
 # noinspection PyBroadException
@@ -368,17 +368,119 @@ def main_view_image():
     # Give us some feedback
     print("\n\nViewing the camera! Please wait...\n")
 
-    # Get the image first before any processing
-    utils.camera.capture_pic()
+    # Clear the camera inputs
+    utils.hotkeys.clear_camera_inputs()
+
+    #
+    # Get the image first before any processing. Decide if we take a new image or feed
+    if not utils.settings.cam_use_image_feed:
+
+        # If we do not want to preview, simply take the image. Else, do the confirmation loop
+
+        if not utils.settings.cam_image_preview:
+            utils.camera.capture_pic()
+
+        else:
+            break_cam_loop = False
+
+            # Loop to check for if the image is what we want or not
+            # NOTE: If image preview is on, then the loop will not even go! Neat!
+
+            while not break_cam_loop:
+                utils.hotkeys.clear_camera_inputs()
+                utils.camera.capture_pic()
+
+                while not (utils.hotkeys.VIEW_IMAGE_PRESSED or utils.hotkeys.CANCEL_IMAGE_PRESSED):
+                    time.sleep(0.05)
+
+                if utils.hotkeys.VIEW_IMAGE_PRESSED:
+                    break_cam_loop = True
+
+                utils.hotkeys.clear_camera_inputs()
+
+
+
+
+    else:
+        utils.camera.use_image_feed()
 
     print("Image processing...\n")
 
+    # Check if we want to run the MIC or not for direct talk
+    direct_talk_transcript = ""
+
+    if utils.settings.cam_direct_talk:
+        direct_talk_transcript = view_image_prompt_get()
+
     # View and process the image, storing the result
-    transcript = API.Oogabooga_Api_Support.view_image()
+    transcript = API.Oogabooga_Api_Support.view_image(direct_talk_transcript)
 
     # Fix up our transcript & show us
     print("\n" + transcript + "\n")
 
+    # We can now undo the previous message
+
+    global undo_allowed
+    undo_allowed = True
+
+    # Check if we need to reply after the image
+    if utils.settings.cam_reply_after:
+        view_image_after_chat("So, what did you think of the image, " + char_name + "?")
+
+
+
+def view_image_prompt_get():
+    print(
+        "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.YELLOW + "[Recording]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + ">",
+        end="", flush=True)
+
+    # Manually toggle on the recording of the mic (it is disabled by toggling off. also works with autochat too BTW)
+    utils.hotkeys.speak_input_on_from_cam_direct_talk()
+
+    # Actual recording and waiting bit
+    audio_buffer = utils.audio.record()
+
+
+    try:
+        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + str(
+            humanize.naturalsize(
+                os.path.getsize(audio_buffer))) + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+        print(tanscribing_log, end="", flush=True)
+
+        # My own edit- To remove possible transcribing errors
+        transcript = "Whoops! The code is having some issues, chill for a second."
+
+        transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+
+
+
+    except Exception as e:
+        print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
+        return
+
+    # Print the transcript
+    print('\r' + ' ' * len(tanscribing_log), end="")
+    print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+          + "----Me----"
+          + colorama.Fore.RED + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+    print(f"{transcript.strip()}")
+    print("\n")
+
+    # Return our transcipt of what we have just said
+    return transcript
+
+def view_image_after_chat(message):
+
+    # Actual sending of the message, waits for reply automatically
+    API.Oogabooga_Api_Support.send_via_oogabooga(message)
+
+
+    # Run our message checks
+    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function
+    main_message_speak()
 
 
 def main_send_blank():
@@ -450,6 +552,12 @@ def run_program():
         utils.settings.rag_enabled = True
     else:
         utils.settings.rag_enabled = False
+
+    vision_enabled_string = os.environ.get("MODULE_VISUAL")
+    if vision_enabled_string == "ON":
+        utils.settings.vision_enabled = True
+    else:
+        utils.settings.vision_enabled = False
 
 
     # Run any needed log conversions

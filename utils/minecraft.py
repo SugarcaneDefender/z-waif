@@ -9,8 +9,7 @@ import API.Oogabooga_Api_Support
 import utils.settings
 import json
 
-if utils.settings.minecraft_enabled:
-    chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
+chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
 
 last_chat = "None!"
 remembered_messages = ["", "Minecraft Chat Loaded!"]
@@ -18,6 +17,12 @@ remembered_messages = ["", "Minecraft Chat Loaded!"]
 # Load the configurable MC names
 with open("Configurables/MinecraftNames.json", 'r') as openfile:
     mc_names = json.load(openfile)
+
+with open("Configurables/MinecraftUsername.json", 'r') as openfile:
+    mc_username = json.load(openfile)
+
+with open("Configurables/MinecraftUsernameFollow.json", 'r') as openfile:
+    mc_username_follow = json.load(openfile)
 
 def check_for_command(message):
 
@@ -45,7 +50,7 @@ def check_for_command(message):
             i = i + 1
 
         if word_collector.__contains__("#follow"):
-            word_collector = "#follow player sugarcanefarmer"
+            word_collector = "#follow player " + mc_username_follow
 
         if word_collector.__contains__("#drop"):
             word_collector = ".drop"
@@ -93,7 +98,7 @@ def check_mc_chat():
         add_message = True
 
         # do not add our own messages, as those are already tracked
-        if utils.cane_lib.keyword_check(message.content, ["<sugarcanemerchan>", "sugarcanemerchan\u00a7r\u00a7r:"]):
+        if utils.cane_lib.keyword_check(message.content, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
             add_message = False
 
         # do not add in remembered messages, as those are already tracked
@@ -120,7 +125,7 @@ def check_mc_chat():
     else:
         last_chat = last_sent
 
-        if utils.cane_lib.keyword_check(last_sent, mc_names) and not utils.cane_lib.keyword_check(last_sent, ["<sugarcanemerchan>", "sugarcanemerchan\u00a7r\u00a7r:"]):
+        if utils.cane_lib.keyword_check(last_sent, mc_names) and not utils.cane_lib.keyword_check(last_sent, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
 
             # Send a MC specific message
             main.main_minecraft_chat(combined_message)

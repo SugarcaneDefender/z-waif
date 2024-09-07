@@ -157,6 +157,109 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
     #
+    # VISUAL
+    #
+
+    if utils.settings.vision_enabled:
+        with gr.Tab("Visual"):
+
+            #
+            # Take / Retake Image
+            #
+
+            with gr.Row():
+                def take_image_button_click():
+                    utils.hotkeys.view_image_from_ui()
+
+                    return
+
+                take_image_button = gr.Button(value="Take / Send Image")
+                take_image_button.click(fn=take_image_button_click)
+
+
+            #
+            # Image Feed
+            #
+
+            with gr.Row():
+                def cam_use_image_feed_button_click():
+                    utils.settings.cam_use_image_feed = not utils.settings.cam_use_image_feed
+
+                    return
+
+
+                with gr.Row():
+                    cam_use_image_feed_button = gr.Button(value="Check/Uncheck")
+                    cam_use_image_feed_button.click(fn=cam_use_image_feed_button_click)
+
+                    cam_use_image_feed_checkbox_view = gr.Checkbox(label="Use Image Feed (File Select)")
+
+
+            #
+            # Direct Talk
+            #
+
+            with gr.Row():
+                def cam_direct_talk_button_click():
+                    utils.settings.cam_direct_talk = not utils.settings.cam_direct_talk
+
+                    return
+
+
+                with gr.Row():
+                    cam_direct_talk_button = gr.Button(value="Check/Uncheck")
+                    cam_direct_talk_button.click(fn=cam_direct_talk_button_click)
+
+                    cam_direct_talk_checkbox_view = gr.Checkbox(label="Direct Talk & Send")
+
+
+            #
+            # Reply After
+            #
+
+            with gr.Row():
+                def cam_reply_after_button_click():
+                    utils.settings.cam_reply_after = not utils.settings.cam_reply_after
+
+                    return
+
+
+                with gr.Row():
+                    cam_reply_after_button = gr.Button(value="Check/Uncheck")
+                    cam_reply_after_button.click(fn=cam_reply_after_button_click)
+
+                    cam_reply_after_checkbox_view = gr.Checkbox(label="Post Reply / Reply After Image")
+
+
+
+            #
+            # Image Preview
+            #
+
+            with gr.Row():
+                def cam_image_preview_button_click():
+                    utils.settings.cam_image_preview = not utils.settings.cam_image_preview
+
+                    return
+
+
+                with gr.Row():
+                    cam_image_preview_button = gr.Button(value="Check/Uncheck")
+                    cam_image_preview_button.click(fn=cam_image_preview_button_click)
+
+                    cam_image_preview_checkbox_view = gr.Checkbox(label="Preview before Sending")
+
+
+            def update_visual_view():
+                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_reply_after, utils.settings.cam_image_preview
+
+
+            demo.load(update_visual_view, every=0.05,
+                      outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_reply_after_checkbox_view, cam_image_preview_checkbox_view])
+
+
+
+    #
     # SETTINGS
     #
 

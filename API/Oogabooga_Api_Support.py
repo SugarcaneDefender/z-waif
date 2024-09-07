@@ -19,6 +19,10 @@ HOST = '127.0.0.1:5000'
 URI = f'http://{HOST}/v1/chat/completions'
 URL_MODEL = f'http://{HOST}/v1/engines/'
 
+IMG_PORT = os.environ.get("IMG_PORT")
+IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
+IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
+
 received_message = ""
 CHARACTER_CARD = os.environ.get("CHARACTER_CARD")
 YOUR_NAME = os.environ.get("YOUR_NAME")
@@ -39,6 +43,9 @@ forced_token_level = 120
 
 stored_received_message = "None!"
 currently_sending_message = ""
+
+VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
+VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
@@ -389,7 +396,7 @@ def swap_language_model(model_ID):
     time.sleep(10)
 
 
-def view_image():
+def view_image(direct_talk_transcript):
 
     global ooga_history
 
@@ -397,43 +404,82 @@ def view_image():
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
     utils.based_rag.add_message_to_database()
 
+    #
     # Prepare The Context
+    #
 
-    # i'll get to this later... meh! Need to add in the last 4 or so messages of context so she has a clue as what to look for
+    global ooga_history
+    image_marker_length = 3     # shorting this so we don't take up a ton of context
+
+    message_marker = len(ooga_history) - image_marker_length
+    if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
+        message_marker = 0
+
     past_messages = [
-        {"role": "user", "content": "Hi Michola! Here is an image for you to view and process."},
-        {"role": "assistant", "content": "*smiles* Welcome back! What do I have to view today?"},
+        {"role": "user", "content": ooga_history[message_marker][0]},
+        {"role": "assistant", "content": ooga_history[message_marker][1]},
     ]
+
+    i = 1
+    while i < image_marker_length and i < len(ooga_history):
+        past_messages.append({"role": "user", "content": ooga_history[message_marker + i][0]})
+        past_messages.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+
+        i = i + 1
+
+    #
+    #
+    #
 
 
     # Prep the prompt
 
+    base_prompt = YOUR_NAME + ", please view and describe this image in detail, for your main system: \n"
+    if utils.settings.cam_direct_talk:
+        base_prompt = direct_talk_transcript
+
+
     with open('LiveImage.png', 'rb') as f:
         img_str = base64.b64encode(f.read()).decode('utf-8')
-        prompt = f'Michola, please view and describe this image in detail, for your main system: \n<img src="data:image/jpeg;base64,{img_str}">'
+        prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
         past_messages.append({"role": "user", "content": prompt})
+
+
+    # Stopping Strings (real important, early vicuna is godlike but also starts to get derailed.
+
+    # Set the stop right
+    stop = ["[System", "Human:", "---", "Assistant:", "###"]
+
 
 
     # Send it in for viewing!
 
-    request = {
-        'max_new_tokens': 120,
-        'messages': past_messages,
-        'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-        'character': 'Michola-VisualAssist',
-        'your_name': YOUR_NAME,
-        'regenerate': False,
-        '_continue': False,
-        'truncation_length': max_context,
+    received_cam_message = ""
+    while len(received_cam_message) < 9:    # must not be a blank reply
 
-        'preset': 'MicholaVisualPreset'
-    }
+        request = {
+            'max_tokens': 300,
+            'prompt': "This image",
+            'messages': past_messages,
+            'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+            'character': VISUAL_CHARACTER_NAME,
+            'your_name': YOUR_NAME,
+            'regenerate': False,
+            '_continue': False,
+            'truncation_length': 2048,
+            'stop': stop,
 
-    response = requests.post(URI, json=request)
-    received_cam_message = response.json()['choices'][0]['message']['content']
+            'preset': VISUAL_PRESET_NAME
+        }
 
-    # Translate issues with the received message
-    received_cam_message = html.unescape(received_cam_message)
+        response = requests.post(IMG_URI, json=request)
+        received_cam_message = response.json()['choices'][0]['message']['content']
+
+        # Translate issues with the received message
+        received_cam_message = html.unescape(received_cam_message)
+
+
+    # Add Header
     received_cam_message = "[System C] " + received_cam_message
 
 
@@ -444,7 +490,11 @@ def view_image():
 
 
     # Add to hist & such
-    ooga_history.append(["[System C] Sending an image...", received_cam_message])
+    base_send = "[System C] Sending an image..."
+    if utils.settings.cam_direct_talk:
+        base_send = direct_talk_transcript
+
+    ooga_history.append([base_send, received_cam_message])
 
 
     # Save
