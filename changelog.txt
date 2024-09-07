@@ -1,0 +1,33 @@
+Changelog
+
+---.---.---.---
+
+v1.1
+
+- Visual System
+	- Toggleable as a module
+	- Able to take new images or upload them directly for the AI to see
+	- Runs using Ooba, like with the text
+		- Can set the port to the existing, default one, or load another instance to dual wield
+	- Option to see images before being sent
+		- Can retake them
+		- Use C/X on the keyboard to confirm
+	- Automatically shrinks images to a proper size
+- Fixed bits of the Minecraft module
+	- Configurable "MinecraftUsername" to set your AI's name (stops feedback loops)
+	- Configurable "MinecraftUsernameFollow" to set who your AI follows when doing "#follow"
+
+---.---.---.---
+
+V1.0
+
+- Initial public release of Z-Waif. Contains:
+	- WebUI
+	- RAG
+	- Discord
+	- Semi-Minecraft Functionality
+	- VTuber Emotes
+	- Hotkeys
+	- Various other initial release items
+
+---.---.---.---
