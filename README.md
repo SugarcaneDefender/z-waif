@@ -21,6 +21,37 @@ Uses Oobabooga, RVC, and Whisper to run AI.
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](http://www.youtube.com/watch?v=IGMregWfhGI "Z-Waif Install")
 
+## Changelog
+
+v1.1
+
+- Visual System
+	- Toggleable as a module
+	- Able to take new images or upload them directly for the AI to see
+	- Runs using Ooba, like with the text
+		- Can set the port to the existing, default one, or load another instance to dual wield
+	- Option to see images before being sent
+		- Can retake them
+		- Use C/X on the keyboard to confirm
+	- Automatically shrinks images to a proper size
+- Fixed bits of the Minecraft module
+	- Configurable "MinecraftUsername" to set your AI's name (stops feedback loops)
+	- Configurable "MinecraftUsernameFollow" to set who your AI follows when doing "#follow"
+
+---.---.---.---
+
+V1.0
+
+- Initial public release of Z-Waif. Contains:
+	- WebUI
+	- RAG
+	- Discord
+	- Semi-Minecraft Functionality
+	- VTuber Emotes
+	- Hotkeys
+	- Various other initial release items
+
+
 ## Links
 Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation!
 
@@ -32,7 +63,6 @@ Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual
 - Make the RAG/Long Term Memory be multiprocessed for better performance
 - Fix repetition issues at the end of speech to text Whisper by manually removing
 - Look more into optimal LLMs and configs
-- Re-Add support for multimodal A.K.A. support for sending images
 - Fix issues where leaving the bot on for a while can cause a bit more lag between messages
 - Fix issues where leaving the WebUI open a long time can freeze it and spike CPU usage
 - Create more Youtube tutorials and other related content
