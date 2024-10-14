@@ -5,6 +5,8 @@ Uses Oobabooga, RVC, and Whisper to run AI.
 
 Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory.
 
+The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
+
 
 |<img src="https://i.imgur.com/3a5eGQK.png" alt="drawing" width="400"/> | <img src="https://i.imgur.com/BCE1snE.png" alt="drawing" width="400"/> |
 |:---:|:---:|
@@ -59,6 +61,7 @@ Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual
 ## Current To-Do
 
 - Make the RAG/Long Term Memory be multiprocessed for better performance
+- Directly infuse the lorebook messages
 - Fix repetition issues at the end of speech to text Whisper by manually removing
 - Look more into optimal LLMs and configs
 - Fix issues where leaving the bot on for a while can cause a bit more lag between messages
