@@ -23,6 +23,16 @@ The goal of the project is less about giving an "all in one package", and moreso
 
 ## Changelog
 
+v1.1-R2
+
+- Fixed a few major bugs:
+	- Fixed the "Error" taking over all of the Gradio WebUI
+		- Happened due to Gradio & FastAPI dependency conflict (reminder: always vet your stuff~!)
+	- Fixed issues with the software failing gently when you have no mic
+	- Fixed crashes relating to searching for "Minecraft" logs, it now checks to see if the module is enabled first
+
+---.---.---.---
+
 v1.1
 
 - Visual System
@@ -53,7 +63,7 @@ V1.0
 
 
 ## Links
-Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation!
+Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation! There is also some troubleshooting info in there.
 
 Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot) for making the original base code/skeleton used here!
 
