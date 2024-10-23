@@ -1,5 +1,7 @@
 import numpy as np
 import sounddevice as sd
+from numba.cuda.libdevice import trunc
+from sympy import false
 
 duration = 10 #in seconds
 
@@ -11,9 +13,14 @@ global SPEAKING_TIMER
 SPEAKING_DETECTED = False
 SPEAKING_TIMER = 0
 
+no_mic = False
+
 
 def audio_callback(indata, frames, time, status):
     global VOL_LISTENER_LEVEL
+
+    if no_mic:
+        VOL_LISTENER_LEVEL = 0
 
     volume_norm = np.linalg.norm(indata) * 10
 
@@ -32,6 +39,24 @@ def get_vol_level():
 
 
 def run_volume_listener():
+
+    allow_mic = False
+
+    sound_query = sd.query_devices()
+    for devices in sound_query:
+        if devices['max_input_channels'] != 0:
+            allow_mic = True
+
+    if not allow_mic:
+        print("No mic detected!")
+
+        global no_mic
+        no_mic = True
+
+        global VOL_LISTENER_LEVEL
+        VOL_LISTENER_LEVEL = 0
+
+        return
 
     while True:
         # Run Stream

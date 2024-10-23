@@ -1,11 +1,11 @@
 opencv-python
-gradio~=4.25.0
+gradio==4.36.1
 keyboard~=0.13.5
 mouse~=0.7.1
 PyGetWindow~=0.0.9
 PythMC~=1.2.2
 sounddevice~=0.4.6
-colorama~=0.4.6
+colorama
 humanize~=4.7.0
 emoji~=2.9.0
 discord
@@ -15,3 +15,4 @@ PyAudio~=0.2.14
 pydub~=0.25.1
 pyvts~=0.3.2
 numpy~=1.24.4
+fastapi==0.112.2

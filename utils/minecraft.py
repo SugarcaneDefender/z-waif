@@ -9,7 +9,10 @@ import API.Oogabooga_Api_Support
 import utils.settings
 import json
 
-chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
+from utils.settings import minecraft_enabled
+
+if minecraft_enabled:
+    chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
 
 last_chat = "None!"
 remembered_messages = ["", "Minecraft Chat Loaded!"]

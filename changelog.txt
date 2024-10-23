@@ -2,6 +2,16 @@ Changelog
 
 ---.---.---.---
 
+v1.1-R2
+
+- Fixed a few major bugs:
+	- Fixed the "Error" taking over all of the Gradio WebUI
+		- Happened due to Gradio & FastAPI dependency conflict (reminder: always vet your stuff~!)
+	- Fixed issues with the software failing gently when you have no mic
+	- Fixed crashes relating to searching for "Minecraft" logs, it now check to see if the module is enabled first
+
+---.---.---.---
+
 v1.1
 
 - Visual System
