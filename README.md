@@ -1,10 +1,8 @@
 # z-waif
 Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), alarm, and plenty more! Has a WebUI and hotkey shortcuts.
 
-Uses Oobabooga, RVC, and Whisper to run AI.
-
-Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory.
-
+Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory. 16GB is reccomended.
+Uses Oobabooga, RVC, and Whisper to run all AI ans sytems locally. Works as a front end to tie many programs together into one cohesive whole.
 The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
 
 
@@ -63,7 +61,7 @@ V1.0
 
 
 ## Links
-Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation! There is also some troubleshooting info in there.
+Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation! There is a lot of good info, such as installation, how to use it, and troubleshooting.
 
 Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot) for making the original base code/skeleton used here!
 
