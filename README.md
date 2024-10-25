@@ -2,8 +2,11 @@
 Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), alarm, and plenty more! Has a WebUI and hotkey shortcuts.
 
 Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory. 16GB is reccomended.
-Uses Oobabooga, RVC, and Whisper to run all AI ans sytems locally. Works as a front end to tie many programs together into one cohesive whole.
+Uses Oobabooga, RVC, and Whisper to run all AI systems locally. Works as a front end to tie many programs together into one cohesive whole.
+
 The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
+
+
 
 
 |<img src="https://i.imgur.com/3a5eGQK.png" alt="drawing" width="400"/> | <img src="https://i.imgur.com/BCE1snE.png" alt="drawing" width="400"/> |
@@ -13,11 +16,13 @@ The goal of the project is less about giving an "all in one package", and moreso
 
 ## YouTube Showcase:
 
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/XBZL500hloU/0.jpg)](http://www.youtube.com/watch?v=XBZL500hloU "Z-Waif Showcase")
+[![IMAGE ALT TEXT](http://img.youtube.com/vi/XBZL500hloU/0.jpg)](http://www.youtube.com/watch?v=XBZL500hloU "Z-Waif Showcase")[![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](http://www.youtube.com/watch?v=IGMregWfhGI "Z-Waif Install")
 
-## YouTube Install Tutorial:
+## Links
+Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. It will show you how to install, how to use the program, and what options you have. Please also take a look at the Youtube videos linked above for installation.
 
-[![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](http://www.youtube.com/watch?v=IGMregWfhGI "Z-Waif Install")
+Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot) for making the original base code/skeleton used here!
+
 
 ## Changelog
 
@@ -58,13 +63,6 @@ V1.0
 	- VTuber Emotes
 	- Hotkeys
 	- Various other initial release items
-
-
-## Links
-Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. I am still in the process of making tutorials and documentation! There is a lot of good info, such as installation, how to use it, and troubleshooting.
-
-Credit to [this other AI waifu project](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot) for making the original base code/skeleton used here!
-
 
 ## Current To-Do
 
