@@ -11,6 +11,8 @@ import utils.based_rag
 import utils.logging
 from dotenv import load_dotenv
 import utils.settings
+import utils.retrospect
+import utils.lorebook
 
 
 load_dotenv()
@@ -193,6 +195,7 @@ def send_via_oogabooga(user_input):
 
     # Write last, non-system message to RAG
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
+    # NOTE: Not safe for undo! Undo will double paste the message! We have a manual check to not add duplicates now, although, if it is supposed to be a dupe then get rekt XD
     utils.based_rag.add_message_to_database()
 
     # RAG
@@ -268,17 +271,18 @@ def save_histories():
 #   System Inserts
 #
 
-def write_lore(lore_entry):
-
-    # Cleanup our lore string
-    clean_lore = "[System D] Lore Entry, " + lore_entry
-
-    ooga_history.append([clean_lore, "Ah, thank you for the lore!"])
-
-
-    # Save
-    save_histories()
-
+#
+#def write_lore(lore_entry):
+#
+#    # Cleanup our lore string
+#    clean_lore = "[System D] Lore Entry, " + lore_entry
+#
+#    ooga_history.append([clean_lore, "Ah, thank you for the lore!"])
+#
+#
+#    # Save
+#    save_histories()
+#
 
 
 def soft_reset():
@@ -337,6 +341,100 @@ def prune_deletables():
 #
 #   Other API Access
 #
+
+def summary_memory_run(messages_input, user_sent_message):
+    global received_message
+    global ooga_history
+    global forced_token_level
+    global force_token_count
+    global currently_sending_message
+
+    # Set the currently sending message
+    currently_sending_message = user_sent_message
+
+    # Load the history from JSON, to clean up the quotation marks
+
+    with open("LiveLog.json", 'r') as openfile:
+        ooga_history = json.load(openfile)
+
+    # Determine what preset we want to load in with
+
+    preset = 'Z-Waif-ADEF-Standard'
+
+    if utils.settings.model_preset != "Default":
+        preset = utils.settings.model_preset
+
+    utils.logging.kelvin_log = preset
+    cur_tokens_required = utils.retrospect.summary_tokens_count
+
+    # Set the stop right
+    stop = ["[System", "\nUser:", "---", "<|"]
+
+    # Encode
+    messages_to_send = messages_input
+
+    # Send the actual API Request
+
+    request = {
+        "messages": messages_to_send,
+        'max_tokens': cur_tokens_required,
+        'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+        'character': CHARACTER_CARD,
+        'truncation_length': max_context,
+        'stop': stop,
+
+        'preset': preset
+    }
+
+    response = requests.post(URI, headers=headers, json=request, verify=False)
+
+    if response.status_code == 200:
+        received_message = response.json()['choices'][0]['message']['content']
+
+        # Translate issues with the received message
+        received_message = html.unescape(received_message)
+
+        # If her reply contains RP-ing as other people, supress it form the message
+        received_message = supress_rp_as_others(received_message)
+
+        # If her reply is the same as the last stored one, run another request
+        global stored_received_message
+
+        if received_message == stored_received_message:
+            summary_memory_run(messages_input, user_sent_message)
+            return
+
+        # If her reply is the same as any in the past 20 chats, run another request
+        if check_if_in_history(received_message):
+            summary_memory_run(messages_input, user_sent_message)
+            return
+
+        # If her reply is blank, request another run, clearing the previous history add, and escape
+        if len(received_message) < 3:
+            summary_memory_run(messages_input, user_sent_message)
+            return
+
+        stored_received_message = received_message
+
+        # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
+        log_user_input = "{0}".format(user_sent_message)
+        log_received_message = "{0}".format(received_message)
+
+        ooga_history.append([log_user_input, log_received_message])
+
+        # Run a pruning of the deletables
+        prune_deletables()
+
+        # Clear the currently sending message variable
+        currently_sending_message = ""
+
+        # Clear any token forcing
+        force_token_count = False
+
+        # Save
+        save_histories()
+
+
 
 def swap_language_model(model_ID):
 
@@ -567,6 +665,17 @@ def encode_new_api(user_input):
     while i < marker_length and i < len(ooga_history):
         messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
         messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+
+        if i == marker_length - 8:
+
+            #
+            # Append the lorebook in here, 8 or so back, it will include all lore in the given range
+            #
+
+            lore_gathered = utils.lorebook.lorebook_gather(ooga_history[-3:], user_input)
+
+            if lore_gathered != utils.lorebook.total_lore_default:
+                messages_to_send.append({"role": "user", "content": lore_gathered})
         
         if i == marker_length - 9:
 
@@ -586,6 +695,37 @@ def encode_new_api(user_input):
 
     messages_to_send.append({"role": "user", "content": user_input})
 
+    return messages_to_send
+
+
+# encodes a given input to the new API, with no additives
+def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length):
+    #
+    # Append 30 of the most recent history pairs (however long our raw marker length is)
+    #
+
+    message_marker = len(user_messages_input) - raw_marker_length
+    if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
+        message_marker = 0
+
+    messages_to_send = [
+        {"role": "user", "content": user_messages_input[message_marker][0]},
+        {"role": "assistant", "content": user_messages_input[message_marker][1]},
+    ]
+
+    i = 1
+    while i < raw_marker_length and i < len(user_messages_input):
+        messages_to_send.append({"role": "user", "content": user_messages_input[message_marker + i][0]})
+        messages_to_send.append({"role": "assistant", "content": user_messages_input[message_marker + i][1]})
+
+        i = i + 1
+
+    #
+    # Append our most recent message
+    #
+
+    if user_message_last != "":
+        messages_to_send.append({"role": "user", "content": user_message_last})
 
     return messages_to_send
 
@@ -593,20 +733,24 @@ def encode_new_api(user_input):
 
 def supress_rp_as_others(message):
 
+    # do not supress if we have newlines enabled
+    if not utils.settings.newline_cut:
+        return message
+
     # do nut supress if there is no colon
     if not message.__contains__(":"):
         return message
 
 
     # Remove any text past a newline with a person's name
-    i = 0
+    i = 1
     counter_watchdog = 0
     message_cutoff_marker = 0
     message_cutoff_enabled = False
 
     while i < len(message):
 
-        if message[i] == "\n" and message_cutoff_enabled == False:
+        if (message[i] == "\n") and (message_cutoff_enabled == False) and (message[i-1] != ":"):
             counter_watchdog = 27
             message_cutoff_marker = i
 

@@ -13,6 +13,7 @@ import utils.alarm
 import utils.volume_listener
 import utils.minecraft
 import utils.log_conversion
+import utils.cane_lib
 
 import API.Oogabooga_Api_Support
 
@@ -23,6 +24,8 @@ import utils.z_waif_discord
 import utils.web_ui
 
 import utils.settings
+import utils.retrospect
+import utils.based_rag
 
 
 from dotenv import load_dotenv
@@ -43,6 +46,7 @@ def main():
         print("You" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic) " + colorama.Fore.RESET + ">", end="", flush=True)
 
         command = utils.hotkeys.chat_input_await()
+
 
         if command == "CHAT":
             main_converse()
@@ -98,6 +102,9 @@ def main_converse():
         print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
         return
 
+    # Fix the transcript, to stop any accidental repeats (whisper glitch)
+    transcript = utils.cane_lib.remove_repeats(transcript)
+
     # Print the transcript
     print('\r' + ' ' * len(tanscribing_log), end="")
     print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
@@ -109,11 +116,6 @@ def main_converse():
     # Store the message, for cycling purposes
     global stored_transcript
     stored_transcript = transcript
-
-    # Check if we have any lore on the subject in question
-    lore_check = utils.lorebook.lorebook_check(transcript)
-    if lore_check != "No lore!":
-        API.Oogabooga_Api_Support.write_lore(lore_check)
 
 
     # Actual sending of the message, waits for reply automatically
@@ -220,12 +222,6 @@ def main_next():
 
 def main_minecraft_chat(message):
 
-    # Check if we have any lore on the subject in question
-    lore_check = utils.lorebook.lorebook_check(message)
-    if lore_check != "No lore!":
-        API.Oogabooga_Api_Support.write_lore(lore_check)
-
-
     # Limit the amount of tokens allowed to send (minecraft chat limits)
     API.Oogabooga_Api_Support.force_tokens_count(47)
 
@@ -246,12 +242,6 @@ def main_minecraft_chat(message):
 
 def main_discord_chat(message):
 
-    # Check if we have any lore on the subject in question
-    lore_check = utils.lorebook.lorebook_check(message)
-    if lore_check != "No lore!":
-        API.Oogabooga_Api_Support.write_lore(lore_check)
-
-
     # Actual sending of the message, waits for reply automatically
     API.Oogabooga_Api_Support.send_via_oogabooga(message)
 
@@ -271,12 +261,6 @@ def main_discord_chat(message):
 
 
 def main_web_ui_chat(message):
-
-    # Check if we have any lore on the subject in question
-    lore_check = utils.lorebook.lorebook_check(message)
-    if lore_check != "No lore!":
-        API.Oogabooga_Api_Support.write_lore(lore_check)
-
 
     # Actual sending of the message, waits for reply automatically
     API.Oogabooga_Api_Support.send_via_oogabooga(message)
@@ -345,6 +329,11 @@ def main_soft_reset():
 
 
 def main_alarm_message():
+
+    # Check for the daily memory
+    if utils.alarm.random_memories and len(utils.based_rag.history_database) > 100:
+        main_memory_proc()
+
     # Send it!
     API.Oogabooga_Api_Support.send_via_oogabooga(utils.alarm.get_alarm_message())
 
@@ -356,6 +345,27 @@ def main_alarm_message():
 
     # Clear the alarm
     utils.alarm.clear_alarm()
+
+
+def main_memory_proc():
+    if len(utils.based_rag.history_database) < 100:
+        print("Not enough conversation history for memories!")
+        return
+
+    # Retrospect and get a random memory
+    utils.retrospect.retrospect_random_mem_summary()
+
+    #
+    # CHATS WILL BE GRABBED AFTER THIS RUNS!
+    #
+
+    # Run our message checks
+    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
+    if utils.settings.speak_shadowchats:
+        main_message_speak()
 
 
 
@@ -507,17 +517,10 @@ def main_send_blank():
     # Pipe us to the reply function
     main_message_speak()
 
-
-
-
-
-
-
 def run_program():
 
     # Announce that the program is running
     print("Welcome back! Loading chat interface...\n\n", end="", flush=True)
-
 
     # Load hotkey ON/OFF on boot
     utils.hotkeys.load_hotkey_bootstate()
@@ -558,6 +561,8 @@ def run_program():
         utils.settings.vision_enabled = True
     else:
         utils.settings.vision_enabled = False
+
+    utils.settings.eyes_follow = os.environ.get("EYES_FOLLOW")
 
 
     # Run any needed log conversions
@@ -602,6 +607,16 @@ def run_program():
         discord_thread = threading.Thread(target=utils.z_waif_discord.run_z_waif_discord)
         discord_thread.daemon = True
         discord_thread.start()
+
+    # Start another thread for camera facial track, if we want that
+    if utils.settings.eyes_follow == "Faces":
+        face_follow_thread = threading.Thread(target=utils.camera.loop_follow_look)
+        face_follow_thread.daemon = True
+        face_follow_thread.start()
+    elif utils.settings.eyes_follow == "Random":
+        face_follow_thread = threading.Thread(target=utils.camera.loop_random_look)
+        face_follow_thread.daemon = True
+        face_follow_thread.start()
 
     # Start another thread for Gradio
     gradio_thread = threading.Thread(target=utils.web_ui.launch_demo)

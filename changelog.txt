@@ -2,6 +2,36 @@ Changelog
 
 ---.---.---.---
 
+V1.2
+
+- Lorebook messages are now directly infused into the encoding as it is sent.
+	- This now sends all relevant lore triggered within the past 3 message sets, instead of just 1 with a required cooldown.
+	- Lore triggering requirements were improved, to add plurals and fix edgecases.
+	- You can still view what lore is triggered via the UI Logs.
+- Random Memories will now trigger before the alarm.
+	- This allows your bot to randomly scan your chat history, and remember past times.
+	- You can also trigger random memories manually via the UI.
+
+- Your VTuber can now look around, either Following Faces or Randomly.
+	- This requires setting up 6 emotes for your VTuber. In order, they should have your VTuber's eyes doing the following (they can be named anything); 
+		- "Look Slight Right"
+		- "Look Right"
+		- "Look Very Right"
+		- "Look Slight Left"
+		- "Look Left"
+		- "Look Very Left"
+	- In the .env, change "EYES_FOLLOW" to "Random" or "Faces". Set the "EYES_START_ID" to whatever emote slot the "Look Slight Right" is set up as.
+		- Make sure all the eye looking emotes follow eachother in order. You can re-order them in VTube Studio if needed.
+	- Obviously, you need a camera for the VTuber to follow faces, as well as the Vision module enabled.
+
+- Other Roleplay Suppression is now disabled if you have "Cutoff at Newlines" off.
+	- This will allow the bot to send messages containing character lines, such as "User:" or "Riley:".
+	- This is to allow lists, info, and multi-user RP scenarios, if you want.
+- Fixed issues with the RAG history desyncing when undoing messages.
+
+
+---.---.---.---
+
 v1.1-R2
 
 - Fixed a few major bugs:

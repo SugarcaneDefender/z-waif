@@ -6,7 +6,7 @@ import random
 import json
 import os
 import time
-import logging
+import utils.logging
 import utils.settings
 
 # Words and their data
@@ -498,6 +498,12 @@ def add_message_to_database():
         return
 
     new_msg = len(history) - 1
+
+    # Do not add in if the content is the same as the last message (likely bugged / undo)
+    if (history[new_msg][0] + history[new_msg][1]) == (history_database[-1][0] + history_database[-1][1]):
+        utils.logging.update_debug_log("Preventing dupe in RAG!")
+        return
+
 
     # Ignore any system deletable messages, and just fall back until before it
     while history[new_msg][0].__contains__("[System D]"):

@@ -12,6 +12,9 @@ cam_direct_talk = True
 cam_reply_after = False
 cam_image_preview = True
 
+# Valid values; "Faces", "Random", "None"
+eyes_follow = "None"
+
 minecraft_enabled = False
 alarm_enabled = True
 vtube_enabled = True

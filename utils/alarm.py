@@ -8,6 +8,8 @@ ALARM_TRIGGERED = False
 ALARM_READY = False
 ALARM_MESSAGE = "[System Message] There was an issue with the alarm system... whoops!"
 
+random_memories = True
+
 # Load the configurable alarm message (talomere, comes after the date)
 with open("Configurables/AlarmMessage.json", 'r') as openfile:
     alarm_talomere = json.load(openfile)

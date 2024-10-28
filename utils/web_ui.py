@@ -316,6 +316,20 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
         #
+        # Random Memory
+        #
+
+        with gr.Row():
+            def random_memory_button_click():
+                main.main_memory_proc()
+
+                return
+
+            soft_reset_button = gr.Button(value="Proc a Random Memory")
+            soft_reset_button.click(fn=random_memory_button_click)
+
+
+        #
         # Shadowchats
         #
 
