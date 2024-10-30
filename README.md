@@ -121,6 +121,8 @@ V1.0
 - Make the RAG/Long Term Memory be multiprocessed for better performance
 - Look more into optimal LLMs and configs
 - Give internal dialouging
-- Fix issues where leaving the bot on for a while can cause a bit more lag between messages
-- Fix issues where leaving the WebUI open a long time can freeze it and spike CPU usage
 - Create more Youtube tutorials and other related content
+
+## Roadmap
+
+I would say that the meat of the project works well, and is fairly robust. Looking in the future, I want to add better processing, and give them decision making skills. So, in essence, I want them to be able to process information and then take action on that info, be it just talking, messaging someone on discord, doing an input in a game, ect. I also want to clean up some of the project's edges a bit, and maybe even internalize some of the external programs, just to smoove out the install and updating process. The goal of the project is to create AI partners for people, for however far along I can walk that journey.
