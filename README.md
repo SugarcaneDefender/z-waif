@@ -76,7 +76,7 @@ V1.2
 	- This is to allow lists, info, and multi-user RP scenarios, if you want.
 - Fixed issues with the RAG history desyncing when undoing messages.
 
----.---.---.---
+---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.
 
 v1.1-R2
 
@@ -86,7 +86,7 @@ v1.1-R2
 	- Fixed issues with the software failing gently when you have no mic
 	- Fixed crashes relating to searching for "Minecraft" logs, it now checks to see if the module is enabled first
 
----.---.---.---
+---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.
 
 v1.1
 
@@ -103,24 +103,13 @@ v1.1
 	- Configurable "MinecraftUsername" to set your AI's name (stops feedback loops)
 	- Configurable "MinecraftUsernameFollow" to set who your AI follows when doing "#follow"
 
----.---.---.---
-
-V1.0
-
-- Initial public release of Z-Waif. Contains:
-	- WebUI
-	- RAG
-	- Discord
-	- Semi-Minecraft Functionality
-	- VTuber Emotes
-	- Hotkeys
-	- Various other initial release items
 
 ## Current To-Do
 
 - Make the RAG/Long Term Memory be multiprocessed for better performance
 - Look more into optimal LLMs and configs
 - Give internal dialouging
+- Make the LLM input and TTS output streaming, to lower the "processing time"
 - Create more Youtube tutorials and other related content
 
 ## Roadmap
