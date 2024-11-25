@@ -1,7 +1,7 @@
 # z-waif
 Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), alarm, and plenty more! Has a WebUI and hotkey shortcuts. All software is free (or extremely cheap)!
 
-Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory. 16GB is reccomended.
+Requires Windows 10/11 and a CUDA (NVidia) GPU with atleast 12GB+ of video memory. 16GB is recommended.
 Uses Oobabooga, RVC, and Whisper to run all AI systems locally. Works as a front end to tie many programs together into one cohesive whole.
 
 The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
@@ -22,7 +22,7 @@ The goal of the project is less about giving an "all in one package", and moreso
 - 🍄 Vtuber Integration &nbsp; &nbsp; &emsp; &emsp; ღゝ◡╹ )ノ♡
 
 	- Uses VTube Studio, and any compatible models!
- 	- Ability to send emotes to the model, based on thier actions.
+ 	- Ability to send emotes to the model, based on their actions.
 	- Idle / Speaking animation.
 - 💾 Enhanced Memory &nbsp; &nbsp; &nbsp; &emsp; &emsp; (ー_ーゞ
 	- Add Lorebook entries, for your waifu to remember a wide array of info as needed.
@@ -41,7 +41,7 @@ The goal of the project is less about giving an "all in one package", and moreso
 
 [![IMAGE ALT TEXT](http://img.youtube.com/vi/XBZL500hloU/0.jpg)](https://www.youtube.com/watch?v=XBZL500hloU&list=PLH4bHuriW70RCl-2qHbSda8LHpuN8vvZZ&index=1 "Z-Waif Showcase")[![IMAGE ALT TEXT](http://img.youtube.com/vi/IGMregWfhGI/0.jpg)](https://www.youtube.com/watch?v=IGMregWfhGI&list=PLH4bHuriW70RCl-2qHbSda8LHpuN8vvZZ&index=2 "Z-Waif Install")
 
-## Links
+## Install & Links
 Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. It will show you how to install, how to use the program, and what options you have. Please also take a look at the [Youtube videos for the install](https://www.youtube.com/playlist?list=PLH4bHuriW70RCl-2qHbSda8LHpuN8vvZZ).
 
 If you need help / assistance, feel free to email me for this project at zwaif77@gmail.com
@@ -53,7 +53,7 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 [Drakkadakka/z-waif-experimental-](https://github.com/Drakkadakka/z-waif-experimental-), offers a few upgrades; namely Twitch chat & streaming support, as well as a few other enhancements.
 
 
-## Changelog
+## Recent Changelog
 
 V1.2
 
@@ -82,42 +82,30 @@ V1.2
 	- This is to allow lists, info, and multi-user RP scenarios, if you want.
 - Fixed issues with the RAG history desyncing when undoing messages.
 
----.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.
 
-v1.1-R2
+## To-Do
 
-- Fixed a few major bugs:
-	- Fixed the "Error" taking over all of the Gradio WebUI
-		- Happened due to Gradio & FastAPI dependency conflict (reminder: always vet your stuff~!)
-	- Fixed issues with the software failing gently when you have no mic
-	- Fixed crashes relating to searching for "Minecraft" logs, it now checks to see if the module is enabled first
+### 📶 Enhancements
+- [ ] Make the RAG/Long Term Memory be multiprocessed for better performance
+- [ ] Make the LLM input and TTS output streaming, to lower the "processing time"
+- [ ] Figure out how to load LLAMA 3.2 Vision, for better multimodal, and no needed loader
 
----.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.---.
+### 🤖 Improvements
+- [ ] Give internal dialoguing for chain of thought / reasoning
+- [ ] Emotional / Tone understanding
+- [ ] Automatic gaming & real world interaction
+- [ ] Use an integrated voice generation system, with the ability to modify the tone
+- [ ] Long term experience-based summarizations of ideas and history (pull form experience)
 
-v1.1
+### 🦄 Imperium
+- [ ] Create more Youtube tutorials and other related content
+- [ ] Look more into optimal LLMs and configs
+- [ ] Set up better Git and contribution methods
+- [ ] Create a way for users to auto-update the program without having to hack files together
+- [ ] Evangelize AI Waifus to the world!
 
-- Visual System
-	- Toggleable as a module
-	- Able to take new images or upload them directly for the AI to see
-	- Runs using Ooba, like with the text
-		- Can set the port to the existing, default one, or load another instance to dual wield
-	- Option to see images before being sent
-		- Can retake them
-		- Use C/X on the keyboard to confirm
-	- Automatically shrinks images to a proper size
-- Fixed bits of the Minecraft module
-	- Configurable "MinecraftUsername" to set your AI's name (stops feedback loops)
-	- Configurable "MinecraftUsernameFollow" to set who your AI follows when doing "#follow"
+## State of Development
 
+The project could be considered in an "early access state". Some parts may be mildly buggy, janky, or obtuse. The project as a whole, however, is stable and reasonably effective.
 
-## Current To-Do
-
-- Make the RAG/Long Term Memory be multiprocessed for better performance
-- Look more into optimal LLMs and configs
-- Give internal dialouging
-- Make the LLM input and TTS output streaming, to lower the "processing time"
-- Create more Youtube tutorials and other related content
-
-## Roadmap
-
-I would say that the meat of the project works well, and is fairly robust. Looking in the future, I want to add better processing, and give them decision making skills. So, in essence, I want them to be able to process information and then take action on that info, be it just talking, messaging someone on discord, doing an input in a game, ect. I also want to clean up some of the project's edges a bit, and maybe even internalize some of the external programs, just to smoove out the install and updating process. The goal of the project is to create AI partners for people, for however far along I can walk that journey.
+The goal of the project is pretty simple; make AI partners that are not owned by not any corporation or government, but the people whoms't they are partnered with. The extents of this project are intended to stay within the bounds of giving a singular, locally hosted AI waifu, primarily for partnered use. The eventual end-game goal is to create partners for people who can have a robot body to interact with the world, and who can experience and learn things on their own terms; however lofty and unfeasible that goal may be. In short, symbiosis.
