@@ -55,32 +55,40 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 
 ## Recent Changelog
 
-V1.2
+V1.3
 
-- Lorebook messages are now directly infused into the encoding as it is sent.
-	- This now sends all relevant lore triggered within the past 3 message sets, instead of just 1 with a required cooldown.
-	- Lore triggering requirements were improved, to add plurals and fix edgecases.
-	- You can still view what lore is triggered via the UI Logs.
-- Random Memories will now trigger before the alarm.
-	- This allows your bot to randomly scan your chat history, and remember past times.
-	- You can also trigger random memories manually via the UI.
+- Added the Tag & Task menu
+	- Tags can be used to classify info for future use.
+		- Applies tags automatically to chats that you put in.
+	- Tasks can be used to swap between character cards, allowing you to swap out parts of the memory.
+		- Tasks are hyphenated between the "WaifuName" and "Task"
+		- For example, if your waifu is named "Ember", and you have a task called "Party", you would want a character card in Oobabooga to be defined "Ember-Party"
 
-- Your VTuber can now look around, either Following Faces or Randomly.
-	- This requires setting up 6 emotes for your VTuber. In order, they should have your VTuber's eyes doing the following (they can be named anything); 
-		- "Look Slight Right"
-		- "Look Right"
-		- "Look Very Right"
-		- "Look Slight Left"
-		- "Look Left"
-		- "Look Very Left"
-	- In the .env, change "EYES_FOLLOW" to "Random" or "Faces". Set the "EYES_START_ID" to whatever emote slot the "Look Slight Right" is set up as.
-		- Make sure all the eye looking emotes follow eachother in order. You can re-order them in VTube Studio if needed.
-	- Obviously, you need a camera for the VTuber to follow faces, as well as the Vision module enabled.
+- Your bot can now use keyboard input to control the keyboard.
+	- Be sure to toggle "MODULE_GAMING" to "ON".
+	- Changing the task will change what JSON file it uses (i.e. the task "Emerald" will use the button mappings in "/Configurables/GamingInputs/Emerald.json").
+		- By default, this is set to "None" with no mappings.
+		- You can add mappings by copy/paste the file, and renaming to something else.
+		- Try to use lowercase letters for the keyboard input, capital letters did not work.
+	- Warning: They can also trigger their own hotkeys, if not turned off!
+	- Automatic gaming can now be toggled on in the Task menu. This is done by taking a picture, then asking for an input.
+		- Note: Very bad at the moment, don't expect much of anything. May require more prompting and tuning.
 
-- Other Roleplay Suppression is now disabled if you have "Cutoff at Newlines" off.
-	- This will allow the bot to send messages containing character lines, such as "User:" or "Riley:".
-	- This is to allow lists, info, and multi-user RP scenarios, if you want.
-- Fixed issues with the RAG history desyncing when undoing messages.
+- Vision can now use the main monitor's screenshot as the image input.
+	- Turn on "Use Screenshot" in the Visual menu.
+
+- Timestamps will now be included in the encoding, telling them the current date and time.
+	- You may want to ask them in the character card to not mention the current time, as they may spam it.
+	- Timestamps are also included and stored in message metadata.
+	- Can be toggled in the .env
+- Messages can now be undone / redone while they are speaking, cutting them off.
+	- Messages are now chunked out and read, instead of all at once.
+- Asterisks can now be banned from generating, for conversational mode and stopping roleplay.
+
+- Discord token is now stored in "Configurables/Tokens/Discord.json", for security reasons.
+
+- Fixed an issue where the lorebook was not giving lore for messages with a "?" at the end.
+- Added a "is_live_pipe" state to the main script, which will tell us if we are currently running/processing something.
 
 
 ## To-Do
