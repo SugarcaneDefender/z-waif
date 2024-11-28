@@ -210,7 +210,8 @@ def send_via_oogabooga(user_input):
     utils.based_rag.add_message_to_database()
 
     # RAG
-    utils.based_rag.run_based_rag(user_input, ooga_history[len(ooga_history) - 1][1])
+    if utils.settings.rag_enabled:
+        utils.based_rag.run_based_rag(user_input, ooga_history[len(ooga_history) - 1][1])
 
     # Run
     run(user_input, 0)
