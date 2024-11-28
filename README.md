@@ -55,6 +55,12 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 
 ## Recent Changelog
 
+V1.3-R2
+
+- Fixed a minor bug where if there wasn't enough chat history, the program would crash, as it would attempt to load chat that wasn't there.
+
+---.---.---.---
+
 V1.3
 
 - Added the Tag & Task menu
