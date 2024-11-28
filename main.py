@@ -7,7 +7,7 @@ import emoji
 import utils.audio
 import utils.hotkeys
 import utils.transcriber_translate
-import win32com.client
+import utils.voice
 import utils.vtube_studio
 import utils.alarm
 import utils.volume_listener
@@ -26,7 +26,8 @@ import utils.web_ui
 import utils.settings
 import utils.retrospect
 import utils.based_rag
-
+import utils.tag_task_controller
+import utils.gaming_control
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -37,6 +38,7 @@ char_name = os.environ.get("CHAR_NAME")
 stored_transcript = "Issue with message cycling!"
 
 undo_allowed = False
+is_live_pipe = False
 
 
 # noinspection PyBroadException
@@ -45,8 +47,15 @@ def main():
     while True:
         print("You" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic) " + colorama.Fore.RESET + ">", end="", flush=True)
 
-        command = utils.hotkeys.chat_input_await()
+        # Stative control depending on what mode we are (gaming, streaming, normal, ect.)
+        if utils.settings.is_gaming_loop:
+            command = utils.gaming_control.gaming_step()
+        else:
+            command = utils.hotkeys.chat_input_await()
 
+        # Flag us as running a command now
+        global is_live_pipe
+        is_live_pipe = True
 
         if command == "CHAT":
             main_converse()
@@ -72,7 +81,8 @@ def main():
         elif command == "BLANK":
             main_send_blank()
 
-
+        # Flag us as no longer running a command
+        is_live_pipe = False
 
 
 
@@ -151,13 +161,18 @@ def main_message_speak():
 
     s_message = emoji.replace_emoji(message, replace='')
 
+    utils.voice.set_speaking(True)
 
-    speaker = win32com.client.Dispatch("SAPI.SpVoice")
-    speaker.Speak(s_message)
+    voice_speaker = threading.Thread(target=utils.voice.speak_line(s_message))
+    voice_speaker.daemon = True
+    voice_speaker.start()
 
+    # Minirest for frame-piercing (race condition as most people call it) for the speaking
+    time.sleep(0.01)
 
-    # Reset the volume cooldown so she don't pickup on herself
-    utils.hotkeys.cooldown_listener_timer()
+    while utils.voice.check_if_speaking():
+        time.sleep(0.01)
+
 
 
 def message_checks(message):
@@ -193,6 +208,14 @@ def message_checks(message):
 
     if utils.settings.minecraft_enabled:
         utils.minecraft.check_for_command(message)
+
+
+    #
+    # Gaming
+    #
+
+    if utils.settings.gaming_enabled:
+        utils.gaming_control.message_inputs(message)
 
 
     # We can now undo the previous message
@@ -269,6 +292,9 @@ def main_web_ui_chat(message):
     # CHATS WILL BE GRABBED AFTER THIS RUNS!
     #
 
+    # Cut voice if needed
+    utils.voice.force_cut_voice()
+
     # Run our message checks
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
@@ -278,6 +304,9 @@ def main_web_ui_chat(message):
         main_message_speak()
 
 def main_web_ui_next():
+
+    # Cut voice if needed
+    utils.voice.force_cut_voice()
 
     API.Oogabooga_Api_Support.next_message_oogabooga()
 
@@ -310,6 +339,9 @@ def main_undo():
     if undo_allowed:
 
         undo_allowed = False
+
+        # Cut voice if needed
+        utils.voice.force_cut_voice()
 
         API.Oogabooga_Api_Support.undo_message()
 
@@ -382,8 +414,21 @@ def main_view_image():
     utils.hotkeys.clear_camera_inputs()
 
     #
-    # Get the image first before any processing. Decide if we take a new image or feed
-    if not utils.settings.cam_use_image_feed:
+    # Get the image first before any processing.
+
+    #
+    # Use the image feed
+    if utils.settings.cam_use_image_feed:
+        utils.camera.use_image_feed()
+
+    #
+    # Screenshot capture
+    elif utils.settings.cam_use_screenshot:
+        utils.camera.capture_screenshot()
+
+    #
+    # Normal camera capture
+    else:
 
         # If we do not want to preview, simply take the image. Else, do the confirmation loop
 
@@ -408,11 +453,6 @@ def main_view_image():
 
                 utils.hotkeys.clear_camera_inputs()
 
-
-
-
-    else:
-        utils.camera.use_image_feed()
 
     print("Image processing...\n")
 
@@ -562,8 +602,19 @@ def run_program():
     else:
         utils.settings.vision_enabled = False
 
+    gaming_enabled_string = os.environ.get("MODULE_GAMING")
+    if gaming_enabled_string == "ON":
+        utils.settings.gaming_enabled = True
+    else:
+        utils.settings.gaming_enabled = False
+
     utils.settings.eyes_follow = os.environ.get("EYES_FOLLOW")
 
+    # Load in our char name
+    utils.settings.char_name = char_name
+
+    # Load tags and tasks
+    utils.tag_task_controller.load_tags_tasks()
 
     # Run any needed log conversions
     utils.log_conversion.run_conversion()

@@ -327,6 +327,9 @@ def chat_input_await():
     while not input_found:
         global RATE_PRESSED, NEXT_PRESSED, REDO_PRESSED, SOFT_RESET_PRESSED, VIEW_IMAGE_PRESSED, BLANK_MESSAGE_PRESSED
 
+        # Breakout if gaming started
+        if utils.settings.is_gaming_loop:
+            break
 
         if get_speak_input():
 

@@ -7,6 +7,8 @@ import API.Oogabooga_Api_Support
 import utils.logging
 import utils.settings
 import utils.hotkeys
+import utils.tag_task_controller
+import utils.voice
 
 
 based_theme = gr.themes.Base(
@@ -49,7 +51,12 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             # Return whole chat, plus the one I have just sent
             if API.Oogabooga_Api_Support.currently_sending_message != "":
 
+                # Prep for viewing without metadata
                 chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                i = 0
+                while i < len(chat_combine):
+                    chat_combine[i] = chat_combine[i][:2]
+                    i += 1
                 chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, ""])
 
                 return chat_combine[-30:]
@@ -57,7 +64,13 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             # Return whole chat, last 30
             else:
-                return API.Oogabooga_Api_Support.ooga_history[-30:]
+                chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                i = 0
+                while i < len(chat_combine):
+                    chat_combine[i] = chat_combine[i][:2]
+                    i += 1
+
+                return chat_combine
 
 
         msg.submit(respond, [msg, chatbot], [msg, chatbot])
@@ -249,13 +262,29 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
                     cam_image_preview_checkbox_view = gr.Checkbox(label="Preview before Sending")
 
+            #
+            # Capture screenshot
+            #
+
+            with gr.Row():
+                def cam_capture_screenshot_button_click():
+                    utils.settings.cam_use_screenshot = not utils.settings.cam_use_screenshot
+
+                    return
+
+
+                with gr.Row():
+                    cam_capture_screenshot_button = gr.Button(value="Check/Uncheck")
+                    cam_capture_screenshot_button.click(fn=cam_capture_screenshot_button_click)
+
+                    cam_capture_screenshot_checkbox_view = gr.Checkbox(label="Capture Screenshot")
 
             def update_visual_view():
-                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_reply_after, utils.settings.cam_image_preview
+                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_reply_after, utils.settings.cam_image_preview, utils.settings.cam_use_screenshot
 
 
             demo.load(update_visual_view, every=0.05,
-                      outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_reply_after_checkbox_view, cam_image_preview_checkbox_view])
+                      outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_reply_after_checkbox_view, cam_image_preview_checkbox_view, cam_capture_screenshot_checkbox_view])
 
 
 
@@ -348,6 +377,24 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
         #
+        # Asterisk Ban
+        #
+
+        with gr.Row():
+            def asterisk_ban_button_click():
+                utils.settings.asterisk_ban = not utils.settings.asterisk_ban
+
+                return
+
+
+            with gr.Row():
+                asterisk_ban_button = gr.Button(value="Check/Uncheck")
+                asterisk_ban_button.click(fn=asterisk_ban_button_click)
+
+                asterisk_ban_button_checkbox_view = gr.Checkbox(label="Ban Asterisks")
+
+
+        #
         # Token Limit Slider
         #
 
@@ -408,10 +455,103 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def update_settings_view():
 
-            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.newline_cut
+            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.newline_cut, utils.settings.asterisk_ban
 
 
-        demo.load(update_settings_view, every=0.05, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, newline_cut_checkbox_view])
+        demo.load(update_settings_view, every=0.05, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, newline_cut_checkbox_view, asterisk_ban_button_checkbox_view])
+
+
+
+
+    #
+    # Tags / Tasks
+    #
+
+    with gr.Tab("Tags & Tasks"):
+
+        #
+        # Tasks
+
+        cur_task_box = gr.Textbox(label="Current Task")
+
+        def update_task_button_click(input_text):
+
+            # Change the task-tag first
+            utils.tag_task_controller.change_tag_via_task("Task-" + input_text)
+
+            # Now swap the task
+            utils.tag_task_controller.set_task(input_text)
+
+
+
+        with gr.Row():
+            cur_task_update_box = gr.Textbox(label="Set New Task")
+            cur_task_update_button = gr.Button(value="Update Task")
+            cur_task_update_button.click(fn=update_task_button_click, inputs=cur_task_update_box)
+
+        previous_tasks_box = gr.Textbox(label="Previous Tasks", lines=7)
+
+
+        #
+        # Gaming Loop
+
+        def update_gaming_loop():
+            utils.settings.is_gaming_loop = not utils.settings.is_gaming_loop
+
+        if utils.settings.gaming_enabled:
+
+            with gr.Row():
+                gaming_loop_button = gr.Button(value="Check/Uncheck")
+                gaming_loop_button.click(fn=update_gaming_loop)
+
+                gaming_loop_checkbox_view = gr.Checkbox(label="Gaming Loop")
+
+
+        #
+        # Tags
+
+        cur_tags_box = gr.Textbox(label="Current Tags")
+
+        def update_tags_button_click(new_tags):
+            new_tags = new_tags.replace(" ", "")
+            new_tags_list = new_tags.split(",")
+            print(new_tags_list)
+
+            utils.tag_task_controller.set_tags(new_tags_list)
+
+
+        with gr.Row():
+            cur_tags_update_box = gr.Textbox(label="Set New Tags")
+            cur_tags_update_button = gr.Button(value="Update Tags")
+            cur_tags_update_button.click(fn=update_tags_button_click, inputs=cur_tags_update_box)
+
+        previous_tags_box = gr.Textbox(label="Previous Tags", lines=7)
+
+        def update_tag_task_view():
+            cantonese_task_list = ""
+            for task in utils.settings.all_task_char_list:
+                cantonese_task_list += task + "\n"
+
+            cantonese_cur_tags_list = ""
+            for tag in utils.settings.cur_tags:
+                cantonese_cur_tags_list += tag + "\n"
+
+            cantonese_all_tags_list = ""
+            for tag in utils.settings.all_tag_list:
+                cantonese_all_tags_list += tag + "\n"
+
+            return utils.settings.cur_task_char, cantonese_task_list, cantonese_cur_tags_list, cantonese_all_tags_list
+
+        def update_autogaming_check():
+            return utils.settings.is_gaming_loop
+
+        if utils.settings.gaming_enabled:
+            demo.load(update_autogaming_check, every=0.05,
+                      outputs=[gaming_loop_checkbox_view])
+
+        demo.load(update_tag_task_view, every=0.05, outputs=[cur_task_box, previous_tasks_box, cur_tags_box, previous_tags_box])
+
+
 
 
 
@@ -419,7 +559,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
     # DEBUG
     #
 
-    with gr.Tab("Debug / Log"):
+    with gr.Tab("Debug"):
         debug_log = gr.Textbox(utils.logging.debug_log, lines=10, label="General Debug", autoscroll=True)
         rag_log = gr.Textbox(utils.logging.rag_log, lines=10, label="RAG Debug", autoscroll=True)
         kelvin_log = gr.Textbox(utils.logging.kelvin_log, lines=1, label="Random Temperature Readout")

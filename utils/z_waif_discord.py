@@ -1,5 +1,6 @@
 # This example requires the 'message_content' intent.
 import asyncio
+import json
 import os
 
 import discord
@@ -11,7 +12,8 @@ intents.message_content = True
 
 client = discord.Client(intents=intents)
 
-DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
+with open("Configurables/Tokens/Discord.json", 'r') as openfile:
+    DISCORD_TOKEN = json.load(openfile)
 
 @client.event
 async def on_ready():

@@ -56,7 +56,7 @@ def lorebook_gather(messages, sent_message):
         # Search for new ones
         for lore in LORE_BOOK:
             if utils.cane_lib.keyword_check(message, [" " + lore['0'] + " ", " " + lore['0'] + "\'", " " + lore['0'] + "s",
-                                                      " " + lore['0'] + "!", " " + lore['0'] + ".", " " + lore['0'] + ",", " " + lore['0'] + "!",
+                                                      " " + lore['0'] + "!", " " + lore['0'] + ".", " " + lore['0'] + ",", " " + lore['0'] + "?",
                                                       ]) and lore['2'] == 0:
 
                 total_lore += (lore['0'] + ", " + lore['1'] + "\n\n")

@@ -1,3 +1,4 @@
+import datetime
 import os
 import html
 import json
@@ -13,6 +14,7 @@ from dotenv import load_dotenv
 import utils.settings
 import utils.retrospect
 import utils.lorebook
+import utils.tag_task_controller
 
 
 load_dotenv()
@@ -46,6 +48,8 @@ forced_token_level = 120
 stored_received_message = "None!"
 currently_sending_message = ""
 
+ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
+
 VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
 VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 
@@ -66,7 +70,7 @@ def run(user_input, temp_level):
     currently_sending_message = user_input
 
     # Load the history from JSON, to clean up the quotation marks
-
+    #
     with open("LiveLog.json", 'r') as openfile:
         ooga_history = json.load(openfile)
 
@@ -102,6 +106,11 @@ def run(user_input, temp_level):
 
     utils.logging.kelvin_log = preset
 
+    # Set what char/task we are sending to, defaulting to the character card if there is none
+    char_send = utils.settings.cur_task_char
+    if char_send == "None":
+        char_send = CHARACTER_CARD
+
 
     # Forced tokens check
     cur_tokens_required = utils.settings.max_tokens
@@ -113,6 +122,8 @@ def run(user_input, temp_level):
     stop = ["[System", "\nUser:", "---", "<|"]
     if utils.settings.newline_cut:
         stop = ["[System", "\nUser:", "---", "<|", "\n"]
+    if utils.settings.asterisk_ban:
+        stop.append("*")
 
 
     # Encode
@@ -124,7 +135,7 @@ def run(user_input, temp_level):
         "messages": messages_to_send,
         'max_tokens': cur_tokens_required,
         'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-        'character': CHARACTER_CARD,
+        'character': char_send,
         'truncation_length': max_context,
         'stop': stop,
 
@@ -171,7 +182,7 @@ def run(user_input, temp_level):
         log_user_input = "{0}".format(user_input)
         log_received_message = "{0}".format(received_message)
 
-        ooga_history.append([log_user_input, log_received_message])
+        ooga_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
         # Run a pruning of the deletables
         prune_deletables()
@@ -300,7 +311,7 @@ def soft_reset():
 
     for message_pair in soft_reset_message:
 
-        ooga_history.append([message_pair[0], message_pair[1]])
+        ooga_history.append([message_pair[0], message_pair[1], utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
 
@@ -353,9 +364,9 @@ def summary_memory_run(messages_input, user_sent_message):
     currently_sending_message = user_sent_message
 
     # Load the history from JSON, to clean up the quotation marks
-
-    with open("LiveLog.json", 'r') as openfile:
-        ooga_history = json.load(openfile)
+    #
+    # with open("LiveLog.json", 'r') as openfile:
+    #     ooga_history = json.load(openfile)
 
     # Determine what preset we want to load in with
 
@@ -366,6 +377,10 @@ def summary_memory_run(messages_input, user_sent_message):
 
     utils.logging.kelvin_log = preset
     cur_tokens_required = utils.retrospect.summary_tokens_count
+
+    #
+    # NOTE: Does not use the character-task at the moment, be aware.
+    #
 
     # Set the stop right
     stop = ["[System", "\nUser:", "---", "<|"]
@@ -420,7 +435,7 @@ def summary_memory_run(messages_input, user_sent_message):
         log_user_input = "{0}".format(user_sent_message)
         log_received_message = "{0}".format(received_message)
 
-        ooga_history.append([log_user_input, log_received_message])
+        ooga_history.append([log_user_input, log_received_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
         # Run a pruning of the deletables
         prune_deletables()
@@ -436,62 +451,62 @@ def summary_memory_run(messages_input, user_sent_message):
 
 
 
-def swap_language_model(model_ID):
-
-    # Setup and send the JSON request
-
-    print("Swapping model!")
-    model_name = "none_model"
-
-    if model_ID == 0:
-
-        model_name = 'LoneStriker_Loyal-Macaroni-Maid-7B-5.0bpw-h6-exl2'
-
-        request = {
-            'action': 'load',
-            'model_name': model_name,
-
-            'args': {
-                'loader': 'ExLlamav2_HF',
-
-                'cache_8bit': True,
-                'disable_exllama': False,
-                'disable_exllamav2': False,
-                'max_seq_len': max_context,
-                'truncation_length': max_context
-
-                }
-        }
-
-    elif model_ID == 1:
-
-        model_name = 'TheBloke_vicuna-7B-1.1-GPTQ'
-
-        request = {
-            'action': 'load',
-            'model_name': model_name,
-
-            'args': {
-                'loader': 'AutoGPTQ',
-
-                'load_in_4bit': True,
-                'disable_exllama': True,
-                'disable_exllamav2': True,
-                'max_seq_len': max_context,
-                'truncation_length': max_context
-
-                }
-
-        }
-
-
-    model_string = URL_MODEL + model_name
-    print(model_string)
-
-    #   Can be used to see the output of the change (and all the config it has)
-    response = requests.post(model_string, json=request)
-    print(response.json())
-    time.sleep(10)
+# def swap_language_model(model_ID):
+#
+#     # Setup and send the JSON request
+#
+#     print("Swapping model!")
+#     model_name = "none_model"
+#
+#     if model_ID == 0:
+#
+#         model_name = 'LoneStriker_Loyal-Macaroni-Maid-7B-5.0bpw-h6-exl2'
+#
+#         request = {
+#             'action': 'load',
+#             'model_name': model_name,
+#
+#             'args': {
+#                 'loader': 'ExLlamav2_HF',
+#
+#                 'cache_8bit': True,
+#                 'disable_exllama': False,
+#                 'disable_exllamav2': False,
+#                 'max_seq_len': max_context,
+#                 'truncation_length': max_context
+#
+#                 }
+#         }
+#
+#     elif model_ID == 1:
+#
+#         model_name = 'TheBloke_vicuna-7B-1.1-GPTQ'
+#
+#         request = {
+#             'action': 'load',
+#             'model_name': model_name,
+#
+#             'args': {
+#                 'loader': 'AutoGPTQ',
+#
+#                 'load_in_4bit': True,
+#                 'disable_exllama': True,
+#                 'disable_exllamav2': True,
+#                 'max_seq_len': max_context,
+#                 'truncation_length': max_context
+#
+#                 }
+#
+#         }
+#
+#
+#     model_string = URL_MODEL + model_name
+#     print(model_string)
+#
+#     #   Can be used to see the output of the change (and all the config it has)
+#     response = requests.post(model_string, json=request)
+#     print(response.json())
+#     time.sleep(10)
 
 
 def view_image(direct_talk_transcript):
@@ -592,7 +607,7 @@ def view_image(direct_talk_transcript):
     if utils.settings.cam_direct_talk:
         base_send = direct_talk_transcript
 
-    ooga_history.append([base_send, received_cam_message])
+    ooga_history.append([base_send, received_cam_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
     # Save
@@ -665,6 +680,18 @@ def encode_new_api(user_input):
     while i < marker_length and i < len(ooga_history):
         messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
         messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+
+        if len(ooga_history[-1]) > 3 and i == marker_length - 3 and ENCODE_TIME == "ON":
+
+            #
+            # Append a relative timestamp, 3 or so back (to make it not super important)
+            #
+
+            timestamp_string = "The current time now is "
+            current_time = datetime.datetime.now()
+            timestamp_string += current_time.strftime("%d %B, %Y at %I:%M %p")
+            timestamp_string += "."
+            messages_to_send.append({"role": "user", "content": timestamp_string})
 
         if i == marker_length - 8:
 
@@ -774,4 +801,3 @@ def force_tokens_count(tokens):
     global forced_token_level, force_token_count
     forced_token_level = tokens
     force_token_count = True
-

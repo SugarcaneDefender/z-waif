@@ -12,4 +12,4 @@
 # Pipe type respresents a variety of actions, such as "Talk", "Picture", "Discord Message"
 #
 # Comes with [current pipeflow spot, pipe ID, pipe type]
-cur_states = [["Idle", 0, "None"], ["Idle", 0, "Discord"]]
+cur_states = [["Idle", 0, "None"], ["Idle", 1, "Discord"]]

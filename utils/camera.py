@@ -4,6 +4,7 @@ import cv2
 import tkinter
 from tkinter import filedialog
 import os
+import pyautogui
 
 import utils.settings
 import utils.vtube_studio
@@ -77,6 +78,29 @@ def browse_feed_image():
     currdir = os.getcwd()
     browsed_image_path = filedialog.askopenfilename(parent=root, initialdir=currdir, title='Please select the image', filetypes=[("JPG", '*.jpg'), ("PNG", '*.png'), ("JPEG", '*.jpeg')])
     return browsed_image_path
+
+
+def capture_screenshot():
+
+    # take screenshot using pyautogui
+    image = pyautogui.screenshot()
+
+    # convert it!
+    image = cv2.cvtColor(numpy.array(image),
+                         cv2.COLOR_RGB2BGR)
+
+    # Resize it accoring to max width/height
+    maxwidth = 400
+    maxheight = 400
+
+    f1 = maxwidth / image.shape[1]
+    f2 = maxheight / image.shape[0]
+    f = min(f1, f2)  # resizing factor
+    dim = (int(image.shape[1] * f), int(image.shape[0] * f))
+    image = cv2.resize(image, dim, interpolation=cv2.INTER_LANCZOS4)
+
+    # saving image in local storage
+    cv2.imwrite("LiveImage.png", image)
 
 
 

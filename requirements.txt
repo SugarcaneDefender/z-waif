@@ -16,3 +16,4 @@ pydub~=0.25.1
 pyvts~=0.3.2
 numpy~=1.24.4
 fastapi==0.112.2
+pyautogui
