@@ -2,7 +2,7 @@ Changelog
 
 V1.4
 
-- The test now "streams", appearing as it is generated!
+- The text now "streams", appearing as it is generated!
 	- This is the default now, responses come in quicker and can be read out loud as they come.
 		- If you get issues, try disabling streaming text in the .env file.
 	- In effect, this means a slower language model is no issue, as long as it generates a little faster than your waifu talks.
