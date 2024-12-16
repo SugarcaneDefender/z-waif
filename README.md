@@ -55,47 +55,23 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 
 ## Recent Changelog
 
-V1.3-R2
+V1.4
 
-- Fixed a minor bug where if there wasn't enough chat history, the program would crash, as it would attempt to load chat that wasn't there.
+- The text now "streams", appearing as it is generated!
+	- This is the default now, responses come in quicker and can be read out loud as they come.
+		- If you get issues, try disabling streaming text in the .env file.
+	- In effect, this means a slower language model is no issue, as long as it generates a little faster than your waifu talks.
+		- This won't apply to internal thinking, such as the camera or other future operations.
+		- Only things read out loud will actually go faster.
+	- Works on multimodal/visual as well.
+		- No "[System C]" headers while streaming, as it is read aloud immediately.
+		- Makes the vision a whole lot better to use, as it tends to be long winded and slow to generate.
 
----.---.---.---
-
-V1.3
-
-- Added the Tag & Task menu
-	- Tags can be used to classify info for future use.
-		- Applies tags automatically to chats that you put in.
-	- Tasks can be used to swap between character cards, allowing you to swap out parts of the memory.
-		- Tasks are hyphenated between the "WaifuName" and "Task"
-		- For example, if your waifu is named "Ember", and you have a task called "Party", you would want a character card in Oobabooga to be defined "Ember-Party"
-
-- Your bot can now use keyboard input to control the keyboard.
-	- Be sure to toggle "MODULE_GAMING" to "ON".
-	- Changing the task will change what JSON file it uses (i.e. the task "Emerald" will use the button mappings in "/Configurables/GamingInputs/Emerald.json").
-		- By default, this is set to "None" with no mappings.
-		- You can add mappings by copy/paste the file, and renaming to something else.
-		- Try to use lowercase letters for the keyboard input, capital letters did not work.
-	- Warning: They can also trigger their own hotkeys, if not turned off!
-	- Automatic gaming can now be toggled on in the Task menu. This is done by taking a picture, then asking for an input.
-		- Note: Very bad at the moment, don't expect much of anything. May require more prompting and tuning.
-
-- Vision can now use the main monitor's screenshot as the image input.
-	- Turn on "Use Screenshot" in the Visual menu.
-
-- Timestamps will now be included in the encoding, telling them the current date and time.
-	- You may want to ask them in the character card to not mention the current time, as they may spam it.
-	- Timestamps are also included and stored in message metadata.
-	- Can be toggled in the .env
-- Messages can now be undone / redone while they are speaking, cutting them off.
-	- Messages are now chunked out and read, instead of all at once.
-- Asterisks can now be banned from generating, for conversational mode and stopping roleplay.
-
-- Discord token is now stored in "Configurables/Tokens/Discord.json", for security reasons.
-
-- Fixed an issue where the lorebook was not giving lore for messages with a "?" at the end.
-- Added a "is_live_pipe" state to the main script, which will tell us if we are currently running/processing something.
-
+- RP Supression and Newline Cut are now unbound from one another.
+- RP Supression and Newline Cut can both be turned on/off in the UI, as well as on/off in the .env (.env is what it is on boot).
+- Lowered the RP Supression (what stops your AI acting as multiple people) watchdog counter (less likely to misfire).
+- Stopping strings are better organized internally.
+- Warning messages about messages being too short or too long now appear in the debug log.
 
 ## To-Do
 
