@@ -320,6 +320,21 @@ def input_soft_reset():
 
     SOFT_RESET_PRESSED = True
 
+# Used to detect, and then clear a next input press. "Pulls" the input, making it eat it.
+def pull_next_press_input():
+    global NEXT_PRESSED
+
+    if NEXT_PRESSED:
+        NEXT_PRESSED = False    # Cleaning
+        return True             # We pressed it bro
+
+    return False
+
+# Set to true
+def do_next_press_input():
+    global NEXT_PRESSED
+    NEXT_PRESSED = True
+
 
 def chat_input_await():
     input_found = False

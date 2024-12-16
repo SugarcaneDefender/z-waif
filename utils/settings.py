@@ -4,8 +4,11 @@ hotkeys_locked = False
 speak_shadowchats = False
 
 max_tokens = 110
-newline_cut = True
+stream_chats = True
+newline_cut = False
 asterisk_ban = False
+supress_rp = True
+stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 
 alarm_time = "09:09"
 model_preset = "Default"

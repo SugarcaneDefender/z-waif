@@ -1,5 +1,24 @@
 Changelog
 
+V1.4
+
+- The test now "streams", appearing as it is generated!
+	- This is the default now, responses come in quicker and can be read out loud as they come.
+		- If you get issues, try disabling streaming text in the .env file.
+	- In effect, this means a slower language model is no issue, as long as it generates a little faster than your waifu talks.
+		- This won't apply to internal thinking, such as the camera or other future operations.
+		- Only things read out loud will actually go faster.
+	- Works on multimodal/visual as well.
+		- No "[System C]" headers while streaming, as it is read aloud immediately.
+		- Makes the vision a whole lot better to use, as it tends to be long winded and slow to generate.
+
+- RP Supression and Newline Cut are now unbound from one another.
+- RP Supression and Newline Cut can both be turned on/off in the UI, as well as on/off in the .env (.env is what it is on boot).
+- Lowered the RP Supression (what stops your AI acting as multiple people) watchdog counter (less likely to misfire).
+- Stopping strings are better organized internally.
+- Warning messages about messages being too short or too long now appear in the debug log.
+
+
 ---.---.---.---
 
 V1.3-R2

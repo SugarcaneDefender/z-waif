@@ -40,6 +40,10 @@ stored_transcript = "Issue with message cycling!"
 undo_allowed = False
 is_live_pipe = False
 
+# Not for sure live pipe... atleast how it is counted now. Unipipes in a few updates will clear this up
+# Livepipe is only for the hotkeys actions, that is why... but these are for non-hotkey stuff!
+live_pipe_no_speak = False
+
 
 # noinspection PyBroadException
 def main():
@@ -155,6 +159,10 @@ def main_message_speak():
     message = API.Oogabooga_Api_Support.receive_via_oogabooga()
 
 
+    # Stop this if the message was streamed- we have already read it!
+    if API.Oogabooga_Api_Support.last_message_streamed:
+        return
+
     #
     #   Speak the message now!
     #
@@ -163,7 +171,7 @@ def main_message_speak():
 
     utils.voice.set_speaking(True)
 
-    voice_speaker = threading.Thread(target=utils.voice.speak_line(s_message))
+    voice_speaker = threading.Thread(target=utils.voice.speak_line(s_message, refuse_pause=False))
     voice_speaker.daemon = True
     voice_speaker.start()
 
@@ -181,13 +189,14 @@ def message_checks(message):
     # Runs message checks for plugins, such as VTube Studio and Minecraft
     #
 
-    #   Log our message
+    #   Log our message (ONLY if the last chat was NOT streaming)
 
-    print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-          + "----" + char_name + "----"
-          + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
-    print(f"{message}")
-    print("\n")
+    if not API.Oogabooga_Api_Support.last_message_streamed:
+        print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+              + "----" + char_name + "----"
+              + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+        print(f"{message}")
+        print("\n")
 
     #
     #   Vtube Studio Emoting
@@ -245,6 +254,11 @@ def main_next():
 
 def main_minecraft_chat(message):
 
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
     # Limit the amount of tokens allowed to send (minecraft chat limits)
     API.Oogabooga_Api_Support.force_tokens_count(47)
 
@@ -258,12 +272,18 @@ def main_minecraft_chat(message):
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
 
 
 def main_discord_chat(message):
+
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
 
     # Actual sending of the message, waits for reply automatically
     API.Oogabooga_Api_Support.send_via_oogabooga(message)
@@ -276,15 +296,22 @@ def main_discord_chat(message):
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
+
 
 
 
 
 def main_web_ui_chat(message):
 
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
     # Actual sending of the message, waits for reply automatically
     API.Oogabooga_Api_Support.send_via_oogabooga(message)
 
@@ -299,14 +326,28 @@ def main_web_ui_chat(message):
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
 
 def main_web_ui_next():
 
+    # This is a shadow chat
+    global live_pipe_no_speak
+    global live_pipe_is_webui_regen
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
+
     # Cut voice if needed
     utils.voice.force_cut_voice()
+
+    # Force end the existing stream (if there is one)
+    if API.Oogabooga_Api_Support.is_in_api_request:
+        API.Oogabooga_Api_Support.set_force_skip_streaming(True)
+        live_pipe_no_speak = False
+        return
 
     API.Oogabooga_Api_Support.next_message_oogabooga()
 
@@ -314,22 +355,29 @@ def main_web_ui_next():
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
 
 
 
 def main_discord_next():
 
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
     API.Oogabooga_Api_Support.next_message_oogabooga()
 
     # Run our message checks
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
 
 
@@ -384,6 +432,11 @@ def main_memory_proc():
         print("Not enough conversation history for memories!")
         return
 
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
     # Retrospect and get a random memory
     utils.retrospect.retrospect_random_mem_summary()
 
@@ -395,8 +448,9 @@ def main_memory_proc():
     reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (NOTE: THIS WILL SLOW THE REPLY PROCESS, AS SHE WILL HAVE TO SPEAK THE WHOLE REPLY FIRST)
-    if utils.settings.speak_shadowchats:
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
         main_message_speak()
 
 
@@ -463,10 +517,11 @@ def main_view_image():
         direct_talk_transcript = view_image_prompt_get()
 
     # View and process the image, storing the result
-    transcript = API.Oogabooga_Api_Support.view_image(direct_talk_transcript)
+    transcript = API.Oogabooga_Api_Support.send_image_via_oobabooga(direct_talk_transcript)
 
     # Fix up our transcript & show us
-    print("\n" + transcript + "\n")
+    if not utils.settings.stream_chats:
+        print("\n" + transcript + "\n")
 
     # We can now undo the previous message
 
@@ -608,7 +663,29 @@ def run_program():
     else:
         utils.settings.gaming_enabled = False
 
+
+    # Other settings
+
     utils.settings.eyes_follow = os.environ.get("EYES_FOLLOW")
+
+    newline_cut_enabled_string = os.environ.get("NEWLINE_CUT_BOOT")
+    if newline_cut_enabled_string == "ON":
+        utils.settings.newline_cut = True
+    else:
+        utils.settings.newline_cut = False
+
+    rp_sup_enabled_string = os.environ.get("RP_SUP_BOOT")
+    if rp_sup_enabled_string == "ON":
+        utils.settings.supress_rp = True
+    else:
+        utils.settings.supress_rp = False
+
+    stream_chats_enabled_string = os.environ.get("API_STREAM_CHATS")
+    if stream_chats_enabled_string == "ON":
+        utils.settings.stream_chats = True
+    else:
+        utils.settings.stream_chats = False
+
 
     # Load in our char name
     utils.settings.char_name = char_name

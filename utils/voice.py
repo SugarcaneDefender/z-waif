@@ -10,7 +10,7 @@ import utils.voice_splitter
 is_speaking = False
 cut_voice = False
 
-def speak_line(s_message):
+def speak_line(s_message, refuse_pause):
 
     global cut_voice
     cut_voice = False
@@ -21,7 +21,10 @@ def speak_line(s_message):
         speaker = win32com.client.Dispatch("SAPI.SpVoice")
         speaker.Speak(chunk)
 
-        time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
+        if not refuse_pause:
+            time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
+        else:
+            time.sleep(0.001)   # Still have a mini-mini rest, even with pauses
 
         # Break free if we undo/redo, and stop reading
         if utils.hotkeys.NEXT_PRESSED or utils.hotkeys.REDO_PRESSED or cut_voice:

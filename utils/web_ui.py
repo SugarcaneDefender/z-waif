@@ -45,7 +45,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             chat_history.append((message, message_reply))
 
-            return "", API.Oogabooga_Api_Support.ooga_history[-30:]
+            return ""   # Note: Removed the update to the chatbot here, as it is done anyway in the update_chat()!
 
         def update_chat():
             # Return whole chat, plus the one I have just sent
@@ -57,7 +57,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 while i < len(chat_combine):
                     chat_combine[i] = chat_combine[i][:2]
                     i += 1
-                chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, ""])
+                chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, API.Oogabooga_Api_Support.currently_streaming_message])
 
                 return chat_combine[-30:]
 
@@ -73,7 +73,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 return chat_combine
 
 
-        msg.submit(respond, [msg, chatbot], [msg, chatbot])
+        msg.submit(respond, [msg, chatbot], [msg])
         demo.load(update_chat, every=0.05, outputs=[chatbot])
 
         #
@@ -359,7 +359,25 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
         #
-        # Shadowchats
+        # RP Supression
+        #
+
+        with gr.Row():
+            def supress_rp_button_click():
+                utils.settings.supress_rp = not utils.settings.supress_rp
+
+                return
+
+
+            with gr.Row():
+                supress_rp_button = gr.Button(value="Check/Uncheck")
+                supress_rp_button.click(fn=supress_rp_button_click)
+
+                supress_rp_checkbox_view = gr.Checkbox(label="Supress RP (as others)")
+
+
+        #
+        # Newline Cut
         #
 
         with gr.Row():
@@ -391,7 +409,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 asterisk_ban_button = gr.Button(value="Check/Uncheck")
                 asterisk_ban_button.click(fn=asterisk_ban_button_click)
 
-                asterisk_ban_button_checkbox_view = gr.Checkbox(label="Ban Asterisks")
+                asterisk_ban_checkbox_view = gr.Checkbox(label="Ban Asterisks")
 
 
         #
@@ -455,10 +473,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def update_settings_view():
 
-            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.newline_cut, utils.settings.asterisk_ban
+            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.supress_rp, utils.settings.newline_cut, utils.settings.asterisk_ban
 
 
-        demo.load(update_settings_view, every=0.05, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, newline_cut_checkbox_view, asterisk_ban_button_checkbox_view])
+        demo.load(update_settings_view, every=0.05, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view])
 
 
 
