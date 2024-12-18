@@ -8,6 +8,7 @@ import pyautogui
 
 import utils.settings
 import utils.vtube_studio
+import utils.hotkeys
 import random
 
 # initialize the camera
@@ -44,9 +45,14 @@ def capture_pic():
 
         # Show it to us, if we are previewing!
         if utils.settings.cam_image_preview:
-            cv2.imshow("Z-Waif Image Preview", image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
+
+            # Loop to wait for image preview
+            while (utils.hotkeys.VIEW_IMAGE_PRESSED is not True) and (utils.hotkeys.CANCEL_IMAGE_PRESSED is not True):
+                cv2.imshow("Z-Waif Image Preview", image)
+                cv2.waitKey(6000)
+                cv2.destroyAllWindows()
+                time.sleep(0.06)
+
 
 
     # If captured image is corrupted, moving to else part

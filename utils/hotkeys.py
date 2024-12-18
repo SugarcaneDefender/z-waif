@@ -7,6 +7,8 @@ import threading
 import utils.alarm
 import utils.volume_listener
 import utils.settings
+import json
+import utils.logging
 
 
 RATE_PRESSED = False
@@ -38,43 +40,26 @@ BLANK_MESSAGE_PRESSED = False
 
 
 # Rating Inputs
-
 #keyboard.on_press_key("1", lambda _:rate_input(0))
 #keyboard.on_press_key("2", lambda _:rate_input(1))
 #keyboard.on_press_key("3", lambda _:rate_input(2))
 #keyboard.on_press_key("4", lambda _:rate_input(3))
 
-
-# Next Input
-
-keyboard.on_press_key("RIGHT_ARROW", lambda _:next_input())
-
-
-# Undo Message Input
-
-keyboard.on_press_key("UP_ARROW", lambda _:redo_input())
-
-
-#Locking Input
-
-keyboard.on_press_key("GRAVE", lambda _:lock_inputs())
-keyboard.on_press_key("BACKSLASH", lambda _:input_lock_backslash())
-
-
-keyboard.on_press_key("RIGHT_CTRL", lambda _:speak_input_toggle())
-
 # Options for right click to speak
 # mouse.on_right_click(callback= lambda _:speak_input_toggle(), args="_")
 
-keyboard.on_press_key("A", lambda _:input_toggle_autochat())
-keyboard.on_press_key("S", lambda _:input_change_listener_sensitivity())
-
-keyboard.on_press_key("R", lambda _:input_soft_reset())
-
-keyboard.on_press_key("C", lambda _:input_view_image())
-keyboard.on_press_key("X", lambda _:input_cancel_image())
-
-keyboard.on_press_key("B", lambda _:input_send_blank())
+# Legacy Input Bindings
+# keyboard.on_press_key("RIGHT_ARROW", lambda _:next_input())
+# keyboard.on_press_key("UP_ARROW", lambda _:redo_input())
+# keyboard.on_press_key("GRAVE", lambda _:lock_inputs())
+# keyboard.on_press_key("BACKSLASH", lambda _:input_lock_backslash())
+# keyboard.on_press_key("RIGHT_CTRL", lambda _:speak_input_toggle())
+# keyboard.on_press_key("A", lambda _:input_toggle_autochat())
+# keyboard.on_press_key("S", lambda _:input_change_listener_sensitivity())
+# keyboard.on_press_key("R", lambda _:input_soft_reset())
+# keyboard.on_press_key("C", lambda _:input_view_image())
+# keyboard.on_press_key("X", lambda _:input_cancel_image())
+# keyboard.on_press_key("B", lambda _:input_send_blank())
 
 def load_hotkey_bootstate():
 
@@ -87,6 +72,42 @@ def load_hotkey_bootstate():
         utils.settings.hotkeys_locked = True
         print("\nInput System Lock Set To " + str(utils.settings.hotkeys_locked) + " !")
 
+    # Also bind all of our needed hotkeys at this point
+    bind_all_hotkeys()
+
+def bind_all_hotkeys():
+
+    # Load in our hotkeys
+    with open("Configurables/Keybinds.json", 'r') as openfile:
+        keybinds = json.load(openfile)
+
+    # Table for text to function. We use the function name without the () to store it as a variable, then pass it as the bindable
+    options = {
+        "Next" : next_input,
+        "Undo" : redo_input,
+        "Input Lock 1" : lock_inputs,
+        "Input Lock 2" : input_lock_backslash,
+        "Speak Toggle" : speak_input_toggle,
+        "Autochat" : input_toggle_autochat,
+        "Autochat Sensitivity" : input_change_listener_sensitivity,
+        "Soft Reset" : input_soft_reset,
+        "View Image" : input_view_image,
+        "Cancel Image" : input_cancel_image,
+        "Send Blank" : input_send_blank
+    }
+
+    # Cycle through, dictionary define
+    for keybind in keybinds:
+        bind_hotkey(keybind[0], options[keybind[1]])
+
+
+def bind_hotkey(binding, input_action):
+
+    try:
+        keyboard.on_press_key(binding, lambda _: input_action())
+    except:
+        print("Issue binding to hotkey " + binding + "!")
+        utils.logging.update_debug_log("Issue binding to hotkey " + binding + "!")
 
 
 def rate_input(rating):
@@ -335,6 +356,17 @@ def do_next_press_input():
     global NEXT_PRESSED
     NEXT_PRESSED = True
 
+# Turns all inputs off
+def stack_wipe_inputs():
+    global RATE_PRESSED, NEXT_PRESSED, REDO_PRESSED, SOFT_RESET_PRESSED, VIEW_IMAGE_PRESSED, BLANK_MESSAGE_PRESSED, SPEAK_TOGGLED
+
+    RATE_PRESSED = False
+    NEXT_PRESSED = False
+    REDO_PRESSED = False
+    SOFT_RESET_PRESSED = False
+    VIEW_IMAGE_PRESSED = False
+    BLANK_MESSAGE_PRESSED = False
+    SPEAK_TOGGLED = False
 
 def chat_input_await():
     input_found = False

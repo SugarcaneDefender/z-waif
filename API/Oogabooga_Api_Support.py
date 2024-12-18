@@ -24,6 +24,7 @@ import utils.voice
 import emoji
 import threading
 import utils.hotkeys
+import utils.vtube_studio
 
 
 load_dotenv()
@@ -72,6 +73,10 @@ VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
     soft_reset_message = json.load(openfile)
+
+# Load in the stopping strings
+with open("Configurables/StoppingStrings.json", 'r') as openfile:
+    utils.settings.stopping_strings = json.load(openfile)
 
 
 def run(user_input, temp_level):
@@ -348,6 +353,9 @@ def run_streaming(user_input, temp_level):
     stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
     client = sseclient.SSEClient(stream_response)
 
+    # Clear streamed emote list
+    utils.vtube_studio.clear_streaming_emote_list()
+
     assistant_message = ''
     supressed_rp = False
     force_skip_streaming = False
@@ -382,10 +390,15 @@ def run_streaming(user_input, temp_level):
         s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
         sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
 
+        # Emotes
+        if utils.settings.vtube_enabled:
+            utils.vtube_studio.set_emote_string(s_assistant_message)
+            utils.vtube_studio.check_emote_string_streaming()
+
+        # Speaking
         if not main.live_pipe_no_speak:
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
-
 
     # Print Newline
     print("\n")
@@ -467,6 +480,11 @@ def streamed_update_handler(chunk, assistant_message):
     if len(sentence_list) > streaming_sentences_ticker:
         streaming_sentences_ticker += 1
 
+        # Emotes
+        if utils.settings.vtube_enabled:
+            utils.vtube_studio.set_emote_string(s_assistant_message)
+            utils.vtube_studio.check_emote_string_streaming()
+
         if not main.live_pipe_no_speak:
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-2], refuse_pause=True)
@@ -516,10 +534,27 @@ def next_message_oogabooga():
 
     print("Generating Replacement Message!")
     cycle_message = ooga_history[-1][0]
+    cycle_tag = ooga_history[-1][2]
     ooga_history.pop()
 
     # Save
     save_histories()
+
+    # If there was an image tag on the last sent message, use the liveimage and visual.
+    # Otherwise, redo as normal
+
+    if cycle_tag.__contains__("ZW-Visual"):
+
+        print("\nRerolling for visual\n")
+
+        # Re-send the new message (visual)
+        if not utils.settings.stream_chats:
+            view_image(cycle_message)
+        if utils.settings.stream_chats:
+            view_image_streaming(cycle_message)
+
+        # 'scape from it
+        return
 
 
     # Re-send the new message
@@ -822,9 +857,13 @@ def view_image(direct_talk_transcript):
     global currently_streaming_message
     global last_message_streamed
     global is_in_api_request
+    global currently_sending_message
 
     # We are starting our API request!
     is_in_api_request = True
+
+    # Message that is currently being sent
+    currently_sending_message = direct_talk_transcript
 
     # Clear the old streaming message, also we are not streaming so set it so
     currently_streaming_message = ""
@@ -927,11 +966,18 @@ def view_image(direct_talk_transcript):
     if utils.settings.cam_direct_talk:
         base_send = direct_talk_transcript
 
-    ooga_history.append([base_send, received_cam_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+    # Prep with visual tag
+    these_tags = utils.settings.cur_tags.copy()
+    these_tags.append("ZW-Visual")
+
+    ooga_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
     # Save
     save_histories()
+
+    # Clear the currently sending message variable
+    currently_sending_message = ""
 
     # We are ending our API request!
     is_in_api_request = False
@@ -949,9 +995,13 @@ def view_image_streaming(direct_talk_transcript):
     global last_message_streamed
     global streaming_sentences_ticker
     global is_in_api_request
+    global force_skip_streaming
 
     # We are starting our API request!
     is_in_api_request = True
+
+    # Message that is currently being sent
+    currently_sending_message = direct_talk_transcript
 
     # Clear the old streaming message, also we are not streaming so set it so
     currently_streaming_message = ""
@@ -1041,7 +1091,11 @@ def view_image_streaming(direct_talk_transcript):
         stream_response = requests.post(IMG_URI, headers=headers, json=request, verify=False, stream=True)
         client = sseclient.SSEClient(stream_response)
 
+        # Clear streamed emote list
+        utils.vtube_studio.clear_streaming_emote_list()
+
         assistant_message = ''
+        force_skip_streaming = False
         supressed_rp = False
         for event in client.events():
             payload = json.loads(event.data)
@@ -1054,17 +1108,36 @@ def view_image_streaming(direct_talk_transcript):
             # Want to set this to be a rolling ticker at some point, where we get the responses at any rate, read them,
             # and reveal them as needed. Yes! One day... this isn't particularly important at the moment
 
+            # Check if we need to force skip the stream (hotkey or manually)
+            if utils.hotkeys.pull_next_press_input() or force_skip_streaming:
+                force_skip_streaming = True
+                break
+
             # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
             if utils.settings.supress_rp and (supress_rp_as_others(assistant_message) != assistant_message):
                 assistant_message = supress_rp_as_others(assistant_message)
                 supressed_rp = True
                 break
 
+        # Redo it and skip
+        if force_skip_streaming:
+            force_skip_streaming = False
+            print("\nSkipping message, redoing!\n")
+            utils.logging.update_debug_log("Got an input to regenerate! Re-generating the reply...")
+            # Just set the message to be small, as this will force a re-run due to our while loop rules
+            assistant_message = ""
+
     # Read the final sentence aloud (if not stopped by RP supr)
     if not supressed_rp:
         s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
         sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
 
+        # Emotes
+        if utils.settings.vtube_enabled:
+            utils.vtube_studio.set_emote_string(s_assistant_message)
+            utils.vtube_studio.check_emote_string_streaming()
+
+        # Speaking
         if not main.live_pipe_no_speak:
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
@@ -1095,11 +1168,18 @@ def view_image_streaming(direct_talk_transcript):
     if utils.settings.cam_direct_talk:
         base_send = direct_talk_transcript
 
-    ooga_history.append([base_send, received_cam_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+    # Prep with visual tag
+    these_tags = utils.settings.cur_tags.copy()
+    these_tags.append("ZW-Visual")
+
+    ooga_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
     # Save
     save_histories()
+
+    # Clear the currently sending message variable
+    currently_sending_message = ""
 
     # We are ending our API request!
     is_in_api_request = False

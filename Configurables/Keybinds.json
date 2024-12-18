@@ -1,0 +1,46 @@
+[
+    [
+		"RIGHT_ARROW",
+		"Next"
+    ],
+    [
+		"UP_ARROW",
+		"Undo"
+    ],
+	[
+		"GRAVE",
+		"Input Lock 1"
+    ],
+	[
+		"BACKSLASH",
+		"Input Lock 2"
+    ],
+	[
+		"RIGHT_CTRL",
+		"Speak Toggle"
+    ],
+	[
+		"A",
+		"Autochat"
+    ],
+	[
+		"S",
+		"Autochat Sensitivity"
+    ],
+	[
+		"R",
+		"Soft Reset"
+    ],
+	[
+		"C",
+		"View Image"
+    ],
+	[
+		"X",
+		"Cancel Image"
+    ],
+	[
+		"B",
+		"Send Blank"
+    ]
+]

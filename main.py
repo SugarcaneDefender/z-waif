@@ -85,6 +85,9 @@ def main():
         elif command == "BLANK":
             main_send_blank()
 
+        # Stack wipe any current inputs, to avoid doing multiple in a row
+        utils.hotkeys.stack_wipe_inputs()
+
         # Flag us as no longer running a command
         is_live_pipe = False
 
@@ -202,7 +205,7 @@ def message_checks(message):
     #   Vtube Studio Emoting
     #
 
-    if utils.settings.vtube_enabled:
+    if utils.settings.vtube_enabled and not API.Oogabooga_Api_Support.last_message_streamed:
         # Feeds the message to our VTube Studio script
         utils.vtube_studio.set_emote_string(message)
 

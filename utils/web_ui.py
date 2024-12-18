@@ -9,16 +9,18 @@ import utils.settings
 import utils.hotkeys
 import utils.tag_task_controller
 import utils.voice
+import json
 
+# Import the gradio theme color
+with open("Configurables/GradioThemeColor.json", 'r') as openfile:
+    gradio_theme_color = json.load(openfile)
 
 based_theme = gr.themes.Base(
-    primary_hue="fuchsia",
+    primary_hue=gradio_theme_color,
     secondary_hue="indigo",
     neutral_hue="zinc",
 
 )
-
-
 
 
 
@@ -35,45 +37,56 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         #
 
         chatbot = gr.Chatbot(height=540)
-        msg = gr.Textbox()
 
-        def respond(message, chat_history):
-            main.main_web_ui_chat(message)
+        with gr.Row():
+            msg = gr.Textbox(scale=3)
 
-            # Retrieve the result now
-            message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+            def respond(message, chat_history):
 
-            chat_history.append((message, message_reply))
+                # No send blank: use button for that!
+                if message == "":
+                    return ""
 
-            return ""   # Note: Removed the update to the chatbot here, as it is done anyway in the update_chat()!
+                main.main_web_ui_chat(message)
 
-        def update_chat():
-            # Return whole chat, plus the one I have just sent
-            if API.Oogabooga_Api_Support.currently_sending_message != "":
+                # Retrieve the result now
+                # message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+                #
+                # chat_history.append((message, message_reply))
 
-                # Prep for viewing without metadata
-                chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
-                i = 0
-                while i < len(chat_combine):
-                    chat_combine[i] = chat_combine[i][:2]
-                    i += 1
-                chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, API.Oogabooga_Api_Support.currently_streaming_message])
+                return ""   # Note: Removed the update to the chatbot here, as it is done anyway in the update_chat()!
 
-                return chat_combine[-30:]
+            def update_chat():
+                # Return whole chat, plus the one I have just sent
+                if API.Oogabooga_Api_Support.currently_sending_message != "":
 
+                    # Prep for viewing without metadata
+                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    i = 0
+                    while i < len(chat_combine):
+                        chat_combine[i] = chat_combine[i][:2]
+                        i += 1
+                    chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, API.Oogabooga_Api_Support.currently_streaming_message])
 
-            # Return whole chat, last 30
-            else:
-                chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
-                i = 0
-                while i < len(chat_combine):
-                    chat_combine[i] = chat_combine[i][:2]
-                    i += 1
-
-                return chat_combine
+                    return chat_combine[-30:]
 
 
-        msg.submit(respond, [msg, chatbot], [msg])
+                # Return whole chat, last 30
+                else:
+                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    i = 0
+                    while i < len(chat_combine):
+                        chat_combine[i] = chat_combine[i][:2]
+                        i += 1
+
+                    return chat_combine
+
+
+            msg.submit(respond, [msg, chatbot], [msg])
+
+            send_button = gr.Button(variant="primary", value="Send")
+            send_button.click(respond, inputs=[msg, chatbot], outputs=[msg])
+
         demo.load(update_chat, every=0.05, outputs=[chatbot])
 
         #

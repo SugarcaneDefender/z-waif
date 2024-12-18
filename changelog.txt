@@ -1,5 +1,31 @@
 Changelog
 
+
+v1.5
+
+- Stopping Strings (what cuts off your waifu if they try talking out of format) can now be changed in the configurables.
+- There is now a "Send" button you can click next to the textbox.
+- The primary color of the interface is now changeable via the configurables. This changes the color of the borders, checkboxes, and the new "Send" button.
+	- For a full list of colors, go to: https://www.gradio.app/guides/theming-guide
+
+- The results from the visual system can now be properly rerolled.
+	- The streamed results can also be interrupted and re-done as it comes in.
+	- Metadata tags are also applied to visual chats, for future (and current) reference.
+- Streaming from the visual system now properly shows in the UI.
+- The visual preview no longer requires tabbing in to it to accept / cancel.
+
+- Can now run multiple emotes per message.
+- Emotes now trigger as text streams in.
+- Removed an old vtube.py script that was unused.
+
+- Hotkeys are now customizable, and can be changed in the configurables.
+- Fixed a bug where some users would crash and fail to launch if the hotkeys failed to bind.
+- Fixed an issue where doing hotkeys multiple times would "queue" the actions.
+
+
+
+---.---.---.---
+
 V1.4
 
 - The text now "streams", appearing as it is generated!
