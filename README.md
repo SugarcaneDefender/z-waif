@@ -55,29 +55,32 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 
 ## Recent Changelog
 
-V1.4
+V1.5
 
-- The text now "streams", appearing as it is generated!
-	- This is the default now, responses come in quicker and can be read out loud as they come.
-		- If you get issues, try disabling streaming text in the .env file.
-	- In effect, this means a slower language model is no issue, as long as it generates a little faster than your waifu talks.
-		- This won't apply to internal thinking, such as the camera or other future operations.
-		- Only things read out loud will actually go faster.
-	- Works on multimodal/visual as well.
-		- No "[System C]" headers while streaming, as it is read aloud immediately.
-		- Makes the vision a whole lot better to use, as it tends to be long winded and slow to generate.
+- Stopping Strings (what cuts off your waifu if they try talking out of format) can now be changed in the configurables.
+- There is now a "Send" button you can click next to the textbox.
+- The primary color of the interface is now changeable via the configurables. This changes the color of the borders, checkboxes, and the new "Send" button.
+	- For a full list of colors, go to: https://www.gradio.app/guides/theming-guide
 
-- RP Supression and Newline Cut are now unbound from one another.
-- RP Supression and Newline Cut can both be turned on/off in the UI, as well as on/off in the .env (.env is what it is on boot).
-- Lowered the RP Supression (what stops your AI acting as multiple people) watchdog counter (less likely to misfire).
-- Stopping strings are better organized internally.
-- Warning messages about messages being too short or too long now appear in the debug log.
+- The results from the visual system can now be properly rerolled.
+	- The streamed results can also be interrupted and re-done as it comes in.
+	- Metadata tags are also applied to visual chats, for future (and current) reference.
+- Streaming from the visual system now properly shows in the UI.
+- The visual preview no longer requires tabbing in to it to accept / cancel.
+
+- Can now run multiple emotes per message.
+	- Emotes now trigger as text streams in.
+	- Removed an old vtube.py script that was unused.
+
+- Hotkeys are now customizable, and can be changed in the configurables.
+- Fixed a bug where some users would crash and fail to launch if the hotkeys failed to bind.
+- Fixed an issue where doing hotkeys multiple times would "queue" the actions.
 
 ## To-Do
 
 ### 📶 Enhancements
 - [ ] Make the RAG/Long Term Memory be multiprocessed for better performance
-- [ ] Make the LLM input and TTS output streaming, to lower the "processing time"
+- [X] Make the LLM input and TTS output streaming, to lower the "processing time"
 - [ ] Figure out how to load LLAMA 3.2 Vision, for better multimodal, and no needed loader
 
 ### 🤖 Improvements
