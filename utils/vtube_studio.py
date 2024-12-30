@@ -27,6 +27,8 @@ EMOTE_ID = 2
 EMOTE_STRING = ""
 streaming_emote_list = []
 
+emote_request_list = []
+
 CUR_LOOK = 0
 LOOK_LEVEL_ID = 1
 look_start_id = int(os.environ.get("EYES_START_ID"))
@@ -87,7 +89,7 @@ def check_emote_string():
     # If we got an emote, run it through the system
     if EMOTE_ID != -1:
         for inlist_emote in emote_list:
-            run_emote(inlist_emote)
+            emote_request_list.append(inlist_emote)
 
 def check_emote_string_streaming():
     global streaming_emote_list
@@ -114,7 +116,7 @@ def check_emote_string_streaming():
     # Run the emotes, if we have any
     if len(emote_list) > 0:
         for inlist_emote in emote_list:
-            run_emote(inlist_emote)
+            emote_request_list.append(inlist_emote)
 
 
 def clear_streaming_emote_list():
@@ -122,8 +124,31 @@ def clear_streaming_emote_list():
     streaming_emote_list = []
 
 
+#
+# This is our basic loop to run emotes. Actually runs it in another thread; just called from main and then looped
+def emote_runner_loop():
+    while True:
+        time.sleep(0.001)
+
+        if len(emote_request_list) > 0:
+            this_emote = emote_request_list[-1]
+            emote_request_list.pop()
+
+            run_emote(this_emote)
+
+
+
+
 def run_emote(inlist_emote):
-    asyncio.run(emote(inlist_emote))
+    time.sleep(0.001)  # Mini Rest (frame pierce happened)
+
+    try:
+        asyncio.run(emote(inlist_emote))
+
+    except:
+        time.sleep(0.002)
+
+    # ^^^ Runs the emote, if there is an error allow a small rest
 
 async def emote(inlist_emote):
     await VTS.connect()
@@ -160,16 +185,23 @@ def change_look_level(value):
     global LOOK_LEVEL_ID, CUR_LOOK
 
     if LOOK_LEVEL_ID != new_look_ID:
-        run_clear_look()
+
+        # Start another thread for this look clearing
+        vtube_interaction_runner = threading.Thread(target=run_clear_look)
+        vtube_interaction_runner.daemon = True
+        vtube_interaction_runner.start()
 
         #mini rest between
-        time.sleep(0.02)
+        time.sleep(0.017)
 
         LOOK_LEVEL_ID = new_look_ID
 
         # only change if we are not at center
         if new_look_ID != -1:
-            run_set_look()
+            # Start another thread for this look
+            vtube_interaction_runner = threading.Thread(target=run_set_look)
+            vtube_interaction_runner.daemon = True
+            vtube_interaction_runner.start()
         else:
             CUR_LOOK = 0
 
@@ -177,25 +209,45 @@ def change_look_level(value):
 
 
 def run_clear_look():
-    asyncio.run(clear_look())
+    time.sleep(0.001)  # Mini Rest (frame pierce happened)
+
+    try:
+        asyncio.run(clear_look())
+
+    except:
+        time.sleep(0.002)
+
+    # ^^^ Runs the emote, if there is an error allow a small rest
 
 def run_set_look():
-    asyncio.run(set_look())
+    time.sleep(0.001)  # Mini Rest (frame pierce happened)
+
+    try:
+        asyncio.run(set_look())
+
+    except:
+        time.sleep(0.002)
+
+    # ^^^ Runs the emote, if there is an error allow a small rest
+
 
 async def clear_look():
+    # Remove the previous look emote
+
     await VTS.connect()
     await VTS.request_authenticate()
 
-    # Remove the previous look emote
+    response_data = await VTS.request(VTS.vts_request.requestHotKeyList())
+    hotkey_list = []
+
+    # Do not trigger if the curlook is 0 (or it will trigger the first emote due to framepiercing)
     if CUR_LOOK != 0:
-        response_data = await VTS.request(VTS.vts_request.requestHotKeyList())
-        hotkey_list = []
         for hotkey in response_data["data"]["availableHotkeys"]:
             hotkey_list.append(hotkey["name"])
         send_hotkey_request = VTS.vts_request.requestTriggerHotKey(hotkey_list[CUR_LOOK])
         await VTS.request(send_hotkey_request)
 
-        await VTS.close()
+    await VTS.close()
 
 
 async def set_look():

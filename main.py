@@ -29,6 +29,8 @@ import utils.based_rag
 import utils.tag_task_controller
 import utils.gaming_control
 
+import utils.uni_pipes
+
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -62,28 +64,33 @@ def main():
         is_live_pipe = True
 
         if command == "CHAT":
-            main_converse()
-
-        elif command == "RATE":
-            main_rate()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Chat", is_main_pipe=True)
 
         elif command == "NEXT":
-            main_next()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Next", is_main_pipe=True)
 
         elif command == "REDO":
-            main_undo()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Redo", is_main_pipe=True)
 
         elif command == "SOFT_RESET":
-            main_soft_reset()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Soft-Reset", is_main_pipe=True)
 
         elif command == "ALARM":
-            main_alarm_message()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Alarm", is_main_pipe=True)
 
         elif command == "VIEW":
-            main_view_image()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-View-Image", is_main_pipe=True)
 
         elif command == "BLANK":
-            main_send_blank()
+            utils.uni_pipes.start_new_pipe(desired_process="Main-Blank", is_main_pipe=True)
+
+        elif command == "Hangout":
+            utils.uni_pipes.start_new_pipe(desired_process="Hangout-Loop", is_main_pipe=True)
+
+        # Wait until the main pipe we have sent is finished
+        while utils.uni_pipes.main_pipe_running:
+            # Sleep the loop while our main pipe still running
+            time.sleep(0.001)
 
         # Stack wipe any current inputs, to avoid doing multiple in a row
         utils.hotkeys.stack_wipe_inputs()
@@ -709,6 +716,11 @@ def run_program():
         vtube_studio_thread.daemon = True
         vtube_studio_thread.start()
 
+        # Emote loop as well
+        vtube_studio_thread = threading.Thread(target=utils.vtube_studio.emote_runner_loop)
+        vtube_studio_thread.daemon = True
+        vtube_studio_thread.start()
+
 
     # Start another thread for the alarm interaction
     if utils.settings.alarm_enabled:
@@ -754,8 +766,8 @@ def run_program():
     gradio_thread.daemon = True
     gradio_thread.start()
 
-
-
+    # Line to manually crash the software (y'know, testing and whatnot)
+    # calculated_test = 0 / 0
 
     # Run the primary loop
     main()

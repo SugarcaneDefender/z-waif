@@ -10,6 +10,8 @@ asterisk_ban = False
 supress_rp = True
 stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 
+hangout_mode = False
+
 alarm_time = "09:09"
 model_preset = "Default"
 
