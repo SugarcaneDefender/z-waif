@@ -55,6 +55,19 @@ If you need help / assistance, feel free to email me for this project at zwaif77
 
 ## Recent Changelog
 
+v1.5-R2
+
+- While using streaming text, emotes are now threaded, meaning that there is no pause for them to happen.
+- The VtubeStudio interactions now use a try-catch system, adding general resistance to errors.
+- Added in more implementation for Unipipes - the system that basically will manage the centralized execution of code.
+
+- Enhanced the ".bat" files, making them pause after a crash happens.
+
+- Fixed an error where the random looking would cause a crash due to requests not closing properly.
+- Fixed an issue with the Discord module crashing when emotes would be triggered.
+
+---.---.---.---
+
 V1.5
 
 - Stopping Strings (what cuts off your waifu if they try talking out of format) can now be changed in the configurables.
