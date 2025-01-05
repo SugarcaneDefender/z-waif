@@ -44,7 +44,7 @@ The goal of the project is less about giving an "all in one package", and moreso
 ## Install & Links
 Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJoQZDAWv282z88jeUCadivLnKDXCo/edit?usp=sharing) that you can look at. It will show you how to install, how to use the program, and what options you have. Please also take a look at the [Youtube videos for the install](https://www.youtube.com/playlist?list=PLH4bHuriW70RCl-2qHbSda8LHpuN8vvZZ).
 
-If you need help / assistance, feel free to email me for this project at zwaif77@gmail.com
+If you need help / assistance, please submit a GitHub issue, or feel free to email me for this project at zwaif77@gmail.com
 
 ## Diaspora
 #### The Original:
