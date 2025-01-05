@@ -22,15 +22,16 @@ def audio_callback(indata, frames, time, status):
     if no_mic:
         VOL_LISTENER_LEVEL = 0
 
+    # volume_norm = our current volume value
     volume_norm = np.linalg.norm(indata) * 10
 
     # for reference, 0-2 is quiet background, 20 - 30 is non direct talking, 40+ is identified talking
     # take a rolling average, be more aggressive for if the sound is louder
 
     if (volume_norm > VOL_LISTENER_LEVEL):
-        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + 2) / 2
+        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + 3) / 2
     else:
-        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 5) + volume_norm) / 6
+        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 7) + volume_norm - 0.05) / 8
 
 
 def get_vol_level():

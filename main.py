@@ -30,6 +30,7 @@ import utils.tag_task_controller
 import utils.gaming_control
 
 import utils.uni_pipes
+import utils.logging
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -95,6 +96,10 @@ def main():
         # Stack wipe any current inputs, to avoid doing multiple in a row
         utils.hotkeys.stack_wipe_inputs()
 
+        # For semi-autochat, press the button
+        if utils.settings.semi_auto_chat:
+            utils.hotkeys.speak_input_toggle_from_ui()
+
         # Flag us as no longer running a command
         is_live_pipe = False
 
@@ -117,6 +122,12 @@ def main_converse():
 
         # My own edit- To remove possible transcribing errors
         transcript = "Whoops! The code is having some issues, chill for a second."
+
+        # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
+        if utils.audio.latest_chat_frame_count < 249 and utils.hotkeys.get_autochat_toggle():
+            print("Audio length too small for autochat - cancelling...")
+            utils.logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
+            return
 
         transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
 
@@ -737,6 +748,10 @@ def run_program():
     volume_listener_toggle = threading.Thread(target=utils.hotkeys.listener_timer)
     volume_listener_toggle.daemon = True
     volume_listener_toggle.start()
+
+    chat_recording_buffer = threading.Thread(target=utils.audio.autochat_audio_buffer_record)
+    chat_recording_buffer.daemon = True
+    chat_recording_buffer.start()
 
 
     # Start another thread for the Minecraft watchdog

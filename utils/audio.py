@@ -1,9 +1,15 @@
+import time
+
 import pyaudio
 import wave
 
 from pydub import AudioSegment
 import utils.hotkeys
 import os, audioop
+
+import sounddevice as sd
+
+import utils.volume_listener
 
 CHUNK = 1024
 
@@ -17,7 +23,9 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 FILENAME = "voice.wav"
 SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
 
+chat_buffer_frames = []
 
+latest_chat_frame_count = 0
 
 
 
@@ -90,6 +98,11 @@ def record():
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
     frames = []
 
+    # Check for if we want to add our audio buffer
+    global chat_buffer_frames
+    if len(chat_buffer_frames) > 1:
+        frames = chat_buffer_frames.copy()
+
     while utils.hotkeys.get_speak_input():
         data = stream.read(CHUNK)
         frames.append(data)
@@ -108,4 +121,44 @@ def record():
     wf.writeframes(b''.join(frames))
     wf.close()
 
+    # Test out playing the recorded audio (wav file)
+    # play_wav(SAVE_PATH)
+
+    # Write out our frame count
+    global latest_chat_frame_count
+    latest_chat_frame_count = len(frames)
+
     return SAVE_PATH
+
+def autochat_audio_buffer_record():
+
+    # Make sure we have an actual audio device, return otherwise
+    if utils.volume_listener.no_mic:
+        return
+
+    global chat_buffer_frames
+
+    # Main recording buffer
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+
+    while True:
+
+        # If there is no autochat, or we are actively in the middle of a chat, clear it
+        if utils.hotkeys.get_autochat_toggle() == False:
+            time.sleep(0.002)     # Rest here a bit, no need to hotloop it
+            chat_buffer_frames = []
+
+
+        # If there is autochat, and no active chat, record it
+        elif utils.hotkeys.get_autochat_toggle() == True:
+
+            # Record
+            data = stream.read(CHUNK)
+            chat_buffer_frames.append(data)
+
+            # Clearing anything over the buffer
+            if len(chat_buffer_frames) > 74:
+                chat_buffer_frames.pop(0)
+
+

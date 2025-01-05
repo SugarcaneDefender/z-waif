@@ -1,5 +1,20 @@
 Changelog
 
+v1.6
+
+- Added an option for Semi-Auto Chat
+	- This will simply toggle the mic on after each reply.
+	- Keyboard hotkey for this is "Q"
+	- Mutually exclusive with Autochat.
+
+- Autochat will not send any requests under ~2 seconds.
+	- This is to help stop noises randomly triggering responses.
+
+- Autochat now has an audio buffer that will contain the ~1-2 seconds before you started speaking.
+- Adjusted the parameters for the Autochat, making it decay faster while no noise is detected.
+
+---.---.---.---
+
 v1.5-R2
 
 - While using streaming text, emotes are now threaded, meaning that there is no pause for them to happen.
@@ -169,5 +184,3 @@ V1.0
 	- VTuber Emotes
 	- Hotkeys
 	- Various other initial release items
-
----.---.---.---

@@ -9,6 +9,7 @@ import utils.volume_listener
 import utils.settings
 import json
 import utils.logging
+import utils.audio
 
 
 RATE_PRESSED = False
@@ -93,7 +94,9 @@ def bind_all_hotkeys():
         "Soft Reset" : input_soft_reset,
         "View Image" : input_view_image,
         "Cancel Image" : input_cancel_image,
-        "Send Blank" : input_send_blank
+        "Send Blank" : input_send_blank,
+
+        "Semi Auto Chat" : input_toggle_semi_autochat
     }
 
     # Cycle through, dictionary define
@@ -250,12 +253,38 @@ def input_toggle_autochat():
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
     print("\nFull Auto Set To " + str(FULL_AUTO_TOGGLED) + " !")
 
+    # Disable semi-auto
+    utils.settings.semi_auto_chat = False
+
+
+
+# For when semi-auto chat is turned on
+def disable_autochat():
+    global FULL_AUTO_TOGGLED
+    FULL_AUTO_TOGGLED = False
+
 def input_toggle_autochat_from_ui():
     global FULL_AUTO_TOGGLED
 
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
     print("\nFull Auto Set To " + str(FULL_AUTO_TOGGLED) + " !")
 
+    # Disable semi-auto
+    utils.settings.semi_auto_chat = False
+
+
+# From keyboard
+def input_toggle_semi_autochat():
+
+    if utils.settings.hotkeys_locked:
+        return
+
+    # Mutually exclusive
+    disable_autochat()
+
+    utils.settings.semi_auto_chat = not utils.settings.semi_auto_chat
+
+    print("\nSemi-Auto Chat set to " + str(utils.settings.semi_auto_chat) + " !")
 
 def listener_timer():
     global SPEAK_TOGGLED

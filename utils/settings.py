@@ -10,6 +10,7 @@ asterisk_ban = False
 supress_rp = True
 stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 
+semi_auto_chat = False
 hangout_mode = False
 
 alarm_time = "09:09"

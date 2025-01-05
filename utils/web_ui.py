@@ -169,15 +169,34 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             autochat_sensitivity_slider.change(fn=change_autochat_sensitivity, inputs=autochat_sensitivity_slider)
 
 
+        #
+        # Semi-Auto Chat Settings
+        #
 
+        def semi_auto_chat_button_click():
+
+            # Toggle
+            utils.settings.semi_auto_chat = not utils.settings.semi_auto_chat
+
+            # Disable
+            utils.hotkeys.disable_autochat()
+
+            return
+
+
+        with gradio.Row():
+            semi_auto_chat_button = gr.Button(value="Toggle Semi-Auto Chat")
+            semi_auto_chat_button.click(fn=semi_auto_chat_button_click)
+
+            semi_auto_chat_checkbox_view = gr.Checkbox(label="Semi-Auto Chat Enabled")
 
 
         def update_settings_view():
-            return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle()
+            return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle(), utils.settings.semi_auto_chat
 
 
         demo.load(update_settings_view, every=0.05,
-                  outputs=[recording_checkbox_view, autochat_checkbox_view])
+                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view])
 
 
 
