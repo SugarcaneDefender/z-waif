@@ -55,18 +55,32 @@ If you need help / assistance, please submit a GitHub issue, or feel free to ema
 
 ## Recent Changelog
 
-v1.6
+v1.7
 
-- Added an option for Semi-Auto Chat
-	- This will simply toggle the mic on after each reply.
-	- Keyboard hotkey for this is "Q"
-	- Mutually exclusive with Autochat.
+- Hangout Mode	
+	- Like a very advanced autochat.
+	- Your waifu decides how to reply to messages, based on hardcoded presets.
+		- They may wait, see if any more input comes, and then reply
+		- They may reply right away
+		- They may use the camera
+		- In the future they could also think on their own and decide how to reply
+	- You can configure their reply personality to change how they reply, or how engaged they are.
+	- Certain words phrases "think about" or "ponder" will cause them to think more.
+		- Words are configurable under "Configurables/Hangout"
+	- Certain words phrases "look at this" or "camera" will cause them to use the vision, if enabled.
+		- Words are configurable under "Configurables/Hangout"
+	- By default, you can interrupt them by saying "Wait, " and then their name.
+		- Can eat up resources, as this also uses whisper. Toggleable in the Configurables.
 
-- Autochat will not send any requests under ~2 seconds.
-	- This is to help stop noises randomly triggering responses.
+- The chat logs now have an automatic backup, named "LiveLogBackup.bak".
+	- Simply rename the file to "LiveLog.json" to restore.
+	- Backs it up upon every time the program is started.
+	- Includes a failsafe measure to not back the files up if the history gets cleared.
+	- Of course, backing up logs in additional methods (to a flash drive, or other PC) is always advised.
 
-- Autochat now has an audio buffer that will contain the ~1-2 seconds before you started speaking.
-- Adjusted the parameters for the Autochat, making it decay faster while no noise is detected.
+- The RAG database now has a progress bar when first calculating it.
+- Further enhanced the Autochat volume listener to better handle different sensitivities.
+- Fixed an issue where streamed camera chats would appear in the log twice.
 
 ## To-Do
 
