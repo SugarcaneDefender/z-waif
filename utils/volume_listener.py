@@ -3,6 +3,8 @@ import sounddevice as sd
 from numba.cuda.libdevice import trunc
 from sympy import false
 
+import utils.hotkeys
+
 duration = 10 #in seconds
 
 global VOL_LISTENER_LEVEL
@@ -29,9 +31,9 @@ def audio_callback(indata, frames, time, status):
     # take a rolling average, be more aggressive for if the sound is louder
 
     if (volume_norm > VOL_LISTENER_LEVEL):
-        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + 3) / 2
+        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + (0.024 * utils.hotkeys.SPEAKING_VOLUME_SENSITIVITY) + 0.01) / 2
     else:
-        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 7) + volume_norm - 0.05) / 8
+        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 8) + volume_norm - (0.0044 * utils.hotkeys.SPEAKING_VOLUME_SENSITIVITY)) / 9
 
 
 def get_vol_level():

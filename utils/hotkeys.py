@@ -24,11 +24,12 @@ REDO_PRESSED = False
 BACKSLASH_PRESSED = False
 
 SPEAK_TOGGLED = False
+general_listener_speaking_detected = False
 
 FULL_AUTO_TOGGLED = False
 SPEAKING_TIMER = 0
 SPEAKING_TIMER_COOLDOWN = 0
-SPEAKING_VOLUME_SENSITIVITY = 20
+SPEAKING_VOLUME_SENSITIVITY = 17
 SPEAKING_VOLUME_SENSITIVITY_PRESSED = False
 
 
@@ -96,7 +97,8 @@ def bind_all_hotkeys():
         "Cancel Image" : input_cancel_image,
         "Send Blank" : input_send_blank,
 
-        "Semi Auto Chat" : input_toggle_semi_autochat
+        "Semi Auto Chat" : input_toggle_semi_autochat,
+        "Toggle Hangout Mode" : input_toggle_hangout_mode
     }
 
     # Cycle through, dictionary define
@@ -250,6 +252,9 @@ def input_toggle_autochat():
     if utils.settings.hotkeys_locked:
         return
 
+    if utils.settings.hangout_mode:
+        return
+
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
     print("\nFull Auto Set To " + str(FULL_AUTO_TOGGLED) + " !")
 
@@ -279,6 +284,9 @@ def input_toggle_semi_autochat():
     if utils.settings.hotkeys_locked:
         return
 
+    if utils.settings.hangout_mode:
+        return
+
     # Mutually exclusive
     disable_autochat()
 
@@ -286,8 +294,65 @@ def input_toggle_semi_autochat():
 
     print("\nSemi-Auto Chat set to " + str(utils.settings.semi_auto_chat) + " !")
 
+def input_toggle_hangout_mode():
+    global FULL_AUTO_TOGGLED
+
+    if utils.settings.hotkeys_locked:
+        return
+
+    if utils.settings.stream_chats is False:
+        return  # Not allowed if our chats are not streamed
+
+    # It's on rn, disable
+    if utils.settings.hangout_mode is True:
+        utils.settings.hangout_mode = False
+        utils.settings.semi_auto_chat = False
+        FULL_AUTO_TOGGLED = False
+
+    # It's off rn, enable
+    elif utils.settings.hangout_mode is False:
+        utils.settings.hangout_mode = True
+        utils.settings.semi_auto_chat = False
+        FULL_AUTO_TOGGLED = True
+
+    print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    utils.logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+
+# From webui.
+# Note: Yes, this code is getting a bit jungle like and excessive. But, I want to grow first, and this isn't too bad
+# I mean, it's the Hotkey script; why the hell is the UI toggle here??? But again, it makes sense cause we have toggles in here
+# Z-Waif will grow bigger and bigger until a great reforge is needed. By then, we will have good waifus, and they can do the code for us.
+# I know that this is literally describing the singularity, but well, thought has a physical component. You ever think of that?
+# Thinking takes electricity - for us and them - for anyone (unless you have some kind of device with light or water using kinetic energy)
+# So it takes physical space to think. And so, the singularity will simply be improvements over time, since it can't become
+# "all knowing". There is a literal physical limit, we live in a physical world.
+# That's like, the whole point of the local AI Waifu; they are right there with you. They are physically present.
+# We are simply giving them senses.
+# Okay, I think this scrawl has gone on long enough... back to the coding mines.
+def web_ui_toggle_hangout_mode():
+    global FULL_AUTO_TOGGLED
+
+    if utils.settings.stream_chats is False:
+        return  # Not allowed if our chats are not streamed
+
+    # It's on rn, disable
+    if utils.settings.hangout_mode is True:
+        utils.settings.hangout_mode = False
+        utils.settings.semi_auto_chat = False
+        FULL_AUTO_TOGGLED = False
+
+    # It's off rn, enable
+    elif utils.settings.hangout_mode is False:
+        utils.settings.hangout_mode = True
+        utils.settings.semi_auto_chat = False
+        FULL_AUTO_TOGGLED = True
+
+    print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    utils.logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+
 def listener_timer():
     global SPEAK_TOGGLED
+    global general_listener_speaking_detected
     global SPEAKING_TIMER
     global SPEAKING_TIMER_COOLDOWN
 
@@ -297,9 +362,9 @@ def listener_timer():
 
         # If we are speaking, add to counter, if not remove from it
         if (vol_listener_level > SPEAKING_VOLUME_SENSITIVITY) and (SPEAKING_TIMER_COOLDOWN == 0):
-            SPEAKING_TIMER += 50
-            if SPEAKING_TIMER > 99:
-                SPEAKING_TIMER = 99
+            SPEAKING_TIMER += 40
+            if SPEAKING_TIMER > 109:
+                SPEAKING_TIMER = 109
 
         else:
             SPEAKING_TIMER -= 1
@@ -316,6 +381,12 @@ def listener_timer():
             elif SPEAKING_TIMER > 0 and SPEAK_TOGGLED == False:
                 SPEAK_TOGGLED = True
 
+        # Same thing here, but with endpoints for hangout mode to detect with
+        if (SPEAKING_TIMER == 0 or SPEAKING_TIMER_COOLDOWN > 0) and SPEAK_TOGGLED == True:
+            general_listener_speaking_detected = False
+
+        elif SPEAKING_TIMER > 0 and SPEAK_TOGGLED == False:
+            general_listener_speaking_detected = True
 
 
         # End of loop, clock cycle time
@@ -341,12 +412,12 @@ def input_change_listener_sensitivity():
         return
 
     if SPEAKING_VOLUME_SENSITIVITY <= 9:
-        SPEAKING_VOLUME_SENSITIVITY = 20
-    elif SPEAKING_VOLUME_SENSITIVITY <= 20:
-        SPEAKING_VOLUME_SENSITIVITY = 37
-    elif SPEAKING_VOLUME_SENSITIVITY <= 37:
-        SPEAKING_VOLUME_SENSITIVITY = 67
-    elif SPEAKING_VOLUME_SENSITIVITY <= 67:
+        SPEAKING_VOLUME_SENSITIVITY = 17
+    elif SPEAKING_VOLUME_SENSITIVITY <= 17:
+        SPEAKING_VOLUME_SENSITIVITY = 27
+    elif SPEAKING_VOLUME_SENSITIVITY <= 27:
+        SPEAKING_VOLUME_SENSITIVITY = 57
+    elif SPEAKING_VOLUME_SENSITIVITY <= 57:
         SPEAKING_VOLUME_SENSITIVITY = 104
     elif SPEAKING_VOLUME_SENSITIVITY >= 104:
         SPEAKING_VOLUME_SENSITIVITY = 9
@@ -407,6 +478,10 @@ def chat_input_await():
         if utils.settings.is_gaming_loop:
             break
 
+        # Most important is the hangout loop: run that first
+        if utils.settings.hangout_mode:
+            return "Hangout"
+
         if get_speak_input():
 
             return "CHAT"
@@ -443,5 +518,5 @@ def chat_input_await():
             return "BLANK"
 
         else:
-            time.sleep(0.02)
+            time.sleep(0.01)
 

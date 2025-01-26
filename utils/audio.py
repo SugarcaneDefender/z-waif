@@ -22,6 +22,7 @@ RATE = 44100
 current_directory = os.path.dirname(os.path.abspath(__file__))
 FILENAME = "voice.wav"
 SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
+SAVE_PATH_ORDUS = os.path.join(current_directory, "resource", "voice_in", "interrupt_voice.wav")
 
 chat_buffer_frames = []
 
@@ -129,6 +130,43 @@ def record():
     latest_chat_frame_count = len(frames)
 
     return SAVE_PATH
+
+def record_for_streaming_snipper():
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    frames = []
+
+    # Check for if we want to add our audio buffer
+    global chat_buffer_frames
+    if len(chat_buffer_frames) > 1:
+        frames = chat_buffer_frames.copy()
+
+    while len(frames) < 150:
+        data = stream.read(CHUNK)
+        frames.append(data)
+
+    stream.stop_stream()
+    stream.close()
+
+    p.terminate()
+
+
+    wf = wave.open(SAVE_PATH, 'wb')
+
+    wf.setnchannels(CHANNELS)
+    wf.setsampwidth(p.get_sample_size(FORMAT))
+    wf.setframerate(RATE)
+    wf.writeframes(b''.join(frames))
+    wf.close()
+
+    # Test out playing the recorded audio (wav file)
+    # play_wav(SAVE_PATH)
+
+    # Write out our frame count
+    global latest_chat_frame_count
+    latest_chat_frame_count = len(frames)
+
+    return SAVE_PATH_ORDUS
 
 def autochat_audio_buffer_record():
 

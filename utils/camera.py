@@ -43,8 +43,8 @@ def capture_pic():
         # saving image in local storage
         cv2.imwrite("LiveImage.png", image)
 
-        # Show it to us, if we are previewing!
-        if utils.settings.cam_image_preview:
+        # Show it to us, if we are previewing! (not during hangout mode, though, never preview there)
+        if utils.settings.cam_image_preview and not utils.settings.hangout_mode:
 
             # Loop to wait for image preview
             while (utils.hotkeys.VIEW_IMAGE_PRESSED is not True) and (utils.hotkeys.CANCEL_IMAGE_PRESSED is not True):

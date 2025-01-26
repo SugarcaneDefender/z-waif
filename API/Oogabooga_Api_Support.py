@@ -25,6 +25,7 @@ import emoji
 import threading
 import utils.hotkeys
 import utils.vtube_studio
+import utils.hangout
 
 
 load_dotenv()
@@ -62,6 +63,7 @@ last_message_streamed = False
 streaming_sentences_ticker = 0
 
 force_skip_streaming = False
+flag_end_streaming = False
 
 is_in_api_request = False
 
@@ -252,6 +254,10 @@ def run_streaming(user_input, temp_level):
     # We are starting our API request!
     is_in_api_request = True
 
+    # Clear possible streaming endflag
+    global flag_end_streaming
+    flag_end_streaming = False
+
     # Message that is currently being sent
     currently_sending_message = user_input
 
@@ -363,7 +369,37 @@ def run_streaming(user_input, temp_level):
         payload = json.loads(event.data)
         chunk = payload['choices'][0]['delta']['content']
         assistant_message += chunk
-        streamed_update_handler(chunk, assistant_message)
+        streamed_response_check = streamed_update_handler(chunk, assistant_message)
+
+        # IF we break out, then make sure we cancel out properly
+        if streamed_response_check == "Cut":
+
+            # Clear the currently sending message variable
+            currently_sending_message = ""
+
+            # We are ending our API request!
+            is_in_api_request = False
+
+            return
+
+        # Cut for the hangout name being said
+        if streamed_response_check == "Hangout-Name-Cut" and utils.settings.hangout_mode:
+
+            # Add any existing stuff to our actual chat history
+            ooga_history.append([user_input, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+            save_histories()
+
+            # Remove flag
+            flag_end_streaming = False
+
+            # Clear the currently sending message variable
+            currently_sending_message = ""
+
+            # We are ending our API request!
+            is_in_api_request = False
+
+            return
+
 
         # Check if we need to force skip the stream (hotkey or manually)
         if utils.hotkeys.pull_next_press_input() or force_skip_streaming:
@@ -489,6 +525,15 @@ def streamed_update_handler(chunk, assistant_message):
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-2], refuse_pause=True)
 
+    if main.live_pipe_use_streamed_interrupt_watchdog and utils.hotkeys.SPEAK_TOGGLED:
+        return "Cut"
+
+    if flag_end_streaming:
+        return "Hangout-Name-Cut"
+
+    return "Continue"
+
+
 def set_force_skip_streaming(tf_input):
     global force_skip_streaming
     force_skip_streaming = tf_input
@@ -523,6 +568,12 @@ def send_image_via_oobabooga(direct_talk_transcript):
         received_cam_message = view_image(direct_talk_transcript)
     if utils.settings.stream_chats:
         received_cam_message = view_image_streaming(direct_talk_transcript)
+
+    return received_cam_message
+
+def send_image_via_oobabooga_hangout(direct_talk_transcript):
+
+    received_cam_message = view_image_streaming(direct_talk_transcript)
 
     return received_cam_message
 
@@ -594,6 +645,13 @@ def check_load_past_chat():
         # Load in our Based RAG as well
         utils.based_rag.load_rag_history()
 
+        # Make a quick backup of our file (if big enough, that way it won't clear if they happen to load again after it errors to 0 somehow)
+        if len(ooga_history) > 30:
+            # Export to JSON
+            with open("LiveLogBackup.bak", 'w') as outfile:
+                json.dump(ooga_history, outfile, indent=4)
+
+
 
 def save_histories():
 
@@ -639,7 +697,7 @@ def soft_reset():
 
     for message_pair in soft_reset_message:
 
-        ooga_history.append([message_pair[0], message_pair[1], utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        ooga_history.append([message_pair[0], message_pair[1],  message_pair[1], utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
 
@@ -1000,13 +1058,17 @@ def view_image_streaming(direct_talk_transcript):
     # We are starting our API request!
     is_in_api_request = True
 
+    # Clear possible streaming endflag
+    global flag_end_streaming
+    flag_end_streaming = False
+
     # Message that is currently being sent
     currently_sending_message = direct_talk_transcript
 
     # Clear the old streaming message, also we are not streaming so set it so
     currently_streaming_message = ""
     assistant_message = ''
-    last_message_streamed = False
+    last_message_streamed = True
 
     # Write last, non-system message to RAG (Since this is going in addition)
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
@@ -1101,7 +1163,35 @@ def view_image_streaming(direct_talk_transcript):
             payload = json.loads(event.data)
             chunk = payload['choices'][0]['delta']['content']
             assistant_message += chunk
-            streamed_update_handler(chunk, assistant_message)
+            streamed_response_check = streamed_update_handler(chunk, assistant_message)
+            if streamed_response_check == "Cut":
+
+                # Clear the currently sending message variable
+                currently_sending_message = ""
+
+                # We are ending our API request!
+                is_in_api_request = False
+
+                return
+
+            # Cut for the hangout name being said
+            if streamed_response_check == "Hangout-Name-Cut" and utils.settings.hangout_mode:
+                # Add any existing stuff to our actual chat history
+                ooga_history.append([direct_talk_transcript, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+                save_histories()
+
+                # Remove flag
+                flag_end_streaming = False
+
+                # Clear the currently sending message variable
+                currently_sending_message = ""
+
+                # We are ending our API request!
+                is_in_api_request = False
+
+                return
+
+
             # time.sleep(0.0197)    # NOTE: This is purely for style points to "slow" incoming responses
             # IDK, it was a bit annoying to wait, and setting it up in another thread straight up didn't work,
             # The TTS takes up the whole dang program lol.
@@ -1372,3 +1462,7 @@ def force_tokens_count(tokens):
     global forced_token_level, force_token_count
     forced_token_level = tokens
     force_token_count = True
+
+def pop_if_sent_is_latest(user_input):
+    if user_input == ooga_history[-1][0]:
+        ooga_history.pop()

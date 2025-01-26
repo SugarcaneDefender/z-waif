@@ -1,5 +1,34 @@
 Changelog
 
+v1.7
+
+- Hangout Mode	
+	- Like a very advanced autochat.
+	- Your waifu decides how to reply to messages, based on hardcoded presets.
+		- They may wait, see if any more input comes, and then reply
+		- They may reply right away
+		- They may use the camera
+		- In the future they could also think on their own and decide how to reply
+	- You can configure their reply personality to change how they reply, or how engaged they are.
+	- Certain words phrases "think about" or "ponder" will cause them to think more.
+		- Words are configurable under "Configurables/Hangout"
+	- Certain words phrases "look at this" or "camera" will cause them to use the vision, if enabled.
+		- Words are configurable under "Configurables/Hangout"
+	- By default, you can interrupt them by saying "Wait, " and then their name.
+		- Can eat up resources, as this also uses whisper. Toggleable in the Configurables.
+
+- The chat logs now have an automatic backup, named "LiveLogBackup.bak".
+	- Simply rename the file to "LiveLog.json" to restore.
+	- Backs it up upon every time the program is started.
+	- Includes a failsafe measure to not back the files up if the history gets cleared.
+	- Of course, backing up logs in additional methods (to a flash drive, or other PC) is always advised.
+
+- The RAG database now has a progress bar when first calculating it.
+- Further enhanced the Autochat volume listener to better handle different sensitivities.
+- Fixed an issue where streamed camera chats would appear in the log twice.
+
+---.---.---.---
+
 v1.6
 
 - Added an option for Semi-Auto Chat

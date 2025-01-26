@@ -3,6 +3,7 @@ import time
 import colorama
 import humanize, os, threading
 import emoji
+import asyncio
 
 import utils.audio
 import utils.hotkeys
@@ -28,6 +29,7 @@ import utils.retrospect
 import utils.based_rag
 import utils.tag_task_controller
 import utils.gaming_control
+import utils.hangout
 
 import utils.uni_pipes
 import utils.logging
@@ -46,6 +48,8 @@ is_live_pipe = False
 # Not for sure live pipe... atleast how it is counted now. Unipipes in a few updates will clear this up
 # Livepipe is only for the hotkeys actions, that is why... but these are for non-hotkey stuff!
 live_pipe_no_speak = False
+live_pipe_force_speak_on_response = False
+live_pipe_use_streamed_interrupt_watchdog = False
 
 
 # noinspection PyBroadException
@@ -124,13 +128,17 @@ def main_converse():
         transcript = "Whoops! The code is having some issues, chill for a second."
 
         # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
-        if utils.audio.latest_chat_frame_count < 249 and utils.hotkeys.get_autochat_toggle():
+        if utils.audio.latest_chat_frame_count < 179 and utils.hotkeys.get_autochat_toggle():
             print("Audio length too small for autochat - cancelling...")
             utils.logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
             return
 
         transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
 
+        if len(transcript) < 2:
+            print("Transcribed chat is blank - cancelling...")
+            utils.logging.update_debug_log("Transcribed chat is blank. Assuming anomaly and not actual speech...")
+            return
 
 
     except Exception as e:
@@ -173,6 +181,8 @@ def main_converse():
 
 
 def main_message_speak():
+    global live_pipe_force_speak_on_response
+
     #
     #   Message is received Here
     #
@@ -181,7 +191,8 @@ def main_message_speak():
 
 
     # Stop this if the message was streamed- we have already read it!
-    if API.Oogabooga_Api_Support.last_message_streamed:
+    if API.Oogabooga_Api_Support.last_message_streamed and not live_pipe_force_speak_on_response:
+        live_pipe_force_speak_on_response = False
         return
 
     #
@@ -478,10 +489,6 @@ def main_memory_proc():
 
 def main_view_image():
 
-    # Disabled for now! Loading in the multi-modal pipeline puts us overburdened!
-    # NOTE: No longer disabled, but please add a toggle for this on/off depending on cam!
-    # return
-
     # Give us some feedback
     print("\n\nViewing the camera! Please wait...\n")
 
@@ -633,6 +640,205 @@ def main_send_blank():
     # Pipe us to the reply function
     main_message_speak()
 
+#
+# Defs for main hangout functions
+#
+
+def hangout_converse():
+    print(
+        "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.YELLOW + "[Recording]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + ">",
+        end="", flush=True)
+
+    # Actual recording and waiting bit
+    audio_buffer = utils.audio.record()
+
+
+    try:
+        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + str(
+            humanize.naturalsize(
+                os.path.getsize(audio_buffer))) + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+        print(tanscribing_log, end="", flush=True)
+
+        # My own edit- To remove possible transcribing errors
+        transcript = "Whoops! The code is having some issues, chill for a second."
+
+        # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
+        # This will cause us to re-loop! Awesome!
+        if utils.audio.latest_chat_frame_count < 179 and utils.hotkeys.get_autochat_toggle():
+            print("Audio length too small for autochat - cancelling...")
+            utils.logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
+            return "Audio too short!"
+
+        transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+
+        if len(transcript) < 2:
+            print("Transcribed chat is blank - cancelling...")
+            utils.logging.update_debug_log("Transcribed chat is blank. Assuming anomaly and not actual speech...")
+            return "Audio too short!"
+
+
+
+    except Exception as e:
+        print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
+        return "Audio error!"
+
+    # Fix the transcript, to stop any accidental repeats (whisper glitch)
+    transcript = utils.cane_lib.remove_repeats(transcript)
+
+    # Print the transcript
+    print('\r' + ' ' * len(tanscribing_log), end="")
+    print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+          + "----Me----"
+          + colorama.Fore.RED + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+    print(f"{transcript.strip()}")
+    print("\n")
+
+    # Store the message, for cycling purposes
+    global stored_transcript
+    stored_transcript = transcript
+
+    # After use, delete the recording.
+    try:
+        os.remove(audio_buffer)
+    except:
+        pass
+
+    return transcript
+
+def hangout_reply(transcript):
+
+    # Bit here for interruption (only if needed)
+    if utils.hangout.use_interruptable_chat:
+        hangout_interruptable = threading.Thread(target=hangout_interrupt_audio_recordable)
+        hangout_interruptable.daemon = True
+        hangout_interruptable.start()
+
+    # Actual sending of the message, waits for reply automatically
+    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+
+    # Run our message checks
+    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function
+    main_message_speak()
+
+    # Clear our appendables (hangout)
+    utils.hangout.clear_appendables()
+
+def hangout_wait_reply_waitportion(transcript):
+    # Send our request, be sure to not read it aloud
+    global live_pipe_no_speak, live_pipe_use_streamed_interrupt_watchdog
+    live_pipe_no_speak = True
+    live_pipe_use_streamed_interrupt_watchdog = True
+
+    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+
+    live_pipe_use_streamed_interrupt_watchdog = False
+    live_pipe_no_speak = False
+
+def hangout_wait_reply_replyportion():
+
+    # wait for gen to finish
+    while API.Oogabooga_Api_Support.is_in_api_request:
+        time.sleep(0.01)
+
+    # Run our message checks
+    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Set it so that we speak on response
+    global live_pipe_force_speak_on_response
+    live_pipe_force_speak_on_response = True
+
+    # Pipe us to the reply function
+    main_message_speak()
+
+    # Clear our appendables (hangout)
+    utils.hangout.clear_appendables()
+
+    live_pipe_force_speak_on_response = False
+
+
+def hangout_view_image_reply(transcript, dont_speak_aloud):
+    global live_pipe_no_speak
+
+    # Give us some feedback
+    print("\n\nViewing the camera! Please wait...\n")
+
+    # Clear the camera inputs
+    utils.hotkeys.clear_camera_inputs()
+
+    #
+    # Get the image first before any processing.
+    #
+    # Screenshot capture
+    if utils.settings.cam_use_screenshot:
+        utils.camera.capture_screenshot()
+
+    #
+    # Normal camera capture
+    else:
+
+        # Just take the image, we do not confirm the image input with this version
+        utils.camera.capture_pic()
+
+
+
+    print("Image processing...\n")
+
+    # Append what was talked about recently
+    direct_talk_transcript = transcript
+
+    # Set us speaking aloud or not (controls are in the API script for streamed update handler
+    live_pipe_no_speak = dont_speak_aloud
+
+    # View and process the image, storing the result
+    transcript = API.Oogabooga_Api_Support.send_image_via_oobabooga_hangout(direct_talk_transcript)
+
+
+    # Run our required message checks
+    message_checks(transcript)
+
+    live_pipe_no_speak = False
+
+    # Clear our appendables (hangout)
+    utils.hangout.clear_appendables()
+
+def hangout_interrupt_audio_recordable():
+
+    # Minirest to allow the API to start requesting
+    time.sleep(2)
+
+    not_run_yet = True
+
+    # Auto-close when the api is in an request
+    while API.Oogabooga_Api_Support.is_in_api_request or not_run_yet:
+
+        time.sleep(0.01)
+
+        # Actual recording and waiting bit
+        audio_buffer = utils.audio.record()
+        ordus_transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+
+        # All the things you can say to get your waifu to stop talking
+        interrupt_messages = ["wait " + char_name, char_name + " wait", "wait, " + char_name, "wait. " + char_name, char_name + ", wait", char_name + ". wait"]
+
+        # Flag
+        not_run_yet = False
+
+        if utils.cane_lib.keyword_check(ordus_transcript, interrupt_messages):
+
+            # Force the interrupt
+            API.Oogabooga_Api_Support.flag_end_streaming = True
+
+            # Info
+            utils.logging.update_debug_log("Forcing generation to end - name detected!")
+
+            # We can exit now
+            return
+
+
 def run_program():
 
     # Announce that the program is running
@@ -717,7 +923,7 @@ def run_program():
     # Run any needed log conversions
     utils.log_conversion.run_conversion()
 
-    # Load the previous chat history
+    # Load the previous chat history, and make a backup of it
     API.Oogabooga_Api_Support.check_load_past_chat()
 
 

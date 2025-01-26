@@ -1,3 +1,5 @@
+import sys
+
 import API.Oogabooga_Api_Support
 import string
 import threading
@@ -8,6 +10,7 @@ import os
 import time
 import utils.logging
 import utils.settings
+from tqdm import tqdm
 
 # Words and their data
 word_database = {
@@ -86,16 +89,17 @@ def setup_based_rag():
 
     # Main loop that will run through and count all uses of a given word
     # Thread this as well eventually
-    i = 0
-    while i < len(history_database):
+
+    for history in tqdm(history_database, file=sys.stdout):
 
         # Add in each message pair
-        parse_words_to_database(history_database[i][0], 0)
-        parse_words_to_database(history_database[i][1], 1)
-
-        i = i + 1
+        parse_words_to_database(history[0], 0)
+        parse_words_to_database(history[1], 1)
 
 
+
+
+    print("\nCalculating word values now... Hold on...")
 
     # Calculate the values of all words
     # Thread this as well eventually

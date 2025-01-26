@@ -147,6 +147,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def autochat_button_click():
 
+            # No toggle in hangout mode
+            if utils.settings.hangout_mode:
+                return
+
             utils.hotkeys.input_toggle_autochat_from_ui()
 
             return
@@ -175,6 +179,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def semi_auto_chat_button_click():
 
+            # No toggle in hangout mode
+            if utils.settings.hangout_mode:
+                return
+
             # Toggle
             utils.settings.semi_auto_chat = not utils.settings.semi_auto_chat
 
@@ -191,12 +199,32 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             semi_auto_chat_checkbox_view = gr.Checkbox(label="Semi-Auto Chat Enabled")
 
 
+        #
+        # Hangout Mode
+        #
+
+        def hangout_mode_button_click():
+
+            # Toggle (Handled in the hotkey script)
+            utils.hotkeys.web_ui_toggle_hangout_mode()
+
+            return
+
+        with gradio.Row():
+            hangout_mode_button = gr.Button(value="Toggle Hangout Mode")
+            hangout_mode_button.click(fn=hangout_mode_button_click)
+
+            hangout_mode_checkbox_view = gr.Checkbox(label="Hangout Mode Enabled")
+
+
         def update_settings_view():
-            return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle(), utils.settings.semi_auto_chat
+            return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle(), utils.settings.semi_auto_chat, utils.settings.hangout_mode
 
 
         demo.load(update_settings_view, every=0.05,
-                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view])
+                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view, hangout_mode_checkbox_view])
+
+
 
 
 
