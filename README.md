@@ -46,6 +46,8 @@ Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJ
 
 If you need help / assistance, please submit a GitHub issue, or feel free to email me for this project at zwaif77@gmail.com
 
+Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I am also working on making a Discord at the moment.
+
 ## Diaspora
 #### The Original:
 [TumblerWarren/Virtual_Avatar_ChatBot](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot), this is the original project that this code is spun-off of. Full credit to that project - it provided the skeleton for the many advancements now in place. It has more of a focus on non-local AI, if that is what you need.
