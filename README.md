@@ -46,7 +46,7 @@ Here is [some documentation](https://docs.google.com/document/d/1qzY09kcwfbZTaoJ
 
 If you need help / assistance, please submit a GitHub issue, or feel free to email me for this project at zwaif77@gmail.com
 
-Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I am also working on making a Discord at the moment.
+Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I have also set up [a small Discord](https://discord.gg/XDWsAyVasH) for community members to chat as well.
 
 ## Diaspora
 #### The Original:
