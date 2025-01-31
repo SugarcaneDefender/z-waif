@@ -6,12 +6,12 @@ import utils.voice_splitter
 
 assert os.name == "posix" # type: ignore
 
-is_speaking: bool = False
-cut_voice: bool = False
+is_speaking = False
+cut_voice = False
 
 def speak_line(s_message: str, refuse_pause: bool):
     global cut_voice #, is_speaking
-    cut_voice: bool = False
+    cut_voice = False
     chunky_message = utils.voice_splitter.split_into_sentences(s_message)
     
     for chunk in chunky_message:
