@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 if [[ "$1" == "--help" ]]; then
-    echo "Usage: ./startup.sh [--help] [--reinstall] [--update-pip] [--keep-logs] [--log-file FILE] [--python-binary BIN] [main_file]"
+    echo "Usage: ./startup.sh [--help] [--reinstall] [--update] [--keep-logs] [--log-file FILE] [--python-binary BIN] [main_file]"
     echo "Options:"
     echo "  --help          Show this help message and exit"
     echo "  --reinstall     Reinstall dependencies"
-    echo "  --update-pip    Update pip"
+    echo "  --update        Update pip packages"
     echo "  --keep-logs     Appends logs to an old log file instead of overwriting it"
     echo "  --log-file      Specify the log file to use (default: log.txt)"
     echo "  --python-binary Specify the python binary to use (default: python3)"
@@ -19,7 +19,7 @@ while [[ $# -gt 0 ]]; do
             export REINSTALL=1
             shift
             ;;
-        --update-pip)
+        --update)
             export UPDATE_PIP=1
             shift
             ;;
@@ -47,20 +47,28 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Check for macOS
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # Check for root user
+    if [[ "$EUID" != "0" ]]; then
+        echo "Please run this script as root on mac."
+        exit 2
+    fi
+fi
+# TODO: does linux need sudo?
+
 # If no python binary is specified, use python3.11
 if [[ -z "$PY" ]]; then
     export PY="python3.11"
 fi
 # Python version
-PYTHON_VERSION=$($PY --version)
+export PYTHON_VERSION=$($PY --version)
 if [[ -z "$PYTHON_VERSION" ]]; then
     echo "Python is not installed or not found in PATH."
     exit 1
 fi
-#? echo "Python Version: $PYTHON_VERSION"
 # Parse "Python x.y.z", get y
-PYTHON_VERSION=$(echo "$PYTHON_VERSION" | grep "\\..*\\." | cut -d "." -f 2)
-#? echo "Python Version: 3.$PYTHON_VERSION"
+export PYTHON_VERSION=$(echo "$PYTHON_VERSION" | grep "\\..*\\." | cut -d "." -f 2)
 
 # Check python version
 if [[ "$PYTHON_VERSION" != "11" ]]; then    
@@ -128,14 +136,16 @@ if [[ -z "$MAIN_FILE" ]]; then
     export MAIN_FILE="main.py"
 fi
 # Run the main file
-echo "Running $MAIN_FILE..."
 $PY "$MAIN_FILE" >> "$LOG_FILE"
-echo "Done running $MAIN_FILE!"
-# Error handling
-echo Z-Waif has stopped running! Likely from an error causing a crash...
-echo See the log.txt file for more info!
+STATUS=$?
 # Deactivate venv
 deactivate
-# Pause the script
-read -p "Press enter to continue..."
+# Error handling
+if [[ $STATUS -ne 0 ]]; then
+    echo "Error: $MAIN_FILE exited with status $STATUS"
+    echo "See the log file for more info."
+    exit $STATUS
+    # Pause the script
+    read -p "Press enter to continue..."
+fi
 # End of script
