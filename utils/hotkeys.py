@@ -1,7 +1,7 @@
 import os
 
 import keyboard
-import mouse
+# import mouse
 import time
 import threading
 import utils.alarm
