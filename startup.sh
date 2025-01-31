@@ -47,9 +47,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# If no python binary is specified, use python3
+# If no python binary is specified, use python3.11
 if [[ -z "$PY" ]]; then
-    export PY="python3"
+    export PY="python3.11"
 fi
 # Python version
 PYTHON_VERSION=$($PY --version)
@@ -60,15 +60,11 @@ fi
 #? echo "Python Version: $PYTHON_VERSION"
 # Parse "Python x.y.z", get y
 PYTHON_VERSION=$(echo "$PYTHON_VERSION" | grep "\\..*\\." | cut -d "." -f 2)
-echo "Python Minor Version: 3.$PYTHON_VERSION"
+#? echo "Python Version: 3.$PYTHON_VERSION"
 
 # Check python version
-# TODO: update versions later
-if [[ "$PYTHON_VERSION" -lt 8 ]]; then
-    echo "Python versions 3.7 or older are not supported. Please install Python 3.8 or higher."
-    exit 1
-elif [[ "$PYTHON_VERSION" -gt 12 ]]; then
-    echo "Python versions 3.12 or newer are not supported. Please install Python 3.11 or lower."
+if [[ "$PYTHON_VERSION" != "11" ]]; then    
+    echo "Please use Python 3.11."
     exit 1
 fi
 
@@ -122,7 +118,7 @@ if [[ "$UPDATE" == "1" || "$REINSTALL" == "1" ]]; then
     # Install openai-whisper from the GitHub repository
     $PY -m pip install git+https://github.com/openai/whisper.git >> "$LOG_FILE"
     # Other deps
-    $PY -m pip install -U pywin32 >> "$LOG_FILE"
+    # $PY -m pip install -U pywin32 >> "$LOG_FILE"
     $PY -m pip install -r requirements.txt >> "$LOG_FILE"
 fi
 
