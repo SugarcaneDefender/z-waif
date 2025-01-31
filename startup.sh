@@ -138,5 +138,4 @@ echo See the log.txt file for more info!
 deactivate
 # Pause the script
 read -p "Press enter to continue..."
-exit 1 # Change to 0?
 # End of script
