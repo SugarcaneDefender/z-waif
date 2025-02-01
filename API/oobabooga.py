@@ -3,8 +3,9 @@ import os
 import html
 import json
 import base64
-import time
+# import time
 import random
+from typing import Any
 
 import requests
 import sseclient
@@ -22,7 +23,7 @@ import colorama
 import utils.voice_splitter
 import utils.voice
 import emoji
-import threading
+# import threading
 import utils.hotkeys
 import utils.vtube_studio
 import utils.hangout
@@ -30,17 +31,18 @@ import utils.hangout
 
 load_dotenv()
 
-HOST = '127.0.0.1:5000'
-URI = f'http://{HOST}/v1/chat/completions'
-URL_MODEL = f'http://{HOST}/v1/engines/'
+HOST = os.environ.get("HOST", "127.0.0.1")
+HOST_PORT = os.environ.get("HOST_PORT", "5005")
+URI = f'http://{HOST}:{HOST_PORT}/v1/chat/completions'
+URL_MODEL = f'http://{HOST}:{HOST_PORT}/v1/engines/'
 
-IMG_PORT = os.environ.get("IMG_PORT")
-IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
-IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
+IMG_PORT = os.environ.get("IMG_PORT", "127.0.0.1:5007")
+IMG_URI = f'http://{HOST}:{IMG_PORT}/v1/chat/completions'
+IMG_URL_MODEL = f'http://{HOST}:{IMG_PORT}/v1/engines/'
 
-received_message = ""
-CHARACTER_CARD = os.environ.get("CHARACTER_CARD")
-YOUR_NAME = os.environ.get("YOUR_NAME")
+received_message: str = ""
+CHARACTER_CARD = os.environ.get("CHARACTER_CARD", "")
+YOUR_NAME = os.environ.get("YOUR_NAME", "You")
 
 history_loaded = False
 
@@ -50,11 +52,11 @@ headers = {
     "Content-Type": "application/json"
 }
 
-max_context = int(os.environ.get("TOKEN_LIMIT"))
-marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT"))
+max_context = int(os.environ.get("TOKEN_LIMIT", 4096))
+marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT", 40))
 
 force_token_count = False
-forced_token_level = 120
+forced_token_level: int = 120
 
 stored_received_message = "None!"
 currently_sending_message = ""
@@ -67,7 +69,7 @@ flag_end_streaming = False
 
 is_in_api_request = False
 
-ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
+ENCODE_TIME = os.environ.get("TIME_IN_ENCODING", "ON")
 
 VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
 VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
@@ -81,7 +83,7 @@ with open("Configurables/StoppingStrings.json", 'r') as openfile:
     utils.settings.stopping_strings = json.load(openfile)
 
 
-def run(user_input, temp_level):
+def run(user_input: str, temp_level: int):
     global received_message
     global ooga_history
     global forced_token_level
@@ -145,9 +147,9 @@ def run(user_input, temp_level):
 
 
     # Forced tokens check
-    cur_tokens_required = utils.settings.max_tokens
+    cur_tokens_required: int = utils.settings.max_tokens
     if force_token_count:
-        cur_tokens_required = forced_token_level
+        cur_tokens_required: int = forced_token_level
 
 
     # Set the stop right
@@ -163,7 +165,7 @@ def run(user_input, temp_level):
 
     # Send the actual API Request
 
-    request = {
+    request: dict[str, Any] = {
         "messages": messages_to_send,
         'max_tokens': cur_tokens_required,
         'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
@@ -238,7 +240,7 @@ def run(user_input, temp_level):
 #
 # For the new streaming chats, runs it continually to grab data as it comes in from Oobabooga. Should run faster
 #
-def run_streaming(user_input, temp_level):
+def run_streaming(user_input: str, temp_level: int):
 
     global received_message
     global ooga_history
@@ -333,7 +335,7 @@ def run_streaming(user_input, temp_level):
     # STREAMING TOOLING GOES HERE o7
     #
 
-    request = {
+    request: dict[str, Any] = {
         "messages": messages_to_send,
         'max_tokens': cur_tokens_required,
         'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
@@ -357,7 +359,7 @@ def run_streaming(user_input, temp_level):
     # Actual streaming bit
 
     stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-    client = sseclient.SSEClient(stream_response)
+    client = sseclient.SSEClient(stream_response) # type: ignore
 
     # Clear streamed emote list
     utils.vtube_studio.clear_streaming_emote_list()
@@ -534,12 +536,12 @@ def streamed_update_handler(chunk, assistant_message):
     return "Continue"
 
 
-def set_force_skip_streaming(tf_input):
+def set_force_skip_streaming(tf_input: bool):
     global force_skip_streaming
     force_skip_streaming = tf_input
 
 
-def send_via_oogabooga(user_input):
+def send_via_oogabooga(user_input: str):
 
     user_input = user_input
 
@@ -558,7 +560,7 @@ def send_via_oogabooga(user_input):
     if utils.settings.stream_chats:
         run_streaming(user_input, 0)
 
-def receive_via_oogabooga():
+def receive_via_oogabooga() -> str:
     return received_message
 
 def send_image_via_oobabooga(direct_talk_transcript):
@@ -739,7 +741,7 @@ def prune_deletables():
 #   Other API Access
 #
 
-def summary_memory_run(messages_input, user_sent_message):
+def summary_memory_run(messages_input: list[dict[str,str]], user_sent_message: str):
     global received_message
     global ooga_history
     global forced_token_level
@@ -1279,7 +1281,7 @@ def view_image_streaming(direct_talk_transcript):
 
 
 
-def check_if_in_history(message):
+def check_if_in_history(message: str) -> bool:
 
     # Search through the 20th - 1th to last entries to see if we have any matches
     i = len(ooga_history) - 20
@@ -1320,7 +1322,7 @@ def check_if_in_history(message):
 
 
 # Encodes from the old api's way of storing history (and ooba internal) to the new one
-def encode_new_api(user_input):
+def encode_new_api(user_input: str) -> list[dict[str, Any]]:
 
     #
     # Append 40 of the most recent history pairs (however long our marker length is)
@@ -1332,7 +1334,7 @@ def encode_new_api(user_input):
     if message_marker < 0:          # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    messages_to_send = [
+    messages_to_send: list[dict[str, str]] = [
         {"role": "user", "content": ooga_history[message_marker][0]},
         {"role": "assistant", "content": ooga_history[message_marker][1]},
     ]
@@ -1387,7 +1389,7 @@ def encode_new_api(user_input):
 
 
 # encodes a given input to the new API, with no additives
-def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length):
+def encode_raw_new_api(user_messages_input: list[list[str]], user_message_last: str, raw_marker_length: int):
     #
     # Append 30 of the most recent history pairs (however long our raw marker length is)
     #
@@ -1396,7 +1398,7 @@ def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    messages_to_send = [
+    messages_to_send: list[dict[str,str]] = [
         {"role": "user", "content": user_messages_input[message_marker][0]},
         {"role": "assistant", "content": user_messages_input[message_marker][1]},
     ]
@@ -1419,7 +1421,7 @@ def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length
 
 
 
-def supress_rp_as_others(message):
+def supress_rp_as_others(message: str) -> str:
 
     # do not supress if there is no colon
     if not message.__contains__(":"):
@@ -1458,11 +1460,11 @@ def supress_rp_as_others(message):
     return new_message
 
 
-def force_tokens_count(tokens):
+def force_tokens_count(tokens: int):
     global forced_token_level, force_token_count
     forced_token_level = tokens
     force_token_count = True
 
-def pop_if_sent_is_latest(user_input):
+def pop_if_sent_is_latest(user_input: str):
     if user_input == ooga_history[-1][0]:
         ooga_history.pop()
