@@ -1,13 +1,14 @@
 import time
+from typing import Any, Callable
 
 import pyaudio
 import wave
 
-from pydub import AudioSegment
+from pydub import AudioSegment # type: ignore
 import utils.hotkeys
 import os, audioop
 
-import sounddevice as sd
+import sounddevice as sd # type: ignore
 
 import utils.volume_listener
 
@@ -24,31 +25,31 @@ FILENAME = "voice.wav"
 SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
 SAVE_PATH_ORDUS = os.path.join(current_directory, "resource", "voice_in", "interrupt_voice.wav")
 
-chat_buffer_frames = []
+chat_buffer_frames: list[bytes] = []
 
-latest_chat_frame_count = 0
+latest_chat_frame_count: int = 0
 
 
 
-def play_mp3(path, audio_level_callback=None):
-    audio_file = AudioSegment.from_file(path, format="mp3")
-    play_mp3_memory(audio_file, audio_level_callback)
+def play_mp3(path: str, audio_level_callback: Callable[..., Any]|None=None):
+    audio_file: AudioSegment = AudioSegment.from_file(path, format="mp3") # type: ignore
+    play_mp3_memory(audio_file, audio_level_callback) # type: ignore
 
 
 # Plays an MP3 file from memory
-def play_mp3_memory(audio_file, audio_level_callback=None):
+def play_mp3_memory(audio_file: AudioSegment, audio_level_callback: Callable[...,Any]|None=None):
     # Initialize PyAudio
     p = pyaudio.PyAudio()
 
     # Open a stream to play the audio
     stream = p.open(format=pyaudio.paInt16,
-                    channels=audio_file.channels,
-                    rate=audio_file.frame_rate,
+                    channels=audio_file.channels, # type: ignore
+                    rate=audio_file.frame_rate, # type: ignore
                     output=True)
 
     # Read the audio data in chunks and play it
     chunk_size = 1024
-    data = audio_file.raw_data
+    data: bytes = audio_file.raw_data # type: ignore
     while data:
         chunk = data[:chunk_size]
         stream.write(chunk)
@@ -63,7 +64,7 @@ def play_mp3_memory(audio_file, audio_level_callback=None):
     p.terminate()
 
 
-def play_wav_memory(audio_file, audio_level_callback=None):
+def play_wav_memory(audio_file: wave.Wave_read, audio_level_callback: Callable[...,Any]|None=None):
     # Initialize PyAudio
     p = pyaudio.PyAudio()
 
@@ -89,7 +90,7 @@ def play_wav_memory(audio_file, audio_level_callback=None):
 
 
 # Plays wav file
-def play_wav(path, audio_level_callback=None):
+def play_wav(path: str, audio_level_callback: Callable[...,Any] | None=None):
     audio_file = wave.open(path)
     play_wav_memory(audio_file, audio_level_callback)
 
