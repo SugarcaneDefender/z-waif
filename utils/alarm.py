@@ -29,31 +29,31 @@ def alarm_loop():
 
         # Reset the alarm just after midnight every night
         if cur_time_string == "00:01":
-            ALARM_TRIGGERED = False
+            ALARM_TRIGGERED = False # type: ignore
 
 
         # Run our alarm here if we are at the specified time
         if cur_time_string == utils.settings.alarm_time and ALARM_TRIGGERED == False:
 
             # Flag
-            ALARM_TRIGGERED = True
+            ALARM_TRIGGERED = True # type: ignore
 
             # Get name (can't declair at the start, donno why, don't care!)
-            char_name = os.environ.get("CHAR_NAME")
+            char_name = os.environ.get("CHAR_NAME", "Waifu")
 
             # Make our message
             cur_date_string = current_time.strftime("%B/%d/%Y")
             cur_day_of_week_string = current_time.strftime("%A")
 
-            alarm_message = "[System A] Good morning, " + char_name + "! It's "
+            alarm_message: str = "[System A] Good morning, " + char_name + "! It's " # type: ignore
             alarm_message += cur_day_of_week_string + ", " + cur_date_string
             alarm_message += ", at " + cur_time_string + ". "
             alarm_message += alarm_talomere
 
-            ALARM_MESSAGE = alarm_message
+            ALARM_MESSAGE: str = alarm_message # type: ignore
 
             # Flag us, we can be picked up by main
-            ALARM_READY = True
+            ALARM_READY = True # type: ignore
 
 
 def alarm_check():
@@ -61,7 +61,7 @@ def alarm_check():
 
 def clear_alarm():
     global ALARM_READY
-    ALARM_READY = False
+    ALARM_READY = False # type: ignore
 
-def get_alarm_message():
+def get_alarm_message() -> str:
     return ALARM_MESSAGE
