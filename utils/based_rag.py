@@ -1,8 +1,9 @@
 import sys
+from typing import Any
 
-import API.Oogabooga_Api_Support
+import API.oobabooga
 import string
-import threading
+# import threading
 import utils.lorebook
 import random
 import json
@@ -13,21 +14,21 @@ import utils.settings
 from tqdm import tqdm
 
 # Words and their data
-word_database = {
-    'word': ["", " ", "the", "it"],
-    'count': [1, 1, 1, 1],
-    'value': [0.0, 0.0, 0.0, 0.0],
-    'total_word_count': 0
+word_database: dict[str, list[str]|list[int]|list[float]|int] = {
+    'word': ["", " ", "the", "it"], # type: list[str]
+    'count': [1, 1, 1, 1], # type: list[int]
+    'value': [0.0, 0.0, 0.0, 0.0], # type: list[float]
+    'total_word_count': 0 # type: int
 }
 
 # Histories
-histories_word_id_database = {
+histories_word_id_database: dict[str,list[Any]] = {
     'me': [],
     'her': [],
     'scores': []
 }
 
-history_database = [["Start of all history!", "Start of all history!"]]
+history_database: list[list[str]] = [["Start of all history!", "Start of all history!"]]
 
 show_rag_debug = True
 show_rag_debug_deep = False
@@ -39,7 +40,8 @@ history_demarc = 20         # This is the point where the history gets considere
 manual_recalculate_ignore_latest = False
 is_setting_up = True
 
-char_name = os.environ.get("CHAR_NAME")
+char_name = os.environ.get("CHAR_NAME", "Waifu")
+assert char_name is not ""
 
 
 #
@@ -80,7 +82,7 @@ def setup_based_rag():
 
 
     # Import Current History As Well
-    history_database += API.Oogabooga_Api_Support.ooga_history
+    history_database += API.oobabooga.ooga_history
 
 
     #
@@ -132,7 +134,7 @@ def setup_based_rag():
 
 
 
-def run_based_rag(message, her_previous):
+def run_based_rag(message: str, her_previous: str):
 
     global word_database
 
@@ -148,8 +150,8 @@ def run_based_rag(message, her_previous):
     #
 
     # Parse the message being sent
-    history_word_ids = parse_words_to_database(message, 2)
-    history_word_scores = []
+    history_word_ids: list[int] = parse_words_to_database(message, 2)
+    history_word_scores: list[int|float] = []
 
 
     # Check the score value of all words
@@ -165,10 +167,10 @@ def run_based_rag(message, her_previous):
     while i < len(history_word_ids):
 
         # Pair all word keys with scores
-        score = word_database['value'][history_word_ids[i]]
+        score: float = word_database['value'][history_word_ids[i]] # type: ignore
 
         # Boost lore word score (only single word)
-        if utils.lorebook.rag_word_check(word_database['word'][history_word_ids[i]]):
+        if utils.lorebook.rag_word_check(word_database['word'][history_word_ids[i]]): # type: ignore
             score = (score + 1) / 2
 
         history_word_scores.append(score)
@@ -183,7 +185,7 @@ def run_based_rag(message, her_previous):
     # EVALUATE HER SENT ONES SECOND
     #
 
-    hers_history_word_ids = parse_words_to_database(her_previous, 3)
+    hers_history_word_ids: list[int] = parse_words_to_database(her_previous, 3)
 
 
     # Run evaluation now that we have all of the words
@@ -192,10 +194,10 @@ def run_based_rag(message, her_previous):
     while i < len(hers_history_word_ids):
 
         # Pair all word keys with scores
-        score = word_database['value'][hers_history_word_ids[i]]
+        score = word_database['value'][hers_history_word_ids[i]] # type: ignore
 
         # Boost lore word score (only single word)
-        if utils.lorebook.rag_word_check(word_database['word'][hers_history_word_ids[i]]):
+        if utils.lorebook.rag_word_check(word_database['word'][hers_history_word_ids[i]]): # type: ignore
             score = (score + 1) / 2
 
         history_word_ids.append(hers_history_word_ids[i])
@@ -221,7 +223,7 @@ def run_based_rag(message, her_previous):
 
         while i < len(history_word_ids):
             if history_word_scores[i] > highest_scores[j] and not highest_score_ids.__contains__(history_word_ids[i]):
-                highest_scores[j] = history_word_scores[i]
+                highest_scores[j] = history_word_scores[i] # type: ignore # why does this throw an error ???
                 highest_score_keys[j] = i
                 highest_score_ids[j] = history_word_ids[i]
 
@@ -249,7 +251,7 @@ def run_based_rag(message, her_previous):
         x = 0
         log_output_text = ""
         while x < len(highest_score_ids):
-            log_output_text += str(word_database['word'][highest_score_ids[x]]) + "\n"
+            log_output_text += str(word_database['word'][highest_score_ids[x]]) + "\n" # type: ignore
             x = x + 1
 
         utils.logging.update_rag_log(log_output_text)
@@ -315,7 +317,7 @@ def call_rag_message():
 
 
 
-def parse_words_to_database(message, flag):
+def parse_words_to_database(message: str, flag: int) -> list[int]:
 
     global word_database
 
@@ -323,7 +325,7 @@ def parse_words_to_database(message, flag):
     i = 0
     word_collector = ""
     word_start_marker = 0
-    history_word_ids = []
+    history_word_ids: list[int] = []
 
 
     # Decide if we want to add to the count, depending on the flag
@@ -357,11 +359,11 @@ def parse_words_to_database(message, flag):
             word_found = False
 
             # Scan if word is in database
-            while j < len(word_database["word"]):
-                if word_collector == word_database["word"][j]:
+            while j < len(word_database["word"]): # type: ignore
+                if word_collector == word_database["word"][j]: # type: ignore
 
                     if count_to_total:
-                        word_database["count"][j] = word_database["count"][j] + 1
+                        word_database["count"][j] = word_database["count"][j] + 1 # type: ignore
 
                     word_found = True
 
@@ -373,12 +375,12 @@ def parse_words_to_database(message, flag):
 
             # If word not in database and we are counting, add it in (word will simply be skipped for eval parsing)
             if not word_found and count_to_total:
-                word_database["word"].append(word_collector)
-                word_database["count"].append(1)
-                word_database["value"].append(0.99)         # Note: will have to be recalculated later on for new words
+                word_database["word"].append(word_collector) # type: ignore
+                word_database["count"].append(1) # type: ignore
+                word_database["value"].append(0.99) # type: ignore   # Note: will have to be recalculated later on for new words
 
                 # Add to our history word ID database
-                history_word_ids.append(len(word_database["word"]) - 1)
+                history_word_ids.append(len(word_database["word"]) - 1) # type: ignore
 
 
             # Set the marker for our next word
@@ -393,7 +395,7 @@ def parse_words_to_database(message, flag):
 
             # Boost our total word count
             if count_to_total:
-                word_database['total_word_count'] = word_database['total_word_count'] + 1
+                word_database['total_word_count'] = word_database['total_word_count'] + 1 # type: ignore
 
 
 
@@ -421,6 +423,7 @@ def parse_words_to_database(message, flag):
     # Sent by her, live add/eval
     if flag == 3:
         return history_word_ids
+    raise NotImplementedError("Flag not implemented!")
 
 
 # Calculates the value of all words
@@ -429,14 +432,14 @@ def calc_word_values():
 
     # Give base values to all the words, with a maximum score being 1
     i = 0
-    while i < len(word_database["value"]):
-        word_database['value'][i] = (1 / (word_database['count'][i] + 19)) * 20
+    while i < len(word_database["value"]): # type: ignore
+        word_database['value'][i] = (1 / (word_database['count'][i] + 19)) * 20 # type: ignore
         i = i + 1
 
 
 
 # Prunes really common words, as there is no need to store these
-def prune_common(point):
+def prune_common(point: int):
 
     global word_database
     global histories_word_id_database
@@ -445,7 +448,7 @@ def prune_common(point):
     i = 0
     while i < len(histories_word_id_database["me"][point]):
         word_id = histories_word_id_database["me"][point][i]
-        if (word_database['count'][word_id] / word_database['total_word_count']) > 0.00077:
+        if (word_database['count'][word_id] / word_database['total_word_count']) > 0.00077: # type: ignore
             histories_word_id_database["me"][point].pop(i)
             i = 0
 
@@ -454,7 +457,7 @@ def prune_common(point):
     i = 0
     while i < len(histories_word_id_database["her"][point]):
         word_id = histories_word_id_database["her"][point][i]
-        if (word_database['count'][word_id] / word_database['total_word_count']) > 0.00077:
+        if (word_database['count'][word_id] / word_database['total_word_count']) > 0.00077: # type: ignore
             histories_word_id_database["her"][point].pop(i)
             i = 0
 
@@ -462,7 +465,7 @@ def prune_common(point):
 
 
 # Totals and returns the value of a given message, when tied to keywords
-def evaluate_message(valued_word_ids, hist_word_ids):
+def evaluate_message(valued_word_ids: list[int], hist_word_ids: list[int]):
 
     i = 0
     value = 0
@@ -493,7 +496,7 @@ def add_message_to_database():
         return
 
     # Import History
-    history = API.Oogabooga_Api_Support.ooga_history
+    history = API.oobabooga.ooga_history
     global word_database, manual_recalculate_ignore_latest, history_database
 
     # Do not add in if we just manually re-calculated, it is already in there
