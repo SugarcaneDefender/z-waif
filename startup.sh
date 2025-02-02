@@ -50,7 +50,7 @@ done
 # Check for macOS
 if [[ "$OSTYPE" == "darwin"* ]]; then
     # Check for root user
-    if [[ "$EUID" != "0" ]]; then
+    if [[ "$EUID" != "0" && -z "$ALLOW_NONROOT" ]]; then
         echo "Please run this script as root on mac."
         exit 2
     fi
@@ -101,7 +101,7 @@ if [[ ! -f "$LOG_FILE" ]]; then
     fi
 fi
 # Put the python version into the log file
-echo "Python Version: $($PY --version)" >> "$LOG_FILE"
+echo "Python Version: $($PY --version)" | tee -a "$LOG_FILE"
 # Check if the venv should be reinstalled
 if [[ "$REINSTALL" == "1" ]]; then
     echo "Reinstalling dependencies..."
@@ -120,14 +120,14 @@ source ./venv/bin/activate
 # Run the script with --update-pip ./startup.sh to update pip
 if [[ "$UPDATE" == "1" || "$REINSTALL" == "1" ]]; then
     echo "Updating..."
-    $PY -m pip install --upgrade pip
+    $PY -m pip install --upgrade pip | tee -a "$LOG_FILE"
     # Install PyTorch, torchvision, and torchaudio from a specific index URL
-    $PY -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 >> "$LOG_FILE"
+    $PY -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 | tee -a "$LOG_FILE"
     # Install openai-whisper from the GitHub repository
-    $PY -m pip install git+https://github.com/openai/whisper.git >> "$LOG_FILE"
+    $PY -m pip install git+https://github.com/openai/whisper.git | tee -a "$LOG_FILE"
     # Other deps
-    # $PY -m pip install -U pywin32 >> "$LOG_FILE"
-    $PY -m pip install -r requirements.txt >> "$LOG_FILE"
+    # $PY -m pip install -U pywin32 | tee -a "$LOG_FILE"
+    $PY -m pip install -r requirements.txt | tee -a "$LOG_FILE"
 fi
 
 
@@ -136,12 +136,15 @@ if [[ -z "$MAIN_FILE" ]]; then
     export MAIN_FILE="main.py"
 fi
 # Run the main file
-$PY "$MAIN_FILE" >> "$LOG_FILE"
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    open http://localhost:7864 &
+fi
+$PY "$MAIN_FILE" | tee -a "$LOG_FILE"
 STATUS=$?
 # Deactivate venv
 deactivate
 # Error handling
-if [[ $STATUS -ne 0 ]]; then
+if [[ $STATUS -ne 0 && $STATUS -ne 130 ]]; then # 0: exit success, 130: Ctrl+C
     echo "Error: $MAIN_FILE exited with status $STATUS"
     echo "See the log file for more info."
     exit $STATUS
