@@ -50,7 +50,7 @@ def alarm_loop():
             alarm_message += ", at " + cur_time_string + ". "
             alarm_message += alarm_talomere
 
-            ALARM_MESSAGE: str = alarm_message # type: ignore
+            ALARM_MESSAGE = alarm_message # type: ignore
 
             # Flag us, we can be picked up by main
             ALARM_READY = True # type: ignore
