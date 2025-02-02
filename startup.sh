@@ -7,7 +7,7 @@ if [[ "$1" == "--help" ]]; then
     echo "  --update        Update pip packages"
     echo "  --keep-logs     Appends logs to an old log file instead of overwriting it"
     echo "  --log-file      Specify the log file to use (default: log.txt)"
-    echo "  --python-binary Specify the python binary to use (default: python3)"
+    echo "  --python-binary Specify the python binary to use (default: python3.11)"
     echo "  main_file       Specify the main file to run (default: main.py)"
     exit 0
 fi
