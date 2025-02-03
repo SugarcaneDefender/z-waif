@@ -1,7 +1,7 @@
 import numpy as np
 import sounddevice as sd
-from numba.cuda.libdevice import trunc
-from sympy import false
+#from numba.cuda.libdevice import trunc
+#from sympy import false
 
 import utils.hotkeys
 
