@@ -1,7 +1,7 @@
 import sys
 from typing import Any
 
-import API.oobabooga
+# import API.oobabooga
 import string
 # import threading
 import utils.lorebook
@@ -12,6 +12,16 @@ import time
 import utils.logging
 import utils.settings
 from tqdm import tqdm
+
+global BACKEND_TYPE
+
+match BACKEND_TYPE: # type: ignore
+    case "oobabooga":
+        from API import oobabooga as backend
+    case "ollama":
+        from API import ollama as backend
+    case _: # type: ignore
+        raise Exception("Invalid backend type!")
 
 # Words and their data
 word_database: dict[str, list[str]|list[int]|list[float]|int] = {
@@ -82,7 +92,7 @@ def setup_based_rag():
 
 
     # Import Current History As Well
-    history_database += API.oobabooga.ooga_history
+    history_database += backend.chat_history
 
 
     #
@@ -496,7 +506,7 @@ def add_message_to_database():
         return
 
     # Import History
-    history = API.oobabooga.ooga_history
+    history = backend.chat_history
     global word_database, manual_recalculate_ignore_latest, history_database
 
     # Do not add in if we just manually re-calculated, it is already in there
