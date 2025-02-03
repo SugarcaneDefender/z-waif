@@ -7,6 +7,7 @@ import random
 from typing import Any
 import utils.based_rag
 import utils.cane_lib
+import utils.hotkeys
 import utils.logging
 import utils.lorebook
 import utils.settings
@@ -65,11 +66,37 @@ def read_preset(preset_name: str, **other_options: Any) -> ollama.Options:
     file: str = ""
     with open("OOBA_Presets/" + preset_name + ".yaml", 'r') as openfile:
         # Parse yaml
-        file = openfile.read()
+        file = openfile.read().strip()
     kwargs: dict[str, Any] = {}
+    yaml_option_names: dict[str, str] = {
+        "min_p": '',
+        "repetition_penalty": 'repeat_penalty',
+        "presence_penalty": '',
+        "repetition_penalty_range": '',
+        "temperature_last": ''
+    }
     for line in file:
-        k, v = line.split(": ")
-        kwargs[k] = float(v) if "." in v else int(v)
+        if line == "":
+            continue
+        try:
+            k, v = line.split(": ")
+            if v == "true":
+                v = True
+            elif v == "false":
+                v = False
+            elif v == "null":
+                v = None
+            elif "." in v:
+                v = float(v)
+            elif v.isnumeric():
+                v = int(v)
+            else: 
+                v = v.strip().removeprefix('"').removesuffix('"')
+            kw = yaml_option_names.get(k, k)
+            if kw != "":    
+                kwargs[kw] = v
+        except ValueError:
+            continue
     ret = ollama.Options(**(kwargs | other_options))
     return ret
 
@@ -158,14 +185,13 @@ def run(user_input: str, temp_level: int):
     response: ollama.ChatResponse = ollama_client.chat( # type: ignore
         model=MODEL, 
         messages=messages_to_send,
-        max_tokens=cur_tokens_required,
-        mode='chat',
-        character=char_send,
-        truncation_length=max_context,
-        options = read_preset(preset, stop=stop)
+        #max_tokens=cur_tokens_required,
+        #character=char_send,
+        #truncation_length=max_context,
+        options = read_preset(preset, stop=stop),
         stream=False,
         # stop=stop, 
-        preset=preset
+        # preset=preset
     )
     
     # Handle the response
@@ -216,7 +242,269 @@ def run(user_input: str, temp_level: int):
     
     return
 
-def run_streaming(user_input: str, temp_level: int): ...
+def run_streaming(user_input: str, temp_level: int): 
+    global received_message
+    global chat_history
+    global forced_token_level
+    global force_token_count
+    global currently_sending_message
+    global currently_streaming_message
+    global last_message_streamed
+    global streaming_sentences_ticker
+    global force_skip_streaming
+    global is_in_api_request
+
+    # We are starting our API request!
+    is_in_api_request = True
+
+    # Clear possible streaming endflag
+    global flag_end_streaming
+    flag_end_streaming = False
+
+    # Message that is currently being sent
+    currently_sending_message = user_input
+
+    # Clear the old streaming message
+    currently_streaming_message = ""
+    last_message_streamed = True
+
+    # Load the history from JSON, to clean up the quotation marks
+    #
+    with open("LiveLog.json", 'r') as openfile:
+        chat_history = json.load(openfile)
+
+
+    # Determine what preset we want to load in with
+
+    preset = 'Z-Waif-ADEF-Standard'
+
+    if random.random() > 0.77:
+        preset = 'Z-Waif-ADEF-Tempered'
+
+    if random.random() > 0.994:
+        preset = 'Z-Waif-ADEF-Blazing'
+
+
+    # Higher forced temps for certain scenarios
+
+    if temp_level == 1:
+        preset = 'Z-Waif-ADEF-Tempered'
+
+        if random.random() > 0.7:
+            preset = 'Z-Waif-ADEF-Blazing'
+
+    if temp_level == 2:
+        preset = 'Z-Waif-ADEF-Blazing'
+
+    #
+    # NOTE: Random temperatures will be inactive if we set another model preset. Quirky!
+    #
+
+    if utils.settings.model_preset != "Default":
+        preset = utils.settings.model_preset
+
+    utils.logging.kelvin_log = preset
+
+    # Set what char/task we are sending to, defaulting to the character card if there is none
+    char_send = utils.settings.cur_task_char
+    if char_send == "None":
+        char_send = CHARACTER_CARD
+
+
+    # Forced tokens check
+    cur_tokens_required = utils.settings.max_tokens
+    if force_token_count:
+        cur_tokens_required = forced_token_level
+
+
+    # Set the stop right
+    stop = utils.settings.stopping_strings
+    if utils.settings.newline_cut:
+        stop.append("\n")
+    if utils.settings.asterisk_ban:
+        stop.append("*")
+
+
+    # Encode
+    messages_to_send = encode_new_api(user_input)
+
+    #
+    # Send the actual API Request
+    #
+
+    #
+    # STREAMING TOOLING GOES HERE o7
+    #
+
+    ollama_client.chat(
+        model=MODEL,
+        messages=messages_to_send,
+        stream=True,
+        max_tokens=cur_tokens_required,
+    )
+    
+    request: dict[str, Any] = {
+        "messages": messages_to_send,
+        'max_tokens': cur_tokens_required,
+        'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+        'character': char_send,
+        'truncation_length': max_context,
+        'stop': stop,
+        'stream': True,
+
+        'preset': preset
+    }
+
+    # Prep console with printing for message output
+
+    print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+          + "----" + utils.settings.char_name + "----"
+          + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+
+    # Reset the ticker (starts counting at 1)
+    streaming_sentences_ticker = 1
+
+    # Actual streaming bit
+
+    stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
+    client = sseclient.SSEClient(stream_response) # type: ignore
+
+    # Clear streamed emote list
+    utils.vtube_studio.clear_streaming_emote_list()
+
+    assistant_message = ''
+    supressed_rp = False
+    force_skip_streaming = False
+    for event in client.events():
+        payload = json.loads(event.data)
+        chunk = payload['choices'][0]['delta']['content']
+        assistant_message += chunk
+        streamed_response_check = streamed_update_handler(chunk, assistant_message)
+
+        # IF we break out, then make sure we cancel out properly
+        if streamed_response_check == "Cut":
+
+            # Clear the currently sending message variable
+            currently_sending_message = ""
+
+            # We are ending our API request!
+            is_in_api_request = False
+
+            return
+
+        # Cut for the hangout name being said
+        if streamed_response_check == "Hangout-Name-Cut" and utils.settings.hangout_mode:
+
+            # Add any existing stuff to our actual chat history
+            chat_history.append([user_input, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+            save_histories()
+
+            # Remove flag
+            flag_end_streaming = False
+
+            # Clear the currently sending message variable
+            currently_sending_message = ""
+
+            # We are ending our API request!
+            is_in_api_request = False
+
+            return
+
+
+        # Check if we need to force skip the stream (hotkey or manually)
+        if utils.hotkeys.pull_next_press_input() or force_skip_streaming:
+            force_skip_streaming = True
+            break
+
+
+        # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
+        if utils.settings.supress_rp and (supress_rp_as_others(assistant_message) != assistant_message):
+            assistant_message = supress_rp_as_others(assistant_message)
+            supressed_rp = True
+            break
+
+    # Redo it and skip
+    if force_skip_streaming:
+        force_skip_streaming = False
+        print("\nSkipping message, redoing!\n")
+        utils.logging.update_debug_log("Got an input to regenerate! Re-generating the reply...")
+        run_streaming(user_input, 1)
+        return
+
+    # Read the final sentence aloud (if it wasn't suppressed because of anti-RP rules)
+    if not supressed_rp:
+        s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
+        sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
+
+        # Emotes
+        if utils.settings.vtube_enabled:
+            utils.vtube_studio.set_emote_string(s_assistant_message)
+            utils.vtube_studio.check_emote_string_streaming()
+
+        # Speaking
+        if not main.live_pipe_no_speak:
+            utils.voice.set_speaking(True)
+            utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
+
+    # Print Newline
+    print("\n")
+
+    #
+    # Set it to the assistant message (streamed response)
+    received_message = assistant_message
+
+    # Translate issues with the received message
+    received_message = html.unescape(received_message)
+
+
+    # If her reply is the same as the last stored one, run another request
+    global stored_received_message
+
+    if received_message == stored_received_message:
+        print("\nBad message, redoing!\n")
+        utils.logging.update_debug_log("Bad message received; same as last attempted generation. Re-generating the reply...")
+        run_streaming(user_input, 2)
+        return
+
+    stored_received_message = received_message
+
+
+    # If her reply is the same as any in the past 20 chats, run another request
+    if check_if_in_history(received_message):
+        print("\nBad message, redoing!\n")
+        utils.logging.update_debug_log("Bad message received; same as a recent chat. Re-generating the reply...")
+        run_streaming(user_input, 1)
+        return
+
+    # If her reply is blank, request another run, clearing the previous history add, and escape
+    if len(received_message) < 3:
+        print("\nBad message, redoing!\n")
+        utils.logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Re-generating the reply...")
+        run_streaming(user_input, 1)
+        return
+
+
+
+    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
+    log_user_input = "{0}".format(user_input)
+    log_received_message = "{0}".format(received_message)
+
+    chat_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+
+    # Run a pruning of the deletables
+    prune_deletables()
+
+    # Clear the currently sending message variable
+    currently_sending_message = ""
+
+    # Clear any token forcing
+    force_token_count = False
+
+    # Save
+    save_histories()
+
+    # We are ending our API request!
+    is_in_api_request = False
 
 def streamed_update_handler(chunk: Any, assistant_message: str): ...
 
