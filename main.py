@@ -173,11 +173,11 @@ def main_converse():
 
     # Actual sending of the message, waits for reply automatically
 
-    backend.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -197,7 +197,7 @@ def main_message_speak():
     #   Message is received Here
     #
 
-    message = backend.receive_via_oogabooga()
+    message = backend.receive()
 
 
     # Stop this if the message was streamed- we have already read it!
@@ -285,10 +285,10 @@ def main_rate():
 
 def main_next():
 
-    backend.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -305,13 +305,13 @@ def main_minecraft_chat(message: str):
     backend.force_tokens_count(47)
 
     # Actual sending of the message, waits for reply automatically
-    backend.send_via_oogabooga(message)
+    backend.send(message)
 
     # Reply in the craft
     utils.minecraft.minecraft_chat()
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -328,14 +328,14 @@ def main_discord_chat(message: str):
         live_pipe_no_speak = True
 
     # Actual sending of the message, waits for reply automatically
-    backend.send_via_oogabooga(message)
+    backend.send(message)
 
     #
     # CHATS WILL BE GRABBED AFTER THIS RUNS!
     #
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -355,7 +355,7 @@ def main_web_ui_chat(message: str):
         live_pipe_no_speak = True
 
     # Actual sending of the message, waits for reply automatically
-    backend.send_via_oogabooga(message)
+    backend.send(message)
 
     #
     # CHATS WILL BE GRABBED AFTER THIS RUNS!
@@ -365,7 +365,7 @@ def main_web_ui_chat(message: str):
     utils.voice.force_cut_voice()
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -391,10 +391,10 @@ def main_web_ui_next():
         live_pipe_no_speak = False
         return
 
-    backend.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -411,10 +411,10 @@ def main_discord_next():
     if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
         live_pipe_no_speak = True
 
-    backend.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -457,10 +457,10 @@ def main_alarm_message():
         main_memory_proc()
 
     # Send it!
-    backend.send_via_oogabooga(utils.alarm.get_alarm_message())
+    backend.send(utils.alarm.get_alarm_message())
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     main_message_speak()
@@ -487,7 +487,7 @@ def main_memory_proc():
     #
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -555,7 +555,7 @@ def main_view_image():
         direct_talk_transcript = view_image_prompt_get()
 
     # View and process the image, storing the result
-    transcript = backend.send_image_via_oobabooga(direct_talk_transcript)
+    transcript = backend.send_image(direct_talk_transcript)
 
     # Fix up our transcript & show us
     if not utils.settings.stream_chats:
@@ -599,7 +599,7 @@ def view_image_prompt_get():
 
     except Exception as e:
         print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
-        return
+        return ""
 
     # Print the transcript
     print('\r' + ' ' * len(tanscribing_log), end="")
@@ -612,14 +612,14 @@ def view_image_prompt_get():
     # Return our transcipt of what we have just said
     return transcript
 
-def view_image_after_chat(message):
+def view_image_after_chat(message: str):
 
     # Actual sending of the message, waits for reply automatically
-    backend.send_via_oogabooga(message)
+    backend.send(message)
 
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -640,10 +640,10 @@ def main_send_blank():
 
     # Actual sending of the message, waits for reply automatically
 
-    backend.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
 
@@ -724,10 +724,10 @@ def hangout_reply(transcript):
         hangout_interruptable.start()
 
     # Actual sending of the message, waits for reply automatically
-    backend.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -742,7 +742,7 @@ def hangout_wait_reply_waitportion(transcript):
     live_pipe_no_speak = True
     live_pipe_use_streamed_interrupt_watchdog = True
 
-    backend.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     live_pipe_use_streamed_interrupt_watchdog = False
     live_pipe_no_speak = False
@@ -754,7 +754,7 @@ def hangout_wait_reply_replyportion():
         time.sleep(0.01)
 
     # Run our message checks
-    reply_message = backend.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Set it so that we speak on response
@@ -804,7 +804,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     live_pipe_no_speak = dont_speak_aloud
 
     # View and process the image, storing the result
-    transcript = backend.send_image_via_oobabooga_hangout(direct_talk_transcript)
+    transcript = backend.send_image_hangout(direct_talk_transcript)
 
 
     # Run our required message checks
