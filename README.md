@@ -58,32 +58,30 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.7
+v1.8
 
-- Hangout Mode	
-	- Like a very advanced autochat.
-	- Your waifu decides how to reply to messages, based on hardcoded presets.
-		- They may wait, see if any more input comes, and then reply
-		- They may reply right away
-		- They may use the camera
-		- In the future they could also think on their own and decide how to reply
-	- You can configure their reply personality to change how they reply, or how engaged they are.
-	- Certain words phrases "think about" or "ponder" will cause them to think more.
-		- Words are configurable under "Configurables/Hangout"
-	- Certain words phrases "look at this" or "camera" will cause them to use the vision, if enabled.
-		- Words are configurable under "Configurables/Hangout"
-	- By default, you can interrupt them by saying "Wait, " and then their name.
-		- Can eat up resources, as this also uses whisper. Toggleable in the Configurables.
+- whisper-turbo, a new ultra fast transcribing method
+	- Optional, off by default
+	- Roughly 4x as fast, with the same transcription quality!
+	- Needs CUDA Toolkit and cuDNN downloaded to work with GPU
+		- CUDA 12 (RTX 20 series+)
+	- You can also toggle it to just use the CPU instead, at a hit to quality/speed.
+	- WARNING: I have experienced random crashes with this, but it's likely due to low VRAM / improper install.
 
-- The chat logs now have an automatic backup, named "LiveLogBackup.bak".
-	- Simply rename the file to "LiveLog.json" to restore.
-	- Backs it up upon every time the program is started.
-	- Includes a failsafe measure to not back the files up if the history gets cleared.
-	- Of course, backing up logs in additional methods (to a flash drive, or other PC) is always advised.
+- Chunked audio transcription
+	- Optional, on by default
+	- Takes in your audio and processes it while you are still speaking.
+	- Helps with response times. Reduces transcription quality slightly.
+	- Configurable chunking amount, Lower = process more often. Default is fairly high.
 
-- The RAG database now has a progress bar when first calculating it.
-- Further enhanced the Autochat volume listener to better handle different sensitivities.
-- Fixed an issue where streamed camera chats would appear in the log twice.
+- Mac support
+	- Use the statup.sh script.
+	- Thanks to @Cootshk!
+	- May require tinkering to figure out.
+
+- Fixed an issue where the first sentence said would cause a crash after that.
+- Fixed an issue with numba and sympy importing things, despite not existing.
+- Interruptible chats in Hangout Mode now work off their own audio file internally.
 
 ## To-Do
 
