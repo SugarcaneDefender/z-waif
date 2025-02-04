@@ -1,5 +1,32 @@
 Changelog
 
+v1.8
+
+- whisper-turbo, a new ultra fast transcribing method
+	- Optional, off by default
+	- Roughly 4x as fast, with the same transcription quality!
+	- Needs CUDA Toolkit and cuDNN downloaded to work with GPU
+		- CUDA 12 (RTX 20 series+)
+	- You can also toggle it to just use the CPU instead, at a hit to quality/speed.
+	- WARNING: I have experienced random crashes with this, but it's likely due to low VRAM / improper install.
+
+- Chunked audio transcription
+	- Optional, on by default
+	- Takes in your audio and processes it while you are still speaking.
+	- Helps with response times. Reduces transcription quality slightly.
+	- Configurable chunking amount, Lower = process more often. Default is fairly high.
+
+- Mac support
+	- Use the statup.sh script.
+	- Thanks to @Cootshk!
+	- May require tinkering to figure out.
+
+- Fixed an issue where the first sentence said would cause a crash after that.
+- Fixed an issue with numba and sympy importing things, despite not existing.
+- Interruptible chats in Hangout Mode now work off their own audio file internally.
+
+---.---.---.---
+
 v1.7
 
 - Hangout Mode	

@@ -19,3 +19,4 @@ fastapi==0.112.2
 pyautogui
 sseclient-py
 tqdm
+faster-whisper
