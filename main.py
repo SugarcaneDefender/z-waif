@@ -1,3 +1,4 @@
+#!/usr/bin/env bash ./startup.sh
 import time
 
 import colorama
