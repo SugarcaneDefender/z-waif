@@ -3,7 +3,7 @@ import time
 import colorama
 import humanize, os, threading
 import emoji
-import asyncio
+# import asyncio
 
 import utils.audio
 import utils.hotkeys
@@ -36,7 +36,6 @@ import utils.logging
 
 from dotenv import load_dotenv
 load_dotenv()
-global BACKEND_TYPE
 BACKEND_TYPE = os.environ.get("TYPE", "oobabooga")
 
 match BACKEND_TYPE:
