@@ -88,7 +88,8 @@ cd "$SCRIPT_DIR"
 if [[ "$KEEP_LOGS" != "1" ]]; then
     # Remove the log file if it exists
     if [ -f "$LOG_FILE" ]; then
-        rm "$LOG_FILE"
+        echo "" > "$LOG_FILE" # Clear the log file
+        # Don't rm -rf because then it is owned by root (Mac)
     fi
 fi
 if [[ ! -f "$LOG_FILE" ]]; then
