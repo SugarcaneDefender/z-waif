@@ -1,5 +1,13 @@
 Changelog
 
+v1.8-R2
+
+- Fixed a bug that would cause crashed in faster-whisper.
+	- Can now confirm no more crashes with it.
+	- Done by setting "temperature" setting to "0.0"
+
+---.---.---.---
+
 v1.8
 
 - whisper-turbo, a new ultra fast transcribing method

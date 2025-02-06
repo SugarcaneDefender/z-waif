@@ -74,7 +74,7 @@ def faster_transcribe(voice):
         # or run on CPU with INT8
         model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
-    segments, info = model.transcribe(voice, beam_size=5,  compression_ratio_threshold=1.9, no_speech_threshold=0.1)
+    segments, info = model.transcribe(voice, beam_size=5,  compression_ratio_threshold=1.9, no_speech_threshold=0.1, temperature=0.0)
 
     # Return the combined text
     for segment in segments:
