@@ -1,9 +1,7 @@
-import random
+from typing import Any
 
-import gradio
-import gradio as gr
+import gradio as gr # type: ignore
 import main
-import API.Oogabooga_Api_Support
 import utils.logging
 import utils.settings
 import utils.hotkeys
@@ -41,7 +39,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         with gr.Row():
             msg = gr.Textbox(scale=3)
 
-            def respond(message, chat_history):
+            def respond(message: str, chat_history: list[str]|Any):
 
                 # No send blank: use button for that!
                 if message == "":
@@ -50,7 +48,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 main.main_web_ui_chat(message)
 
                 # Retrieve the result now
-                # message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+                # message_reply = API.Oogabooga_Api_Support.receive()
                 #
                 # chat_history.append((message, message_reply))
 
@@ -58,22 +56,22 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             def update_chat():
                 # Return whole chat, plus the one I have just sent
-                if API.Oogabooga_Api_Support.currently_sending_message != "":
+                if backend.currently_sending_message != "":
 
                     # Prep for viewing without metadata
-                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    chat_combine = backend.chat_history[-30:]
                     i = 0
                     while i < len(chat_combine):
                         chat_combine[i] = chat_combine[i][:2]
                         i += 1
-                    chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, API.Oogabooga_Api_Support.currently_streaming_message])
+                    chat_combine.append([backend.currently_sending_message, backend.currently_streaming_message])
 
                     return chat_combine[-30:]
 
 
                 # Return whole chat, last 30
                 else:
-                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    chat_combine = backend.chat_history[-30:]
                     i = 0
                     while i < len(chat_combine):
                         chat_combine[i] = chat_combine[i][:2]
@@ -100,7 +98,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             return
 
 
-        with gradio.Row():
+        with gr.Row():
 
             recording_button = gr.Button(value="Mic (Toggle)")
             recording_button.click(fn=recording_button_click)
@@ -114,7 +112,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         # Buttons
         #
 
-        with gradio.Row():
+        with gr.Row():
 
             def regenerate():
                 main.main_web_ui_next()
@@ -162,7 +160,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             return
 
 
-        with gradio.Row():
+        with gr.Row():
 
             autochat_button = gr.Button(value="Toggle Auto-Chat")
             autochat_button.click(fn=autochat_button_click)
@@ -192,7 +190,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             return
 
 
-        with gradio.Row():
+        with gr.Row():
             semi_auto_chat_button = gr.Button(value="Toggle Semi-Auto Chat")
             semi_auto_chat_button.click(fn=semi_auto_chat_button_click)
 
@@ -210,7 +208,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             return
 
-        with gradio.Row():
+        with gr.Row():
             hangout_mode_button = gr.Button(value="Toggle Hangout Mode")
             hangout_mode_button.click(fn=hangout_mode_button_click)
 
@@ -396,7 +394,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def soft_reset_button_click():
-                API.Oogabooga_Api_Support.soft_reset()
+                backend.soft_reset()
 
                 return
 
@@ -682,5 +680,5 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
 def launch_demo():
-    demo.launch(server_port=7864)
+    demo.launch(server_port=7864) # type: ignore
 
