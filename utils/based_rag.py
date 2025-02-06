@@ -1,7 +1,6 @@
 import sys
 from typing import Any
 
-# import API.oobabooga
 import string
 # import threading
 import utils.lorebook
@@ -13,15 +12,7 @@ import utils.logging
 import utils.settings
 from tqdm import tqdm
 
-global BACKEND_TYPE
-
-match BACKEND_TYPE: # type: ignore
-    case "oobabooga":
-        from API import oobabooga as backend
-    case "ollama":
-        from API import ollama as backend
-    case _: # type: ignore
-        raise Exception("Invalid backend type!")
+from API import backend
 
 # Words and their data
 word_database: dict[str, list[str]|list[int]|list[float]|int] = {

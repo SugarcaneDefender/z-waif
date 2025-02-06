@@ -1,11 +1,10 @@
 # This example requires the 'message_content' intent.
-import asyncio
 import json
-import os
 
 import discord
 import main
-import API.Oogabooga_Api_Support
+
+from API import backend
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -20,7 +19,7 @@ async def on_ready():
     print(f'We have logged in as {client.user}')
 
 @client.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     print("Processing discord message: " + message.content + "|| From " + message.author.name)
 
     if message.author == client.user:
@@ -35,7 +34,7 @@ async def on_message(message):
             main.main_discord_next()
 
             # Retrieve the result now
-            message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+            message_reply = backend.receive()
 
         # Send it!
         await message.channel.send(message_reply)
@@ -53,7 +52,7 @@ async def on_message(message):
             main.main_discord_chat(sending_string)
 
             # Retrieve the result now
-            message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+            message_reply = backend.receive()
 
         # Send it!
         await message.channel.send(message_reply)

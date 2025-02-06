@@ -13,7 +13,8 @@
 # Pipes are not stored in a list, but simply passed as objects
 
 import time
-import API.Oogabooga_Api_Support
+from typing import Any, Literal
+import os
 import main
 import threading
 
@@ -25,12 +26,16 @@ import utils.logging
 pipe_counter = 0 # This is just the total number of pipes created this session. Appends as pipe id
 main_pipe_running = False
 
-def start_new_pipe(desired_process, is_main_pipe):
+from API import backend
+
+PROCESS_TYPES = Literal["Main-Chat", "Main-Next", "Main-Redo", "Main-Soft-Reset", "Main-Alarm", "Main-View-Image", "Main-Blank", "Hangout-Loop"]
+
+def start_new_pipe(desired_process: PROCESS_TYPES, is_main_pipe: bool):
     global pipe_counter, main_pipe_running
     pipe_counter += 1
 
     # Make our pipe
-    this_pipe = ["Init", "None", pipe_counter, desired_process, is_main_pipe]
+    this_pipe: list[str|str|int|str|bool] = ["Init", "None", pipe_counter, desired_process, is_main_pipe]
     if is_main_pipe:
         main_pipe_running = True
 
@@ -41,7 +46,7 @@ def start_new_pipe(desired_process, is_main_pipe):
 
 
 # This is what continually runs a pipe. It will run, until the desired pipe reaches "BAKED"
-def pipe_loop(this_pipe):
+def pipe_loop(this_pipe: list[Any]):
     global main_pipe_running
 
     # while not finished
@@ -176,7 +181,7 @@ def pipe_loop(this_pipe):
                     utils.hangout.add_to_appendables(this_hangout_input)
 
                     # Clear out the latest chat if it is the one we just sent (it can slip in)
-                    API.Oogabooga_Api_Support.pop_if_sent_is_latest(this_hangout_input)
+                    backend.pop_if_sent_is_latest(this_hangout_input)
 
                     continue
 
@@ -203,10 +208,10 @@ def pipe_loop(this_pipe):
     return
 
 
-def pipe_api_request(this_pipe):
+def pipe_api_request(this_pipe: Any):
     # Sleep on this while any other request is running
 
-    while API.Oogabooga_Api_Support.is_in_api_request:
+    while backend.is_in_api_request:
         time.sleep(0.03)
 
 

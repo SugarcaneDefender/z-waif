@@ -33,17 +33,10 @@ import utils.hangout
 import utils.uni_pipes
 import utils.logging
 
+from API import backend
+
 from dotenv import load_dotenv
 load_dotenv()
-BACKEND_TYPE = os.environ.get("TYPE", "oobabooga")
-
-match BACKEND_TYPE:
-    case "oobabooga":
-        from API import oobabooga as backend
-    case "ollama":
-        from API import ollama as backend
-    case _:
-        raise Exception("Invalid backend type!")
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
 char_name = os.environ.get("CHAR_NAME", "")

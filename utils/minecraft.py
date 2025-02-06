@@ -1,17 +1,26 @@
 # Support for playing Minecraft!
-
-from pythmc import ChatLink
-import pygetwindow
+import os
+from typing import Any
+if os.name == "nt": # TODO: mac and linux
+    from pythmc import ChatLink
+else:
+    ChatLink = Any # Allow type checking to work on Mac and Linux
+import pygetwindow # type: ignore
 import utils.cane_lib
 import time
 import main
-import API.Oogabooga_Api_Support
 import utils.settings
 import json
 
 from utils.settings import minecraft_enabled
 
+from API import backend
+
+chat: ChatLink = None
+
 if minecraft_enabled:
+    if os.name != "nt":
+        raise Exception("Minecraft is only supported on Windows at the moment.")
     chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
 
 last_chat = "None!"
@@ -27,7 +36,7 @@ with open("Configurables/MinecraftUsername.json", 'r') as openfile:
 with open("Configurables/MinecraftUsernameFollow.json", 'r') as openfile:
     mc_username_follow = json.load(openfile)
 
-def check_for_command(message):
+def check_for_command(message: str):
 
     if str(message).__contains__("#") or str(message).__contains__("/"):
 
@@ -84,7 +93,7 @@ def check_mc_chat():
     global remembered_messages
 
     # Returns a list of messages from the in-game chat.
-    message_list = chat.get_history(limit=10)
+    message_list: list[ChatLink.Message] | None = chat.get_history(limit=10)
 
     if message_list is None:
         message_list = ["None!"]
@@ -142,6 +151,6 @@ def check_mc_chat():
 
 def minecraft_chat():
 
-    message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message = backend.receive()
     chat.send(message)
 
