@@ -58,6 +58,14 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+v1.8-R2
+
+- Fixed a bug that would cause random crashes in faster-whisper.
+	- Can now confirm no more crashes with it.
+	- Done by setting "temperature" setting to "0.0"
+
+---.---.---.---
+
 v1.8
 
 - whisper-turbo, a new ultra fast transcribing method
