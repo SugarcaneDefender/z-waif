@@ -223,7 +223,7 @@ def main_message_speak():
 
 
 
-def message_checks(message):
+def message_checks(message: str):
 
     #
     # Runs message checks for plugins, such as VTube Studio and Minecraft
@@ -768,7 +768,7 @@ def hangout_wait_reply_replyportion():
     live_pipe_force_speak_on_response = False
 
 
-def hangout_view_image_reply(transcript, dont_speak_aloud):
+def hangout_view_image_reply(transcript: str, dont_speak_aloud: bool):
     global live_pipe_no_speak
 
     # Give us some feedback
