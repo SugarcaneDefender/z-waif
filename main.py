@@ -118,23 +118,31 @@ def main_converse():
     # Actual recording and waiting bit
     audio_buffer = utils.audio.record()
 
+    size_string = ""
+    try:
+        size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
+    except:
+        size_string = str(1 + len(utils.transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
-        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + str(
-            humanize.naturalsize(
-                os.path.getsize(audio_buffer))) + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + size_string + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+
         print(tanscribing_log, end="", flush=True)
+
+        while utils.transcriber_translate.chunky_request != None:  # rest to wait for transcription to complete
+            time.sleep(0.01)
 
         # My own edit- To remove possible transcribing errors
         transcript = "Whoops! The code is having some issues, chill for a second."
 
         # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
-        if utils.audio.latest_chat_frame_count < 179 and utils.hotkeys.get_autochat_toggle():
+        if utils.audio.latest_chat_frame_count < 159 and utils.hotkeys.get_autochat_toggle():
             print("Audio length too small for autochat - cancelling...")
             utils.logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
+            utils.transcriber_translate.clear_transcription_chunks()
             return
 
-        transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+        transcript = utils.transcriber_translate.transcribe_voice_to_text(audio_buffer)
 
         if len(transcript) < 2:
             print("Transcribed chat is blank - cancelling...")
@@ -575,16 +583,23 @@ def view_image_prompt_get():
     audio_buffer = utils.audio.record()
 
 
+    size_string = ""
     try:
-        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + str(
-            humanize.naturalsize(
-                os.path.getsize(audio_buffer))) + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+         size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
+    except:
+        size_string = str(1 + len(utils.transcriber_translate.transcription_chunks)) + " Chunks"
+
+    try:
+        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + size_string + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
         print(tanscribing_log, end="", flush=True)
+
+        while utils.transcriber_translate.chunky_request != None:  # rest to wait for transcription to complete
+            time.sleep(0.01)
 
         # My own edit- To remove possible transcribing errors
         transcript = "Whoops! The code is having some issues, chill for a second."
 
-        transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+        transcript = utils.transcriber_translate.transcribe_voice_to_text(audio_buffer)
 
 
 
@@ -652,25 +667,31 @@ def hangout_converse():
 
     # Actual recording and waiting bit
     audio_buffer = utils.audio.record()
-
+    size_string = ""
+    try:
+         size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
+    except:
+        size_string = str(1 + len(utils.transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
-        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + str(
-            humanize.naturalsize(
-                os.path.getsize(audio_buffer))) + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
+        tanscribing_log = "\rYou" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic " + colorama.Fore.BLUE + "[Transcribing (" + size_string + ")]" + colorama.Fore.GREEN + ") " + colorama.Fore.RESET + "> "
         print(tanscribing_log, end="", flush=True)
+
+        while utils.transcriber_translate.chunky_request != None:  # rest to wait for transcription to complete
+            time.sleep(0.01)
 
         # My own edit- To remove possible transcribing errors
         transcript = "Whoops! The code is having some issues, chill for a second."
 
         # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
         # This will cause us to re-loop! Awesome!
-        if utils.audio.latest_chat_frame_count < 179 and utils.hotkeys.get_autochat_toggle():
+        if utils.audio.latest_chat_frame_count < 159 and utils.hotkeys.get_autochat_toggle():
             print("Audio length too small for autochat - cancelling...")
             utils.logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
+            utils.transcriber_translate.clear_transcription_chunks()
             return "Audio too short!"
 
-        transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+        transcript = utils.transcriber_translate.transcribe_voice_to_text(audio_buffer)
 
         if len(transcript) < 2:
             print("Transcribed chat is blank - cancelling...")
@@ -806,6 +827,7 @@ def hangout_view_image_reply(transcript: str, dont_speak_aloud: bool):
     # Clear our appendables (hangout)
     utils.hangout.clear_appendables()
 
+# For interrupting in hangout mode. Flagged as "Ordus" for recording and transcribing, needs its own methods
 def hangout_interrupt_audio_recordable():
 
     # Minirest to allow the API to start requesting
@@ -819,8 +841,8 @@ def hangout_interrupt_audio_recordable():
         time.sleep(0.01)
 
         # Actual recording and waiting bit
-        audio_buffer = utils.audio.record()
-        ordus_transcript = utils.transcriber_translate.to_transcribe_original_language(audio_buffer)
+        audio_buffer = utils.audio.record_ordus()
+        ordus_transcript = utils.transcriber_translate.ordus_transcribe_voice_to_text(audio_buffer)
 
         # All the things you can say to get your waifu to stop talking
         interrupt_messages = ["wait " + char_name, char_name + " wait", "wait, " + char_name, "wait. " + char_name, char_name + ", wait", char_name + ". wait"]
@@ -982,6 +1004,12 @@ def run_program():
         face_follow_thread = threading.Thread(target=utils.camera.loop_random_look)
         face_follow_thread.daemon = True
         face_follow_thread.start()
+
+    # Start a chunky transcription thread
+    # NOTE: While I could add a check to see if we need to, it really doesn't matter, since no requests come in anyway!
+    chunky_transcription = threading.Thread(target=utils.transcriber_translate.chunky_transcription_loop)
+    chunky_transcription.daemon = True
+    chunky_transcription.start()
 
     # Start another thread for Gradio
     gradio_thread = threading.Thread(target=utils.web_ui.launch_demo)

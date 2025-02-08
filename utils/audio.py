@@ -11,8 +11,10 @@ import os, audioop
 import sounddevice as sd # type: ignore
 
 import utils.volume_listener
+import utils.transcriber_translate
 
 CHUNK = 1024
+CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE")
 
 FORMAT = pyaudio.paInt16
 
@@ -96,6 +98,12 @@ def play_wav(path: str, audio_level_callback: Callable[...,Any] | None=None):
 
 
 def record():
+    # Breaker for if we are doing chunky transcription, go do that instead!
+    if utils.transcriber_translate.CHUNKY_TRANSCRIPTION == "ON":
+        return record_chunky()
+
+    #
+    # Otherwise, record as ususal
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
     frames = []
@@ -132,7 +140,7 @@ def record():
 
     return SAVE_PATH
 
-def record_for_streaming_snipper():
+def record_ordus():
     p = pyaudio.PyAudio()
     stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
     frames = []
@@ -152,7 +160,7 @@ def record_for_streaming_snipper():
     p.terminate()
 
 
-    wf = wave.open(SAVE_PATH, 'wb')
+    wf = wave.open(SAVE_PATH_ORDUS, 'wb')
 
     wf.setnchannels(CHANNELS)
     wf.setsampwidth(p.get_sample_size(FORMAT))
@@ -168,6 +176,60 @@ def record_for_streaming_snipper():
     latest_chat_frame_count = len(frames)
 
     return SAVE_PATH_ORDUS
+
+
+# For chunky audio recording/processing
+def record_chunky():
+    frames = []
+    all_frames = []
+
+    # Check for if we want to add our audio buffer
+    global chat_buffer_frames
+    if len(chat_buffer_frames) > 1:
+        frames = chat_buffer_frames.copy()
+
+    # Loop through until done recording, and limit it to X frames
+    while utils.hotkeys.get_speak_input():
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+
+        while len(frames) < int(CHUNKY_TRANSCRIPTION_RATE) and utils.hotkeys.get_speak_input():
+            data = stream.read(CHUNK)
+            frames.append(data)
+            all_frames.append(data)
+
+        # Wait for another opening to transcribe, we are still transcribing the last chunk!
+        # NOTE: If this happens to you, that is bad! It can't even keep up to realtime!
+        while utils.transcriber_translate.chunky_request != None:
+            time.sleep(0.01)
+
+        stream.stop_stream()
+        stream.close()
+
+        p.terminate()
+
+        wf = wave.open(SAVE_PATH, 'wb')
+
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+
+        # Transcribe this chunk in another thread!
+        utils.transcriber_translate.give_chunky_request(SAVE_PATH)
+
+        # Clear frames for next loop (keep latest one for quality)
+        frames = [frames[-1]]
+
+
+
+    # Write out our frame count
+    global latest_chat_frame_count
+    latest_chat_frame_count = len(all_frames)
+
+    return "CHUNKY" # faker so we have something for the return
+
 
 def autochat_audio_buffer_record():
 

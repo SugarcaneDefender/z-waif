@@ -167,7 +167,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             autochat_checkbox_view = gr.Checkbox(label="Auto-Chat Enabled")
 
-            autochat_sensitivity_slider = gr.Slider(minimum=4, maximum=144, value=20, label="Auto-Chat Sensitivity")
+            autochat_sensitivity_slider = gr.Slider(minimum=4, maximum=144, value=16, label="Auto-Chat Sensitivity")
             autochat_sensitivity_slider.change(fn=change_autochat_sensitivity, inputs=autochat_sensitivity_slider)
 
 
