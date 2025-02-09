@@ -1,8 +1,9 @@
 import time
+from typing import Any
 
 import utils.cane_lib
 import asyncio,os,threading
-import pyvts
+import pyvts # type: ignore
 import json
 from dotenv import load_dotenv
 
@@ -25,18 +26,30 @@ load_dotenv()
 # NOTE: Emote ID is now just used for detection! There is now a list that can run multiple emotes at once!
 EMOTE_ID = 2
 EMOTE_STRING = ""
-streaming_emote_list = []
+streaming_emote_list: list[int] = []
 
-emote_request_list = []
+emote_request_list: list[int] = []
 
 CUR_LOOK = 0
 LOOK_LEVEL_ID = 1
-look_start_id = int(os.environ.get("EYES_START_ID"))
+look_start_id = int(os.environ.get("EYES_START_ID", 14))
 
 
 # Load in the EmoteLib from configurables
 with open("Configurables/EmoteLib.json", 'r') as openfile:
-    emote_lib = json.load(openfile)
+    """
+    [
+        [
+            [
+                "Pog",
+                "Surprise"
+            ],
+            9
+        ],
+        ...
+    ]
+    """
+    emote_lib: list[list[list[str]|int]] = json.load(openfile)
 
 
 
@@ -54,17 +67,17 @@ async def vtube_studio_connection():
 
 # Emote System
 
-def set_emote_string(emote_string):
+def set_emote_string(emote_string: str):
     global EMOTE_STRING
-    EMOTE_STRING = emote_string
+    EMOTE_STRING = emote_string # type: ignore
 
 def check_emote_string():
 
     # Setup our global
     global EMOTE_ID
-    EMOTE_ID = -1
+    EMOTE_ID = -1 # type: ignore
 
-    emote_list = []
+    emote_list: list[int] = []
 
 
     # Cleanup the text to only look at the asterisk'ed words
@@ -82,9 +95,9 @@ def check_emote_string():
     # Run through emotes, using OOP to only run one at a time (last = most prominent)
 
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]):
-            EMOTE_ID = emote_page[1]
-            emote_list.append(emote_page[1])
+        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]): # type: ignore
+            EMOTE_ID = emote_page[1] # type: ignore
+            emote_list.append(emote_page[1]) # type: ignore
 
     # If we got an emote, run it through the system
     if EMOTE_ID != -1:
@@ -95,7 +108,7 @@ def check_emote_string_streaming():
     global streaming_emote_list
 
     # Make our list
-    emote_list = []
+    emote_list: list[int] = []
 
     # Cleanup the text to only look at the asterisk'ed words
     clean_emote_text = ''
@@ -109,9 +122,9 @@ def check_emote_string_streaming():
 
     # Check if there is an emote that we DON'T have in the streaming one!
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]):
-            emote_list.append(emote_page[1])
-            streaming_emote_list.append(emote_page[1])
+        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]): # type: ignore
+            emote_list.append(emote_page[1]) # type: ignore
+            streaming_emote_list.append(emote_page[1]) # type: ignore
 
     # Run the emotes, if we have any
     if len(emote_list) > 0:
@@ -139,7 +152,7 @@ def emote_runner_loop():
 
 
 
-def run_emote(inlist_emote):
+def run_emote(inlist_emote: int):
     time.sleep(0.001)  # Mini Rest (frame pierce happened)
 
     try:
@@ -150,19 +163,19 @@ def run_emote(inlist_emote):
 
     # ^^^ Runs the emote, if there is an error allow a small rest
 
-async def emote(inlist_emote):
+async def emote(inlist_emote: int):
     await VTS.connect()
     await VTS.request_authenticate()
-    response_data = await VTS.request(VTS.vts_request.requestHotKeyList())
-    hotkey_list = []
+    response_data: dict[str,dict[str, Any]] = await VTS.request(VTS.vts_request.requestHotKeyList()) # type: ignore
+    hotkey_list: list[str] = []
     for hotkey in response_data["data"]["availableHotkeys"]:
         hotkey_list.append(hotkey["name"])
-    send_hotkey_request = VTS.vts_request.requestTriggerHotKey(hotkey_list[inlist_emote])
-    await VTS.request(send_hotkey_request)
+    send_hotkey_request = VTS.vts_request.requestTriggerHotKey(hotkey_list[inlist_emote]) # type: ignore
+    await VTS.request(send_hotkey_request) # type: ignore
 
     await VTS.close()
 
-def change_look_level(value):
+def change_look_level(value: float):
 
     # Inputting value should be from -1 to 1
     # We translate to what the look level should be here
