@@ -1,9 +1,10 @@
+#!/usr/bin/env bash ./startup.sh
 import time
 
 import colorama
 import humanize, os, threading
 import emoji
-import asyncio
+# import asyncio
 
 import utils.audio
 import utils.hotkeys
@@ -15,8 +16,6 @@ import utils.volume_listener
 import utils.minecraft
 import utils.log_conversion
 import utils.cane_lib
-
-import API.Oogabooga_Api_Support
 
 import utils.lorebook
 import utils.camera
@@ -34,11 +33,13 @@ import utils.hangout
 import utils.uni_pipes
 import utils.logging
 
+from API import backend
+
 from dotenv import load_dotenv
 load_dotenv()
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
-char_name = os.environ.get("CHAR_NAME")
+char_name = os.environ.get("CHAR_NAME", "")
 
 stored_transcript = "Issue with message cycling!"
 
@@ -171,11 +172,11 @@ def main_converse():
 
     # Actual sending of the message, waits for reply automatically
 
-    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -195,11 +196,11 @@ def main_message_speak():
     #   Message is received Here
     #
 
-    message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message = backend.receive()
 
 
     # Stop this if the message was streamed- we have already read it!
-    if API.Oogabooga_Api_Support.last_message_streamed and not live_pipe_force_speak_on_response:
+    if backend.last_message_streamed and not live_pipe_force_speak_on_response:
         live_pipe_force_speak_on_response = False
         return
 
@@ -223,7 +224,7 @@ def main_message_speak():
 
 
 
-def message_checks(message):
+def message_checks(message: str):
 
     #
     # Runs message checks for plugins, such as VTube Studio and Minecraft
@@ -231,7 +232,7 @@ def message_checks(message):
 
     #   Log our message (ONLY if the last chat was NOT streaming)
 
-    if not API.Oogabooga_Api_Support.last_message_streamed:
+    if not backend.last_message_streamed:
         print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
               + "----" + char_name + "----"
               + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
@@ -242,7 +243,7 @@ def message_checks(message):
     #   Vtube Studio Emoting
     #
 
-    if utils.settings.vtube_enabled and not API.Oogabooga_Api_Support.last_message_streamed:
+    if utils.settings.vtube_enabled and not backend.last_message_streamed:
         # Feeds the message to our VTube Studio script
         utils.vtube_studio.set_emote_string(message)
 
@@ -283,16 +284,16 @@ def main_rate():
 
 def main_next():
 
-    API.Oogabooga_Api_Support.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
     main_message_speak()
 
-def main_minecraft_chat(message):
+def main_minecraft_chat(message: str):
 
     # This is a shadow chat
     global live_pipe_no_speak
@@ -300,16 +301,16 @@ def main_minecraft_chat(message):
         live_pipe_no_speak = True
 
     # Limit the amount of tokens allowed to send (minecraft chat limits)
-    API.Oogabooga_Api_Support.force_tokens_count(47)
+    backend.force_tokens_count(47)
 
     # Actual sending of the message, waits for reply automatically
-    API.Oogabooga_Api_Support.send_via_oogabooga(message)
+    backend.send(message)
 
     # Reply in the craft
     utils.minecraft.minecraft_chat()
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -318,7 +319,7 @@ def main_minecraft_chat(message):
         main_message_speak()
 
 
-def main_discord_chat(message):
+def main_discord_chat(message: str):
 
     # This is a shadow chat
     global live_pipe_no_speak
@@ -326,14 +327,14 @@ def main_discord_chat(message):
         live_pipe_no_speak = True
 
     # Actual sending of the message, waits for reply automatically
-    API.Oogabooga_Api_Support.send_via_oogabooga(message)
+    backend.send(message)
 
     #
     # CHATS WILL BE GRABBED AFTER THIS RUNS!
     #
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -345,7 +346,7 @@ def main_discord_chat(message):
 
 
 
-def main_web_ui_chat(message):
+def main_web_ui_chat(message: str):
 
     # This is a shadow chat
     global live_pipe_no_speak
@@ -353,7 +354,7 @@ def main_web_ui_chat(message):
         live_pipe_no_speak = True
 
     # Actual sending of the message, waits for reply automatically
-    API.Oogabooga_Api_Support.send_via_oogabooga(message)
+    backend.send(message)
 
     #
     # CHATS WILL BE GRABBED AFTER THIS RUNS!
@@ -363,7 +364,7 @@ def main_web_ui_chat(message):
     utils.voice.force_cut_voice()
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -384,15 +385,15 @@ def main_web_ui_next():
     utils.voice.force_cut_voice()
 
     # Force end the existing stream (if there is one)
-    if API.Oogabooga_Api_Support.is_in_api_request:
-        API.Oogabooga_Api_Support.set_force_skip_streaming(True)
+    if backend.is_in_api_request:
+        backend.set_force_skip_streaming(True)
         live_pipe_no_speak = False
         return
 
-    API.Oogabooga_Api_Support.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -409,10 +410,10 @@ def main_discord_next():
     if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
         live_pipe_no_speak = True
 
-    API.Oogabooga_Api_Support.next_message_oogabooga()
+    backend.next_message()
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -431,7 +432,7 @@ def main_undo():
         # Cut voice if needed
         utils.voice.force_cut_voice()
 
-        API.Oogabooga_Api_Support.undo_message()
+        backend.undo_message()
 
         print("\nUndoing the previous message!\n")
 
@@ -439,7 +440,7 @@ def main_undo():
 
 def main_soft_reset():
 
-    API.Oogabooga_Api_Support.soft_reset()
+    backend.soft_reset()
 
     # We can noT undo
     global undo_allowed
@@ -455,10 +456,10 @@ def main_alarm_message():
         main_memory_proc()
 
     # Send it!
-    API.Oogabooga_Api_Support.send_via_oogabooga(utils.alarm.get_alarm_message())
+    backend.send(utils.alarm.get_alarm_message())
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     main_message_speak()
@@ -485,7 +486,7 @@ def main_memory_proc():
     #
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
@@ -553,7 +554,7 @@ def main_view_image():
         direct_talk_transcript = view_image_prompt_get()
 
     # View and process the image, storing the result
-    transcript = API.Oogabooga_Api_Support.send_image_via_oobabooga(direct_talk_transcript)
+    transcript = backend.send_image(direct_talk_transcript)
 
     # Fix up our transcript & show us
     if not utils.settings.stream_chats:
@@ -604,7 +605,7 @@ def view_image_prompt_get():
 
     except Exception as e:
         print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
-        return
+        return ""
 
     # Print the transcript
     print('\r' + ' ' * len(tanscribing_log), end="")
@@ -617,14 +618,14 @@ def view_image_prompt_get():
     # Return our transcipt of what we have just said
     return transcript
 
-def view_image_after_chat(message):
+def view_image_after_chat(message: str):
 
     # Actual sending of the message, waits for reply automatically
-    API.Oogabooga_Api_Support.send_via_oogabooga(message)
+    backend.send(message)
 
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -645,10 +646,10 @@ def main_send_blank():
 
     # Actual sending of the message, waits for reply automatically
 
-    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
 
@@ -735,10 +736,10 @@ def hangout_reply(transcript):
         hangout_interruptable.start()
 
     # Actual sending of the message, waits for reply automatically
-    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Pipe us to the reply function
@@ -753,7 +754,7 @@ def hangout_wait_reply_waitportion(transcript):
     live_pipe_no_speak = True
     live_pipe_use_streamed_interrupt_watchdog = True
 
-    API.Oogabooga_Api_Support.send_via_oogabooga(transcript)
+    backend.send(transcript)
 
     live_pipe_use_streamed_interrupt_watchdog = False
     live_pipe_no_speak = False
@@ -761,11 +762,11 @@ def hangout_wait_reply_waitportion(transcript):
 def hangout_wait_reply_replyportion():
 
     # wait for gen to finish
-    while API.Oogabooga_Api_Support.is_in_api_request:
+    while backend.is_in_api_request:
         time.sleep(0.01)
 
     # Run our message checks
-    reply_message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    reply_message = backend.receive()
     message_checks(reply_message)
 
     # Set it so that we speak on response
@@ -781,7 +782,7 @@ def hangout_wait_reply_replyportion():
     live_pipe_force_speak_on_response = False
 
 
-def hangout_view_image_reply(transcript, dont_speak_aloud):
+def hangout_view_image_reply(transcript: str, dont_speak_aloud: bool):
     global live_pipe_no_speak
 
     # Give us some feedback
@@ -815,7 +816,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     live_pipe_no_speak = dont_speak_aloud
 
     # View and process the image, storing the result
-    transcript = API.Oogabooga_Api_Support.send_image_via_oobabooga_hangout(direct_talk_transcript)
+    transcript = backend.send_image_hangout(direct_talk_transcript)
 
 
     # Run our required message checks
@@ -835,7 +836,7 @@ def hangout_interrupt_audio_recordable():
     not_run_yet = True
 
     # Auto-close when the api is in an request
-    while API.Oogabooga_Api_Support.is_in_api_request or not_run_yet:
+    while backend.is_in_api_request or not_run_yet:
 
         time.sleep(0.01)
 
@@ -852,7 +853,7 @@ def hangout_interrupt_audio_recordable():
         if utils.cane_lib.keyword_check(ordus_transcript, interrupt_messages):
 
             # Force the interrupt
-            API.Oogabooga_Api_Support.flag_end_streaming = True
+            backend.flag_end_streaming = True
 
             # Info
             utils.logging.update_debug_log("Forcing generation to end - name detected!")
@@ -946,7 +947,7 @@ def run_program():
     utils.log_conversion.run_conversion()
 
     # Load the previous chat history, and make a backup of it
-    API.Oogabooga_Api_Support.check_load_past_chat()
+    backend.check_load_past_chat()
 
 
     # Start the VTube Studio interaction in a separate thread, we ALWAYS do this FYI

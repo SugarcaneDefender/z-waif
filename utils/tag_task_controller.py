@@ -1,5 +1,4 @@
 import utils.settings
-import os
 import json
 import utils.cane_lib
 import utils.logging
@@ -23,7 +22,7 @@ def save_tags_tasks():
         json.dump(utils.settings.all_tag_list, outfile, indent=4)
 
 
-def set_task(input_text):
+def set_task(input_text: str):
     if input_text == "None" or input_text == "":
         utils.settings.cur_task_char = "None"
     else:
@@ -40,7 +39,7 @@ def set_task(input_text):
 
     utils.logging.update_debug_log("Task set to " + utils.settings.cur_task_char)
 
-def set_tags(new_tags_list):
+def set_tags(new_tags_list: list[str]):
 
     # Set 'em
     utils.settings.cur_tags = new_tags_list
@@ -67,8 +66,8 @@ def apply_tags():
     return taglist
 
 
-def change_tag_via_task(intag):
-    if utils.settings.cur_tags is not None:
+def change_tag_via_task(intag: str):
+    if utils.settings.cur_tags not in [None, []]: # is not None or an empty list
         for tag in utils.settings.cur_tags:
             if utils.cane_lib.keyword_check(tag, ["Task"]):
                 utils.settings.cur_tags.remove(tag)

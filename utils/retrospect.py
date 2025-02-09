@@ -1,15 +1,17 @@
 import utils.based_rag
 import random
-import API.Oogabooga_Api_Support
 import utils.logging
 import os
+
+from API import backend
 
 
 summary_tokens_count = 310
 search_point_size = 16
 
 enable_debug = True
-char_name = os.environ.get("CHAR_NAME")
+char_name: str = os.environ.get("CHAR_NAME", "") # Default name?
+assert char_name is not ""
 
 
 # remembers a random past event
@@ -20,7 +22,7 @@ def retrospect_random_mem_summary():
     search_point = random.randint(0, len(history) - 90)
 
     history_scope = history[search_point:search_point+search_point_size]
-    retrospect_message = ("[System L] Can you please summarize all of these chat messages? These are previous memories that you, " + char_name +
+    retrospect_message: str = ("[System L] Can you please summarize all of these chat messages? These are previous memories that you, " + char_name +
                           ", have experienced. " +
                           "Feel free to focus on details that are of note or you find interest in.")
 
@@ -28,8 +30,8 @@ def retrospect_random_mem_summary():
         utils.logging.update_rag_log(history_scope)
 
     # Encode and send!
-    pre_encoded_message = API.Oogabooga_Api_Support.encode_raw_new_api(history_scope, retrospect_message, search_point_size)
-    API.Oogabooga_Api_Support.summary_memory_run(pre_encoded_message, retrospect_message)
+    pre_encoded_message = backend.encode_raw_new_api(history_scope, retrospect_message, search_point_size)
+    backend.summary_memory_run(pre_encoded_message, retrospect_message)
 
 
 

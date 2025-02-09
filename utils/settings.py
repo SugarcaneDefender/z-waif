@@ -13,8 +13,8 @@ stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 semi_auto_chat = False
 hangout_mode = False
 
-alarm_time = "09:09"
-model_preset = "Default"
+alarm_time: str = "09:09"
+model_preset: str = "Default"
 
 cam_use_image_feed = False
 cam_direct_talk = True
@@ -26,9 +26,9 @@ cam_use_screenshot = False
 eyes_follow = "None"
 
 # Tags and tasks
-all_tag_list = []
-cur_tags = []
-all_task_char_list = []
+all_tag_list: list[str] = []
+cur_tags: list[str] = []
+all_task_char_list: list[str] = []
 cur_task_char = "None"
 
 # Gaming

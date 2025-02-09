@@ -1,19 +1,20 @@
 import os
+from typing import Any
 import time
 
-import whisper
+import whisper # type: ignore
 from faster_whisper import WhisperModel
 import torch
 from dotenv import load_dotenv
 load_dotenv()
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+device = "mps" if torch.mps.is_available() else "cuda" if torch.cuda.is_available() else "cpu"
 
 FORCE_CPU = os.environ.get("WHISPER_TURBO_CPU_TRANSCRIPTION")
 if FORCE_CPU == "ON":
     device = "cpu"
 
-USER_MODEL = os.environ.get("WHISPER_MODEL")
+USER_MODEL = os.environ.get("WHISPER_MODEL", "base.en")
 WHISPER_TURBO = os.environ.get("WHISPER_TURBO")
 
 CHUNKY_TRANSCRIPTION = os.environ.get("WHISPER_CHUNKY")
@@ -84,8 +85,13 @@ def faster_transcribe(voice):
 # Normal transcription, uses whisper
 def classical_transcribe(voice):
     nresult=""
+USER_MODEL = os.environ.get("WHISPER_MODEL", "base.en")
+
+def to_transcribe_original_language(voice: str) -> str:
+
+    nresult: str = ""
     model = whisper.load_model(USER_MODEL)
-    result = model.transcribe(voice, language="en", compression_ratio_threshold=1.9, no_speech_threshold=0.1)
+    result: dict[str, Any] = model.transcribe(voice, language="en", compression_ratio_threshold=1.9, no_speech_threshold=0.1) # type: ignore
 
     # Return the combined text
     for mem in result["segments"]:

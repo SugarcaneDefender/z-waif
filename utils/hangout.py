@@ -70,7 +70,7 @@ with open("Configurables/Hangout/CameraWords.json", 'r') as openfile:
 # reply_speed   -   Determines how long waiting is needed
 # reply_depth   -   Determines how much thinking is needed
 # reply_cam     -   How much camera we need
-def reply_decide(input_text):
+def reply_decide(input_text: str):
     global replies_skipped_stacking
     reply_speed = 100
     reply_depth = 100
@@ -226,7 +226,7 @@ def clear_reply_skipping():
     global replies_skipped_stacking
     replies_skipped_stacking = 0
 
-def add_to_appendables(input):
+def add_to_appendables(input: str):
     global hangout_interrupts_appendables
     hangout_interrupts_appendables += input
 

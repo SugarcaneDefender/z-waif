@@ -424,7 +424,7 @@ def input_change_listener_sensitivity():
     print("\nSensitivity Set To " + str(SPEAKING_VOLUME_SENSITIVITY) + " !")
 
 
-def input_change_listener_sensitivity_from_ui(value):
+def input_change_listener_sensitivity_from_ui(value: int):
     global SPEAKING_VOLUME_SENSITIVITY
 
     SPEAKING_VOLUME_SENSITIVITY = value

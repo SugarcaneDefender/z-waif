@@ -35,7 +35,7 @@ with open("Configurables/Lorebook.json", 'r') as openfile:
 #     return "No lore!"
 
 # Gathers ALL lore in a given scope (send in the message being sent, as well as any message pairs you want to check)
-def lorebook_gather(messages, sent_message):
+def lorebook_gather(messages: list[str], sent_message: str) -> str:
 
     # gather, gather, into reformed
     reformed_messages = [sent_message, ""]
@@ -71,7 +71,7 @@ def lorebook_gather(messages, sent_message):
 
 
 # Check if keyword is in the lorebook
-def rag_word_check(word):
+def rag_word_check(word: str) -> bool:
     # Lockout clearing
     for lore in LORE_BOOK:
         if str.lower(lore['0']) == word:

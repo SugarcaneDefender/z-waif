@@ -3,8 +3,9 @@ import os
 import html
 import json
 import base64
-import time
+# import time
 import random
+from typing import Any
 
 import requests
 import sseclient
@@ -22,7 +23,7 @@ import colorama
 import utils.voice_splitter
 import utils.voice
 import emoji
-import threading
+# import threading
 import utils.hotkeys
 import utils.vtube_studio
 import utils.hangout
@@ -30,31 +31,32 @@ import utils.hangout
 
 load_dotenv()
 
-HOST = '127.0.0.1:5000'
-URI = f'http://{HOST}/v1/chat/completions'
-URL_MODEL = f'http://{HOST}/v1/engines/'
+HOST = os.environ.get("HOST", "127.0.0.1")
+HOST_PORT = os.environ.get("HOST_PORT", "5005")
+URI = f'http://{HOST}:{HOST_PORT}/v1/chat/completions'
+URL_MODEL = f'http://{HOST}:{HOST_PORT}/v1/engines/'
 
-IMG_PORT = os.environ.get("IMG_PORT")
-IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
-IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
+IMG_PORT = os.environ.get("IMG_PORT", "127.0.0.1:5007")
+IMG_URI = f'http://{HOST}:{IMG_PORT}/v1/chat/completions'
+IMG_URL_MODEL = f'http://{HOST}:{IMG_PORT}/v1/engines/'
 
-received_message = ""
-CHARACTER_CARD = os.environ.get("CHARACTER_CARD")
-YOUR_NAME = os.environ.get("YOUR_NAME")
+received_message: str = ""
+CHARACTER_CARD = os.environ.get("CHARACTER_CARD", "")
+YOUR_NAME = os.environ.get("YOUR_NAME", "You")
 
 history_loaded = False
 
-ooga_history = [ ["Hello, I am back!", "Welcome back! *smiles*"] ]
+chat_history = [ ["Hello, I am back!", "Welcome back! *smiles*"] ]
 
 headers = {
     "Content-Type": "application/json"
 }
 
-max_context = int(os.environ.get("TOKEN_LIMIT"))
-marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT"))
+max_context = int(os.environ.get("TOKEN_LIMIT", 4096))
+marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT", 40))
 
 force_token_count = False
-forced_token_level = 120
+forced_token_level: int = 120
 
 stored_received_message = "None!"
 currently_sending_message = ""
@@ -67,7 +69,7 @@ flag_end_streaming = False
 
 is_in_api_request = False
 
-ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
+ENCODE_TIME = os.environ.get("TIME_IN_ENCODING", "ON")
 
 VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
 VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
@@ -81,9 +83,9 @@ with open("Configurables/StoppingStrings.json", 'r') as openfile:
     utils.settings.stopping_strings = json.load(openfile)
 
 
-def run(user_input, temp_level):
+def run(user_input: str, temp_level: int):
     global received_message
-    global ooga_history
+    global chat_history
     global forced_token_level
     global force_token_count
     global currently_sending_message
@@ -104,7 +106,7 @@ def run(user_input, temp_level):
     # Load the history from JSON, to clean up the quotation marks
     #
     with open("LiveLog.json", 'r') as openfile:
-        ooga_history = json.load(openfile)
+        chat_history = json.load(openfile)
 
 
     # Determine what preset we want to load in with
@@ -145,9 +147,9 @@ def run(user_input, temp_level):
 
 
     # Forced tokens check
-    cur_tokens_required = utils.settings.max_tokens
+    cur_tokens_required: int = utils.settings.max_tokens
     if force_token_count:
-        cur_tokens_required = forced_token_level
+        cur_tokens_required: int = forced_token_level
 
 
     # Set the stop right
@@ -163,7 +165,7 @@ def run(user_input, temp_level):
 
     # Send the actual API Request
 
-    request = {
+    request: dict[str, Any] = {
         "messages": messages_to_send,
         'max_tokens': cur_tokens_required,
         'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
@@ -218,7 +220,7 @@ def run(user_input, temp_level):
         log_user_input = "{0}".format(user_input)
         log_received_message = "{0}".format(received_message)
 
-        ooga_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        chat_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
         # Run a pruning of the deletables
         prune_deletables()
@@ -238,10 +240,10 @@ def run(user_input, temp_level):
 #
 # For the new streaming chats, runs it continually to grab data as it comes in from Oobabooga. Should run faster
 #
-def run_streaming(user_input, temp_level):
+def run_streaming(user_input: str, temp_level: int):
 
     global received_message
-    global ooga_history
+    global chat_history
     global forced_token_level
     global force_token_count
     global currently_sending_message
@@ -268,7 +270,7 @@ def run_streaming(user_input, temp_level):
     # Load the history from JSON, to clean up the quotation marks
     #
     with open("LiveLog.json", 'r') as openfile:
-        ooga_history = json.load(openfile)
+        chat_history = json.load(openfile)
 
 
     # Determine what preset we want to load in with
@@ -333,7 +335,7 @@ def run_streaming(user_input, temp_level):
     # STREAMING TOOLING GOES HERE o7
     #
 
-    request = {
+    request: dict[str, Any] = {
         "messages": messages_to_send,
         'max_tokens': cur_tokens_required,
         'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
@@ -357,7 +359,7 @@ def run_streaming(user_input, temp_level):
     # Actual streaming bit
 
     stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-    client = sseclient.SSEClient(stream_response)
+    client = sseclient.SSEClient(stream_response) # type: ignore
 
     # Clear streamed emote list
     utils.vtube_studio.clear_streaming_emote_list()
@@ -386,7 +388,7 @@ def run_streaming(user_input, temp_level):
         if streamed_response_check == "Hangout-Name-Cut" and utils.settings.hangout_mode:
 
             # Add any existing stuff to our actual chat history
-            ooga_history.append([user_input, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+            chat_history.append([user_input, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
             save_histories()
 
             # Remove flag
@@ -479,7 +481,7 @@ def run_streaming(user_input, temp_level):
     log_user_input = "{0}".format(user_input)
     log_received_message = "{0}".format(received_message)
 
-    ooga_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+    chat_history.append([log_user_input, log_received_message, utils.tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
     # Run a pruning of the deletables
     prune_deletables()
@@ -498,7 +500,7 @@ def run_streaming(user_input, temp_level):
 
 #
 # Handles all changes in the streamed updates
-def streamed_update_handler(chunk, assistant_message):
+def streamed_update_handler(chunk: str, assistant_message: str):
 
     global currently_streaming_message
     global streaming_sentences_ticker
@@ -534,12 +536,12 @@ def streamed_update_handler(chunk, assistant_message):
     return "Continue"
 
 
-def set_force_skip_streaming(tf_input):
+def set_force_skip_streaming(tf_input: bool):
     global force_skip_streaming
     force_skip_streaming = tf_input
 
 
-def send_via_oogabooga(user_input):
+def send(user_input: str):
 
     user_input = user_input
 
@@ -550,7 +552,7 @@ def send_via_oogabooga(user_input):
 
     # RAG
     if utils.settings.rag_enabled:
-        utils.based_rag.run_based_rag(user_input, ooga_history[len(ooga_history) - 1][1])
+        utils.based_rag.run_based_rag(user_input, chat_history[len(chat_history) - 1][1])
 
     # Run
     if not utils.settings.stream_chats:
@@ -558,35 +560,34 @@ def send_via_oogabooga(user_input):
     if utils.settings.stream_chats:
         run_streaming(user_input, 0)
 
-def receive_via_oogabooga():
+def receive() -> str:
     return received_message
 
-def send_image_via_oobabooga(direct_talk_transcript):
+def send_image(direct_talk_transcript: str) -> str:
 
-    received_cam_message = ""
-    if not utils.settings.stream_chats:
-        received_cam_message = view_image(direct_talk_transcript)
     if utils.settings.stream_chats:
         received_cam_message = view_image_streaming(direct_talk_transcript)
+    else:
+        received_cam_message = view_image(direct_talk_transcript)
 
     return received_cam_message
 
-def send_image_via_oobabooga_hangout(direct_talk_transcript):
+def send_image_hangout(direct_talk_transcript: str) -> str:
 
     received_cam_message = view_image_streaming(direct_talk_transcript)
 
     return received_cam_message
 
 
-def next_message_oogabooga():
-    global ooga_history
+def next_message():
+    global chat_history
 
     # Record & Clear the old message
 
     print("Generating Replacement Message!")
-    cycle_message = ooga_history[-1][0]
-    cycle_tag = ooga_history[-1][2]
-    ooga_history.pop()
+    cycle_message = chat_history[-1][0]
+    cycle_tag = chat_history[-1][2]
+    chat_history.pop()
 
     # Save
     save_histories()
@@ -616,9 +617,9 @@ def next_message_oogabooga():
 
 
 def undo_message():
-    global ooga_history
+    global chat_history
 
-    ooga_history.pop()
+    chat_history.pop()
 
     # Fix the RAG database
     utils.based_rag.remove_latest_database_message()
@@ -629,7 +630,7 @@ def undo_message():
 
 
 def check_load_past_chat():
-    global ooga_history
+    global chat_history
     global history_loaded
 
 
@@ -638,7 +639,7 @@ def check_load_past_chat():
         # Load the history from JSON
 
         with open("LiveLog.json", 'r') as openfile:
-            ooga_history = json.load(openfile)
+            chat_history = json.load(openfile)
 
         history_loaded = True
 
@@ -646,10 +647,10 @@ def check_load_past_chat():
         utils.based_rag.load_rag_history()
 
         # Make a quick backup of our file (if big enough, that way it won't clear if they happen to load again after it errors to 0 somehow)
-        if len(ooga_history) > 30:
+        if len(chat_history) > 30:
             # Export to JSON
             with open("LiveLogBackup.bak", 'w') as outfile:
-                json.dump(ooga_history, outfile, indent=4)
+                json.dump(chat_history, outfile, indent=4)
 
 
 
@@ -657,7 +658,7 @@ def save_histories():
 
     # Export to JSON
     with open("LiveLog.json", 'w') as outfile:
-        json.dump(ooga_history, outfile, indent=4)
+        json.dump(chat_history, outfile, indent=4)
 
     # Save RAG database too
     utils.based_rag.store_rag_history()
@@ -674,7 +675,7 @@ def save_histories():
 #    # Cleanup our lore string
 #    clean_lore = "[System D] Lore Entry, " + lore_entry
 #
-#    ooga_history.append([clean_lore, "Ah, thank you for the lore!"])
+#    chat_history.append([clean_lore, "Ah, thank you for the lore!"])
 #
 #
 #    # Save
@@ -685,7 +686,7 @@ def save_histories():
 def soft_reset():
 
     # Saftey breaker for if the previous message was also a Soft Reset / System D
-    if utils.cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):
+    if utils.cane_lib.keyword_check(chat_history[-2][0], ["[System D]"]):
         print("\nStopping potential additional soft reset!\n")
         return
 
@@ -697,7 +698,7 @@ def soft_reset():
 
     for message_pair in soft_reset_message:
 
-        ooga_history.append([message_pair[0], message_pair[1],  message_pair[1], utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        chat_history.append([message_pair[0], message_pair[1],  message_pair[1], utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
 
@@ -711,17 +712,17 @@ def prune_deletables():
 
 
     # Search through the 27th - 8th to last entries and clear any with the System D headers
-    i = len(ooga_history) - 27
+    i = len(chat_history) - 27
 
     # Ensure it isn't checking a negative number
     if i < 0:
         i = 0
 
 
-    while i < len(ooga_history) - 8:
-        if utils.cane_lib.keyword_check(ooga_history[i][0], ["[System D]"]):
-            del ooga_history[i]
-            i = len(ooga_history) - 27
+    while i < len(chat_history) - 8:
+        if utils.cane_lib.keyword_check(chat_history[i][0], ["[System D]"]):
+            del chat_history[i]
+            i = len(chat_history) - 27
             if i < 0:
                 i = 0
 
@@ -739,9 +740,9 @@ def prune_deletables():
 #   Other API Access
 #
 
-def summary_memory_run(messages_input, user_sent_message):
+def summary_memory_run(messages_input: list[dict[str,str]], user_sent_message: str):
     global received_message
-    global ooga_history
+    global chat_history
     global forced_token_level
     global force_token_count
     global currently_sending_message
@@ -762,7 +763,7 @@ def summary_memory_run(messages_input, user_sent_message):
     # Load the history from JSON, to clean up the quotation marks
     #
     # with open("LiveLog.json", 'r') as openfile:
-    #     ooga_history = json.load(openfile)
+    #     chat_history = json.load(openfile)
 
     # Determine what preset we want to load in with
 
@@ -832,7 +833,7 @@ def summary_memory_run(messages_input, user_sent_message):
         log_user_input = "{0}".format(user_sent_message)
         log_received_message = "{0}".format(received_message)
 
-        ooga_history.append([log_user_input, log_received_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        chat_history.append([log_user_input, log_received_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
         # Run a pruning of the deletables
         prune_deletables()
@@ -909,9 +910,9 @@ def summary_memory_run(messages_input, user_sent_message):
 #     time.sleep(10)
 
 
-def view_image(direct_talk_transcript):
+def view_image(direct_talk_transcript: str) -> str:
 
-    global ooga_history
+    global chat_history
     global currently_streaming_message
     global last_message_streamed
     global is_in_api_request
@@ -935,22 +936,22 @@ def view_image(direct_talk_transcript):
     # Prepare The Context
     #
 
-    global ooga_history
+    global chat_history
     image_marker_length = 3     # shorting this so we don't take up a ton of context
 
-    message_marker = len(ooga_history) - image_marker_length
+    message_marker = len(chat_history) - image_marker_length
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
     past_messages = [
-        {"role": "user", "content": ooga_history[message_marker][0]},
-        {"role": "assistant", "content": ooga_history[message_marker][1]},
+        {"role": "user", "content": chat_history[message_marker][0]},
+        {"role": "assistant", "content": chat_history[message_marker][1]},
     ]
 
     i = 1
-    while i < image_marker_length and i < len(ooga_history):
-        past_messages.append({"role": "user", "content": ooga_history[message_marker + i][0]})
-        past_messages.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+    while i < image_marker_length and i < len(chat_history):
+        past_messages.append({"role": "user", "content": chat_history[message_marker + i][0]})
+        past_messages.append({"role": "assistant", "content": chat_history[message_marker + i][1]})
 
         i = i + 1
 
@@ -1028,7 +1029,7 @@ def view_image(direct_talk_transcript):
     these_tags = utils.settings.cur_tags.copy()
     these_tags.append("ZW-Visual")
 
-    ooga_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+    chat_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
     # Save
@@ -1044,9 +1045,9 @@ def view_image(direct_talk_transcript):
     return received_cam_message
 
 
-def view_image_streaming(direct_talk_transcript):
+def view_image_streaming(direct_talk_transcript: str) -> str:
 
-    global ooga_history
+    global chat_history
     global currently_streaming_message
     global currently_sending_message
     global currently_streaming_message
@@ -1078,22 +1079,22 @@ def view_image_streaming(direct_talk_transcript):
     # Prepare The Context
     #
 
-    global ooga_history
+    global chat_history
     image_marker_length = 3     # shorting this so we don't take up a ton of context
 
-    message_marker = len(ooga_history) - image_marker_length
+    message_marker = len(chat_history) - image_marker_length
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
     past_messages = [
-        {"role": "user", "content": ooga_history[message_marker][0]},
-        {"role": "assistant", "content": ooga_history[message_marker][1]},
+        {"role": "user", "content": chat_history[message_marker][0]},
+        {"role": "assistant", "content": chat_history[message_marker][1]},
     ]
 
     i = 1
-    while i < image_marker_length and i < len(ooga_history):
-        past_messages.append({"role": "user", "content": ooga_history[message_marker + i][0]})
-        past_messages.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+    while i < image_marker_length and i < len(chat_history):
+        past_messages.append({"role": "user", "content": chat_history[message_marker + i][0]})
+        past_messages.append({"role": "assistant", "content": chat_history[message_marker + i][1]})
 
         i = i + 1
 
@@ -1172,12 +1173,12 @@ def view_image_streaming(direct_talk_transcript):
                 # We are ending our API request!
                 is_in_api_request = False
 
-                return
+                return ''
 
             # Cut for the hangout name being said
             if streamed_response_check == "Hangout-Name-Cut" and utils.settings.hangout_mode:
                 # Add any existing stuff to our actual chat history
-                ooga_history.append([direct_talk_transcript, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+                chat_history.append([direct_talk_transcript, assistant_message, utils.settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
                 save_histories()
 
                 # Remove flag
@@ -1189,7 +1190,7 @@ def view_image_streaming(direct_talk_transcript):
                 # We are ending our API request!
                 is_in_api_request = False
 
-                return
+                return ''
 
 
             # time.sleep(0.0197)    # NOTE: This is purely for style points to "slow" incoming responses
@@ -1262,7 +1263,7 @@ def view_image_streaming(direct_talk_transcript):
     these_tags = utils.settings.cur_tags.copy()
     these_tags.append("ZW-Visual")
 
-    ooga_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+    chat_history.append([base_send, received_cam_message, these_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
     # Save
@@ -1279,15 +1280,15 @@ def view_image_streaming(direct_talk_transcript):
 
 
 
-def check_if_in_history(message):
+def check_if_in_history(message: str) -> bool:
 
     # Search through the 20th - 1th to last entries to see if we have any matches
-    i = len(ooga_history) - 20
+    i = len(chat_history) - 20
     if i < 0:
         i = 0
 
-    while i < len(ooga_history):
-        if ooga_history[i][1] == message:
+    while i < len(chat_history):
+        if chat_history[i][1] == message:
             return True
 
         i = i + 1
@@ -1303,14 +1304,14 @@ def check_if_in_history(message):
 #     # print(my_message)
 #     # print(her_message)
 #
-#     ooga_history['internal'].insert(len(ooga_history['internal']) - 8, [my_message, her_message])
-#     ooga_history['visible'].insert(len(ooga_history['visible']) - 8, [my_message, her_message])
+#     chat_history['internal'].insert(len(chat_history['internal']) - 8, [my_message, her_message])
+#     chat_history['visible'].insert(len(chat_history['visible']) - 8, [my_message, her_message])
 #
-#     # print(ooga_history['internal'])
+#     # print(chat_history['internal'])
 #
 #     # Export to JSON
 #     with open("LiveLog.json", 'w') as outfile:
-#         json.dump(ooga_history, outfile, indent=4)
+#         json.dump(chat_history, outfile, indent=4)
 #
 #     stored_rag_recall[0] = message_a
 #     stored_rag_recall[1] = message_b
@@ -1320,29 +1321,29 @@ def check_if_in_history(message):
 
 
 # Encodes from the old api's way of storing history (and ooba internal) to the new one
-def encode_new_api(user_input):
+def encode_new_api(user_input: str) -> list[dict[str, Any]]:
 
     #
     # Append 40 of the most recent history pairs (however long our marker length is)
     #
 
-    global ooga_history
+    global chat_history
 
-    message_marker = len(ooga_history) - marker_length
+    message_marker = len(chat_history) - marker_length
     if message_marker < 0:          # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    messages_to_send = [
-        {"role": "user", "content": ooga_history[message_marker][0]},
-        {"role": "assistant", "content": ooga_history[message_marker][1]},
+    messages_to_send: list[dict[str, str]] = [
+        {"role": "user", "content": chat_history[message_marker][0]},
+        {"role": "assistant", "content": chat_history[message_marker][1]},
     ]
 
     i = 1
-    while i < marker_length and i < len(ooga_history):
-        messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
-        messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+    while i < marker_length and i < len(chat_history):
+        messages_to_send.append({"role": "user", "content": chat_history[message_marker + i][0]})
+        messages_to_send.append({"role": "assistant", "content": chat_history[message_marker + i][1]})
 
-        if len(ooga_history[-1]) > 3 and i == marker_length - 3 and ENCODE_TIME == "ON":
+        if len(chat_history[-1]) > 3 and i == marker_length - 3 and ENCODE_TIME == "ON":
 
             #
             # Append a relative timestamp, 3 or so back (to make it not super important)
@@ -1360,7 +1361,7 @@ def encode_new_api(user_input):
             # Append the lorebook in here, 8 or so back, it will include all lore in the given range
             #
 
-            lore_gathered = utils.lorebook.lorebook_gather(ooga_history[-3:], user_input)
+            lore_gathered = utils.lorebook.lorebook_gather(chat_history[-3:], user_input) # type: ignore
 
             if lore_gathered != utils.lorebook.total_lore_default:
                 messages_to_send.append({"role": "user", "content": lore_gathered})
@@ -1387,7 +1388,7 @@ def encode_new_api(user_input):
 
 
 # encodes a given input to the new API, with no additives
-def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length):
+def encode_raw_new_api(user_messages_input: list[list[str]], user_message_last: str, raw_marker_length: int):
     #
     # Append 30 of the most recent history pairs (however long our raw marker length is)
     #
@@ -1396,7 +1397,7 @@ def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    messages_to_send = [
+    messages_to_send: list[dict[str,str]] = [
         {"role": "user", "content": user_messages_input[message_marker][0]},
         {"role": "assistant", "content": user_messages_input[message_marker][1]},
     ]
@@ -1419,7 +1420,7 @@ def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length
 
 
 
-def supress_rp_as_others(message):
+def supress_rp_as_others(message: str) -> str:
 
     # do not supress if there is no colon
     if not message.__contains__(":"):
@@ -1458,11 +1459,11 @@ def supress_rp_as_others(message):
     return new_message
 
 
-def force_tokens_count(tokens):
+def force_tokens_count(tokens: int):
     global forced_token_level, force_token_count
     forced_token_level = tokens
     force_token_count = True
 
-def pop_if_sent_is_latest(user_input):
-    if user_input == ooga_history[-1][0]:
-        ooga_history.pop()
+def pop_if_sent_is_latest(user_input: str):
+    if user_input == chat_history[-1][0]:
+        chat_history.pop()
