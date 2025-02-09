@@ -1,5 +1,6 @@
 from typing import Any
 
+from API import backend
 import gradio as gr # type: ignore
 import main
 import utils.logging
@@ -154,7 +155,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             return
 
 
-        def change_autochat_sensitivity(autochat_sens):
+        def change_autochat_sensitivity(autochat_sens: int):
 
             utils.hotkeys.input_change_listener_sensitivity_from_ui(autochat_sens)
             return
@@ -491,7 +492,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         # Alarm Time
         #
 
-        def alarm_button_click(input_time):
+        def alarm_button_click(input_time: str):
 
             utils.settings.alarm_time = input_time
 
@@ -511,7 +512,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         # Language Model Preset
         #
 
-        def model_preset_button_click(input_text):
+        def model_preset_button_click(input_text: str):
 
             utils.settings.model_preset = input_text
 
@@ -588,7 +589,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         cur_tags_box = gr.Textbox(label="Current Tags")
 
-        def update_tags_button_click(new_tags):
+        def update_tags_button_click(new_tags: str):
             new_tags = new_tags.replace(" ", "")
             new_tags_list = new_tags.split(",")
             print(new_tags_list)

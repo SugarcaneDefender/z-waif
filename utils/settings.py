@@ -13,8 +13,8 @@ stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 semi_auto_chat = False
 hangout_mode = False
 
-alarm_time = "09:09"
-model_preset = "Default"
+alarm_time: str = "09:09"
+model_preset: str = "Default"
 
 cam_use_image_feed = False
 cam_direct_talk = True
