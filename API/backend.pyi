@@ -2,7 +2,7 @@ from typing import Any, Literal
 
 def run(user_input: str, temp_level: int) -> None: ...
 def run_streaming(user_input: str, temp_level: int) -> None: ...
-def streamed_update_handler(chunk: Any, assistant_message: str) -> Literal["Cut", "Hangout-Name-Cut", "Continue"]: ...
+def streamed_update_handler(chunk: str, assistant_message: str) -> Literal["Cut", "Hangout-Name-Cut", "Continue"]: ...
 def set_force_skip_streaming(tf_input: bool) -> None: ...
 def send(user_input: str) -> None: ...
 def receive() -> str: ...
@@ -23,3 +23,28 @@ def encode_raw_new_api(user_messages_input: list[list[str]], user_message_last: 
 def supress_rp_as_others(message: str) -> str: ...
 def force_tokens_count(tokens: int) -> None: ...
 def pop_if_sent_is_latest(user_input: str) -> None: ...
+
+history_loaded = False
+
+chat_history: list[list[str]] = [ ["Hello, I am back!", "Welcome back! *smiles*"] ]
+
+headers: dict[str,str] = {
+    "Content-Type": "application/json"
+}
+
+max_context: int
+marker_length: int
+
+force_token_count: bool
+forced_token_level: int
+
+stored_received_message: str
+currently_sending_message: str
+currently_streaming_message: str
+last_message_streamed: bool
+streaming_sentences_ticker: int
+
+force_skip_streaming: bool
+flag_end_streaming: bool
+
+is_in_api_request: bool
