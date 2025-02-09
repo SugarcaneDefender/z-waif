@@ -1,12 +1,12 @@
 import os
 # Moved to os-specific files
 if os.name == 'nt':
-    from .windows.voice import speak_line, check_if_speaking
+    from .windows.voice import speak_line, check_if_speaking # type: ignore
 else: # TODO: linux
-    from .mac.voice import speak_line, check_if_speaking
+    from .mac.voice import speak_line, check_if_speaking # type: ignore
 
 
-def set_speaking(set):
+def set_speaking(set: bool):
     global is_speaking
     is_speaking = set
 
