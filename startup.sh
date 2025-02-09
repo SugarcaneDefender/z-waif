@@ -118,7 +118,7 @@ fi
 # Load the venv
 source ./venv/bin/activate
 
-# Run the script with --update-pip ./startup.sh to update pip
+# Run the script with ./startup.sh --update to update pip
 if [[ "$UPDATE" == "1" || "$REINSTALL" == "1" ]]; then
     echo "Updating..."
     $PY -m pip install --upgrade pip | tee -a "$LOG_FILE"
