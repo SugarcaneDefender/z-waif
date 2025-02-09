@@ -500,7 +500,7 @@ def run_streaming(user_input: str, temp_level: int):
 
 #
 # Handles all changes in the streamed updates
-def streamed_update_handler(chunk: Any, assistant_message: str):
+def streamed_update_handler(chunk: str, assistant_message: str):
 
     global currently_streaming_message
     global streaming_sentences_ticker
