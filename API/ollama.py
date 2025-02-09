@@ -1,10 +1,13 @@
-from dotenv import load_dotenv
+import colorama
 import datetime
+from dotenv import load_dotenv
 import json
+import emoji
+import main
 import ollama
 import os
 import random
-from typing import Any
+from typing import Any, Generator, Literal
 import utils.based_rag
 import utils.cane_lib
 import utils.hotkeys
@@ -12,6 +15,10 @@ import utils.logging
 import utils.lorebook
 import utils.settings
 import utils.tag_task_controller
+import utils.voice
+import utils.voice_splitter
+import utils.vtube_studio
+
 load_dotenv()
 
 HOST = os.environ.get("HOST", "127.0.0.1")
@@ -164,9 +171,9 @@ def run(user_input: str, temp_level: int):
 
 
     # Forced tokens check
-    cur_tokens_required: int = utils.settings.max_tokens
-    if force_token_count:
-        cur_tokens_required: int = forced_token_level
+    # cur_tokens_required: int = utils.settings.max_tokens
+    # if force_token_count:
+    #     cur_tokens_required: int = forced_token_level
 
 
     # Set the stop right
@@ -312,9 +319,9 @@ def run_streaming(user_input: str, temp_level: int):
 
 
     # Forced tokens check
-    cur_tokens_required = utils.settings.max_tokens
-    if force_token_count:
-        cur_tokens_required = forced_token_level
+    # cur_tokens_required = utils.settings.max_tokens
+    # if force_token_count:
+    #     cur_tokens_required = forced_token_level
 
 
     # Set the stop right
@@ -336,24 +343,13 @@ def run_streaming(user_input: str, temp_level: int):
     # STREAMING TOOLING GOES HERE o7
     #
 
-    ollama_client.chat(
+    response: Generator[ollama.ChatResponse] = ollama_client.chat( # type: ignore
         model=MODEL,
         messages=messages_to_send,
         stream=True,
-        max_tokens=cur_tokens_required,
+        options=read_preset(preset, stop=stop),
+        # max_tokens=cur_tokens_required,
     )
-    
-    request: dict[str, Any] = {
-        "messages": messages_to_send,
-        'max_tokens': cur_tokens_required,
-        'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-        'character': char_send,
-        'truncation_length': max_context,
-        'stop': stop,
-        'stream': True,
-
-        'preset': preset
-    }
 
     # Prep console with printing for message output
 
@@ -363,21 +359,15 @@ def run_streaming(user_input: str, temp_level: int):
 
     # Reset the ticker (starts counting at 1)
     streaming_sentences_ticker = 1
-
-    # Actual streaming bit
-
-    stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-    client = sseclient.SSEClient(stream_response) # type: ignore
-
+    
     # Clear streamed emote list
     utils.vtube_studio.clear_streaming_emote_list()
 
     assistant_message = ''
     supressed_rp = False
     force_skip_streaming = False
-    for event in client.events():
-        payload = json.loads(event.data)
-        chunk = payload['choices'][0]['delta']['content']
+    for resp in response:
+        chunk: str = resp.message.content # type: ignore
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)
 
@@ -454,7 +444,7 @@ def run_streaming(user_input: str, temp_level: int):
     received_message = assistant_message
 
     # Translate issues with the received message
-    received_message = html.unescape(received_message)
+    # received_message = html.unescape(received_message)
 
 
     # If her reply is the same as the last stored one, run another request
@@ -506,7 +496,39 @@ def run_streaming(user_input: str, temp_level: int):
     # We are ending our API request!
     is_in_api_request = False
 
-def streamed_update_handler(chunk: Any, assistant_message: str): ...
+def streamed_update_handler(chunk: str, assistant_message: str) -> Literal["Cut", "Hangout-Name-Cut", "Continue"]: 
+    global currently_streaming_message
+    global streaming_sentences_ticker
+
+    # Update our two live text output spots
+    print(chunk, end='', flush=True)
+
+    currently_streaming_message = assistant_message
+    s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
+
+    # Check if the generated update has added a new sentence.
+    # If a complete new sentence is found, read it aloud
+    sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
+
+    if len(sentence_list) > streaming_sentences_ticker:
+        streaming_sentences_ticker += 1
+
+        # Emotes
+        if utils.settings.vtube_enabled:
+            utils.vtube_studio.set_emote_string(s_assistant_message)
+            utils.vtube_studio.check_emote_string_streaming()
+
+        if not main.live_pipe_no_speak:
+            utils.voice.set_speaking(True)
+            utils.voice.speak_line(sentence_list[-2], refuse_pause=True)
+
+    if main.live_pipe_use_streamed_interrupt_watchdog and utils.hotkeys.SPEAK_TOGGLED:
+        return "Cut"
+
+    if flag_end_streaming:
+        return "Hangout-Name-Cut"
+
+    return "Continue"
 
 def set_force_skip_streaming(tf_input: bool):
     global force_skip_streaming
