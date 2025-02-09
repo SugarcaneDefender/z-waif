@@ -26,8 +26,8 @@ cam_use_screenshot = False
 eyes_follow = "None"
 
 # Tags and tasks
-all_tag_list = []
-cur_tags = []
+all_tag_list: list[str] = []
+cur_tags: list[str] = []
 all_task_char_list = []
 cur_task_char = "None"
 
