@@ -28,7 +28,7 @@ eyes_follow = "None"
 # Tags and tasks
 all_tag_list: list[str] = []
 cur_tags: list[str] = []
-all_task_char_list = []
+all_task_char_list: list[str] = []
 cur_task_char = "None"
 
 # Gaming
