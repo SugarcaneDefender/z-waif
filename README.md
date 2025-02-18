@@ -58,6 +58,14 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+v1.8-R3
+
+- Fixed a bug that would cause repeated phrases over and over while using chunking mode.
+- Fixed references to "whisper-turbo", should be "faster-whisper".
+- Made the default speech-to-text be multi-lingual. English use recommended to stay on "base.en".
+
+---.---.---.---
+
 v1.8-R2
 
 - Fixed a bug that would cause random crashes in faster-whisper.
@@ -68,7 +76,7 @@ v1.8-R2
 
 v1.8
 
-- whisper-turbo, a new ultra fast transcribing method
+- faster-whisper, a new ultra fast transcribing method
 	- Optional, off by default
 	- Roughly 4x as fast, with the same transcription quality!
 	- Needs CUDA Toolkit and cuDNN downloaded to work with GPU
@@ -84,7 +92,7 @@ v1.8
 
 - Mac support
 	- Use the statup.sh script.
-	- Thanks to @Cootshk!
+	- Thanks to @Cootshk !
 	- May require tinkering to figure out.
 
 - Fixed an issue where the first sentence said would cause a crash after that.
