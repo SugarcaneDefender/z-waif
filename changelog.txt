@@ -1,8 +1,16 @@
 Changelog
 
+v1.8-R3
+
+- Fixed a bug that would cause repeated phrases over and over while using chunking mode.
+- Fixed references to "whisper-turbo", should be "faster-whisper".
+- Made the default text-to-speech be multi-lingual. English use recommended to stay on "base.en".
+
+---.---.---.---
+
 v1.8-R2
 
-- Fixed a bug that would cause crashed in faster-whisper.
+- Fixed a bug that would cause random crashes in faster-whisper.
 	- Can now confirm no more crashes with it.
 	- Done by setting "temperature" setting to "0.0"
 
@@ -10,7 +18,7 @@ v1.8-R2
 
 v1.8
 
-- whisper-turbo, a new ultra fast transcribing method
+- faster-whisper, a new ultra fast transcribing method
 	- Optional, off by default
 	- Roughly 4x as fast, with the same transcription quality!
 	- Needs CUDA Toolkit and cuDNN downloaded to work with GPU

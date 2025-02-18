@@ -153,9 +153,6 @@ def main_converse():
         print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
         return
 
-    # Fix the transcript, to stop any accidental repeats (whisper glitch)
-    transcript = utils.cane_lib.remove_repeats(transcript)
-
     # Print the transcript
     print('\r' + ' ' * len(tanscribing_log), end="")
     print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
@@ -702,9 +699,6 @@ def hangout_converse():
     except Exception as e:
         print(colorama.Fore.RED + colorama.Style.BRIGHT + "Error: " + str(e))
         return "Audio error!"
-
-    # Fix the transcript, to stop any accidental repeats (whisper glitch)
-    transcript = utils.cane_lib.remove_repeats(transcript)
 
     # Print the transcript
     print('\r' + ' ' * len(tanscribing_log), end="")

@@ -7,14 +7,16 @@ import torch
 from dotenv import load_dotenv
 load_dotenv()
 
+import utils.cane_lib
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-FORCE_CPU = os.environ.get("WHISPER_TURBO_CPU_TRANSCRIPTION")
+FORCE_CPU = os.environ.get("FASTER_WHISPER_CPU_TRANSCRIPTION")
 if FORCE_CPU == "ON":
     device = "cpu"
 
 USER_MODEL = os.environ.get("WHISPER_MODEL")
-WHISPER_TURBO = os.environ.get("WHISPER_TURBO")
+WHISPER_TURBO = os.environ.get("FASTER_WHISPER")
 
 CHUNKY_TRANSCRIPTION = os.environ.get("WHISPER_CHUNKY")
 
@@ -79,6 +81,10 @@ def faster_transcribe(voice):
     # Return the combined text
     for segment in segments:
         nresult += segment.text + " "
+
+    # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
+    nresult = utils.cane_lib.remove_repeats(nresult)
+
     return nresult
 
 # Normal transcription, uses whisper
@@ -90,6 +96,10 @@ def classical_transcribe(voice):
     # Return the combined text
     for mem in result["segments"]:
         nresult += mem['text']+" "
+
+    # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
+    nresult = utils.cane_lib.remove_repeats(nresult)
+
     return nresult
 
 
