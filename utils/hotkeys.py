@@ -8,7 +8,7 @@ import utils.alarm
 import utils.volume_listener
 import utils.settings
 import json
-import utils.logging
+import utils.zw_logging
 import utils.audio
 
 
@@ -112,7 +112,7 @@ def bind_hotkey(binding, input_action):
         keyboard.on_press_key(binding, lambda _: input_action())
     except:
         print("Issue binding to hotkey " + binding + "!")
-        utils.logging.update_debug_log("Issue binding to hotkey " + binding + "!")
+        utils.zw_logging.update_debug_log("Issue binding to hotkey " + binding + "!")
 
 
 def rate_input(rating):
@@ -316,7 +316,7 @@ def input_toggle_hangout_mode():
         FULL_AUTO_TOGGLED = True
 
     print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
-    utils.logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    utils.zw_logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
 
 # From webui.
 # Note: Yes, this code is getting a bit jungle like and excessive. But, I want to grow first, and this isn't too bad
@@ -348,7 +348,7 @@ def web_ui_toggle_hangout_mode():
         FULL_AUTO_TOGGLED = True
 
     print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
-    utils.logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    utils.zw_logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
 
 def listener_timer():
     global SPEAK_TOGGLED

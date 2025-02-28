@@ -13,14 +13,14 @@
 # Pipes are not stored in a list, but simply passed as objects
 
 import time
-import API.Oogabooga_Api_Support
+import API.api_controller
 import main
 import threading
 
 import utils.settings
 import utils.hotkeys
 import utils.hangout
-import utils.logging
+import utils.zw_logging
 
 pipe_counter = 0 # This is just the total number of pipes created this session. Appends as pipe id
 main_pipe_running = False
@@ -112,7 +112,7 @@ def pipe_loop(this_pipe):
             #
             # Decide on how to reply to this message
             decided_reply_style = utils.hangout.reply_decide(this_hangout_input)
-            utils.logging.update_debug_log("Hangout reply has been decided as: " + decided_reply_style)
+            utils.zw_logging.update_debug_log("Hangout reply has been decided as: " + decided_reply_style)
 
             #
             # Breakdown for what to do next
@@ -176,7 +176,7 @@ def pipe_loop(this_pipe):
                     utils.hangout.add_to_appendables(this_hangout_input)
 
                     # Clear out the latest chat if it is the one we just sent (it can slip in)
-                    API.Oogabooga_Api_Support.pop_if_sent_is_latest(this_hangout_input)
+                    API.api_controller.pop_if_sent_is_latest(this_hangout_input)
 
                     continue
 
@@ -206,7 +206,7 @@ def pipe_loop(this_pipe):
 def pipe_api_request(this_pipe):
     # Sleep on this while any other request is running
 
-    while API.Oogabooga_Api_Support.is_in_api_request:
+    while API.api_controller.is_in_api_request:
         time.sleep(0.03)
 
 

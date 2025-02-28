@@ -1,7 +1,7 @@
 import utils.based_rag
 import random
-import API.Oogabooga_Api_Support
-import utils.logging
+import API.api_controller
+import utils.zw_logging
 import os
 
 
@@ -25,11 +25,11 @@ def retrospect_random_mem_summary():
                           "Feel free to focus on details that are of note or you find interest in.")
 
     if enable_debug:
-        utils.logging.update_rag_log(history_scope)
+        utils.zw_logging.update_rag_log(history_scope)
 
     # Encode and send!
-    pre_encoded_message = API.Oogabooga_Api_Support.encode_raw_new_api(history_scope, retrospect_message, search_point_size)
-    API.Oogabooga_Api_Support.summary_memory_run(pre_encoded_message, retrospect_message)
+    pre_encoded_message = API.api_controller.encode_raw_new_api(history_scope, retrospect_message, search_point_size)
+    API.api_controller.summary_memory_run(pre_encoded_message, retrospect_message)
 
 
 

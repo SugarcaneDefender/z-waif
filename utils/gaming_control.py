@@ -4,7 +4,7 @@ import keyboard
 import utils.tag_task_controller as tag
 import utils.settings
 import re
-import utils.logging
+import utils.zw_logging
 import json
 
 #
@@ -58,7 +58,7 @@ def do_button_press(press, game):
         if buttons[0] == str.lower(press):
 
             keyboard.press(buttons[1])
-            utils.logging.update_debug_log("Pressed " + buttons[1] + "!")
+            utils.zw_logging.update_debug_log("Pressed " + buttons[1] + "!")
             time.sleep(0.07)
             keyboard.release(buttons[1])
             time.sleep(0.67)

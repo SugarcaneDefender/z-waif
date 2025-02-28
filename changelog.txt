@@ -1,10 +1,32 @@
 Changelog
 
+v1.9
+
+- Ollama Support!
+	- Thanks to @cootshk and myself!
+	- Properly functioning visual models!
+	- No need to load models manually after booting - it happens automatically.
+	- Memory is cached, meaning instant replies and ability to jack up the max memory w/o much penalty.
+	- Less control at the moment - beware! Max Tokens, Stopping Strings, and other model control features are non-functional.
+		- This is a priority to tinker with and fix.
+		- Also due to models having their settings (temperature, rep_penalty, ect.) baked into themselves.
+	- Tutorials will be out after I properly update it in a week or two.
+
+- Images can be sent at different sizes using "IMG_SCALE" in the .env.
+- API port for Oobabooga / other Open-AI typed endpoints can now be configured in the .env.
+- Tasks can now be set in configurables, although there is no way for the AI to access them right now.
+
+- Removed classic transcription being hardcoded to English only.
+- Renamed "utils.logging" to "utils.zw_logging" so that it's not overlapping a base library.
+- Renamed "API.Oogabooga_API_Support" to "API.api_controller", as it is the generic now.
+
+---.---.---.---
+
 v1.8-R3
 
 - Fixed a bug that would cause repeated phrases over and over while using chunking mode.
 - Fixed references to "whisper-turbo", should be "faster-whisper".
-- Made the default text-to-speech be multi-lingual. English use recommended to stay on "base.en".
+- Made the default speech-to-text be multi-lingual. English use recommended to stay on "base.en".
 
 ---.---.---.---
 

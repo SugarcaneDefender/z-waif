@@ -1,6 +1,6 @@
 import utils.cane_lib
 import json
-import utils.logging
+import utils.zw_logging
 
 do_log_lore = True
 total_lore_default = "Here is some lore about the current topic from your lorebook;\n\n"
@@ -63,7 +63,7 @@ def lorebook_gather(messages, sent_message):
                 lore['2'] = 7   # lore has procced, prevent dupes
 
     if do_log_lore and total_lore != total_lore_default:
-        utils.logging.update_debug_log(total_lore)
+        utils.zw_logging.update_debug_log(total_lore)
 
 
     return total_lore

@@ -3,8 +3,8 @@ import random
 import gradio
 import gradio as gr
 import main
-import API.Oogabooga_Api_Support
-import utils.logging
+import API.api_controller
+import utils.zw_logging
 import utils.settings
 import utils.hotkeys
 import utils.tag_task_controller
@@ -50,7 +50,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 main.main_web_ui_chat(message)
 
                 # Retrieve the result now
-                # message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+                # message_reply = API.api_controller.receive_via_oogabooga()
                 #
                 # chat_history.append((message, message_reply))
 
@@ -58,22 +58,22 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             def update_chat():
                 # Return whole chat, plus the one I have just sent
-                if API.Oogabooga_Api_Support.currently_sending_message != "":
+                if API.api_controller.currently_sending_message != "":
 
                     # Prep for viewing without metadata
-                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    chat_combine = API.api_controller.ooga_history[-30:]
                     i = 0
                     while i < len(chat_combine):
                         chat_combine[i] = chat_combine[i][:2]
                         i += 1
-                    chat_combine.append([API.Oogabooga_Api_Support.currently_sending_message, API.Oogabooga_Api_Support.currently_streaming_message])
+                    chat_combine.append([API.api_controller.currently_sending_message, API.api_controller.currently_streaming_message])
 
                     return chat_combine[-30:]
 
 
                 # Return whole chat, last 30
                 else:
-                    chat_combine = API.Oogabooga_Api_Support.ooga_history[-30:]
+                    chat_combine = API.api_controller.ooga_history[-30:]
                     i = 0
                     while i < len(chat_combine):
                         chat_combine[i] = chat_combine[i][:2]
@@ -396,7 +396,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def soft_reset_button_click():
-                API.Oogabooga_Api_Support.soft_reset()
+                API.api_controller.soft_reset()
 
                 return
 
@@ -638,12 +638,12 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
     #
 
     with gr.Tab("Debug"):
-        debug_log = gr.Textbox(utils.logging.debug_log, lines=10, label="General Debug", autoscroll=True)
-        rag_log = gr.Textbox(utils.logging.rag_log, lines=10, label="RAG Debug", autoscroll=True)
-        kelvin_log = gr.Textbox(utils.logging.kelvin_log, lines=1, label="Random Temperature Readout")
+        debug_log = gr.Textbox(utils.zw_logging.debug_log, lines=10, label="General Debug", autoscroll=True)
+        rag_log = gr.Textbox(utils.zw_logging.rag_log, lines=10, label="RAG Debug", autoscroll=True)
+        kelvin_log = gr.Textbox(utils.zw_logging.kelvin_log, lines=1, label="Random Temperature Readout")
 
         def update_logs():
-            return utils.logging.debug_log, utils.logging.rag_log, utils.logging.kelvin_log
+            return utils.zw_logging.debug_log, utils.zw_logging.rag_log, utils.zw_logging.kelvin_log
 
         demo.load(update_logs, every=0.05, outputs=[debug_log, rag_log, kelvin_log])
 

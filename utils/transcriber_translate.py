@@ -91,7 +91,7 @@ def faster_transcribe(voice):
 def classical_transcribe(voice):
     nresult=""
     model = whisper.load_model(USER_MODEL)
-    result = model.transcribe(voice, language="en", compression_ratio_threshold=1.9, no_speech_threshold=0.1)
+    result = model.transcribe(voice, compression_ratio_threshold=1.9, no_speech_threshold=0.1)
 
     # Return the combined text
     for mem in result["segments"]:

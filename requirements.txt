@@ -20,3 +20,5 @@ pyautogui
 sseclient-py
 tqdm
 faster-whisper
+ollama
+PyYAML

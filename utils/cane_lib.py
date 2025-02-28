@@ -1,5 +1,5 @@
 import re
-import utils.logging
+import utils.zw_logging
 
 # Quick lil function to check if any keywords are in a piece of text
 def keyword_check(phrase, keywords):
@@ -32,5 +32,5 @@ def remove_repeats(input_string):
         new_string = input_string.replace(list_split[-2] + ".", "")
         new_string = new_string.replace(list_split[-2] + "!", "")
         new_string = new_string.replace(list_split[-2] + "?", "")
-        utils.logging.update_debug_log("Removed repeats! Original message was: " + input_string)
+        utils.zw_logging.update_debug_log("Removed repeats! Original message was: " + input_string)
         return new_string

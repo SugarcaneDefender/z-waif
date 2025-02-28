@@ -6,7 +6,7 @@ assert os.name == 'nt' # type: ignore
 import win32com.client
 import utils.hotkeys
 import utils.voice_splitter
-import utils.logging
+import utils.zw_logging
 
 is_speaking = False
 cut_voice = False
@@ -34,7 +34,7 @@ def speak_line(s_message, refuse_pause):
                 break
 
         except:
-            utils.logging.update_debug_log("Error with voice!")
+            utils.zw_logging.update_debug_log("Error with voice!")
 
 
 

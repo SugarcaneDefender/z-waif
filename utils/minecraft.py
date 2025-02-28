@@ -5,7 +5,7 @@ import pygetwindow
 import utils.cane_lib
 import time
 import main
-import API.Oogabooga_Api_Support
+import API.api_controller
 import utils.settings
 import json
 
@@ -142,6 +142,6 @@ def check_mc_chat():
 
 def minecraft_chat():
 
-    message = API.Oogabooga_Api_Support.receive_via_oogabooga()
+    message = API.api_controller.receive_via_oogabooga()
     chat.send(message)
 

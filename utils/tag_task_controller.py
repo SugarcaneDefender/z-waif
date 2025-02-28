@@ -2,7 +2,7 @@ import utils.settings
 import os
 import json
 import utils.cane_lib
-import utils.logging
+import utils.zw_logging
 
 # Loads tags and tasks
 def load_tags_tasks():
@@ -38,7 +38,7 @@ def set_task(input_text):
             utils.settings.all_task_char_list.append(input_text)
             save_tags_tasks()
 
-    utils.logging.update_debug_log("Task set to " + utils.settings.cur_task_char)
+    utils.zw_logging.update_debug_log("Task set to " + utils.settings.cur_task_char)
 
 def set_tags(new_tags_list):
 

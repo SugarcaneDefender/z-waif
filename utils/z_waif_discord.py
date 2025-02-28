@@ -5,7 +5,7 @@ import os
 
 import discord
 import main
-import API.Oogabooga_Api_Support
+import API.api_controller
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -35,7 +35,7 @@ async def on_message(message):
             main.main_discord_next()
 
             # Retrieve the result now
-            message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+            message_reply = API.api_controller.receive_via_oogabooga()
 
         # Send it!
         await message.channel.send(message_reply)
@@ -53,7 +53,7 @@ async def on_message(message):
             main.main_discord_chat(sending_string)
 
             # Retrieve the result now
-            message_reply = API.Oogabooga_Api_Support.receive_via_oogabooga()
+            message_reply = API.api_controller.receive_via_oogabooga()
 
         # Send it!
         await message.channel.send(message_reply)

@@ -1,6 +1,6 @@
 import sys
 
-import API.Oogabooga_Api_Support
+import API.api_controller
 import string
 import threading
 import utils.lorebook
@@ -8,7 +8,7 @@ import random
 import json
 import os
 import time
-import utils.logging
+import utils.zw_logging
 import utils.settings
 from tqdm import tqdm
 
@@ -52,7 +52,7 @@ char_name = os.environ.get("CHAR_NAME")
 def setup_based_rag():
 
     if show_rag_debug:
-        utils.logging.update_rag_log("Running BASED RAG")
+        utils.zw_logging.update_rag_log("Running BASED RAG")
         print("Running BASED RAG")
 
     # Create a word-value database(d)
@@ -80,7 +80,7 @@ def setup_based_rag():
 
 
     # Import Current History As Well
-    history_database += API.Oogabooga_Api_Support.ooga_history
+    history_database += API.api_controller.ooga_history
 
 
     #
@@ -126,8 +126,8 @@ def setup_based_rag():
 
     # Print out so we can see if the word database is working
     if show_rag_debug_deep:
-        utils.logging.update_rag_log(word_database)
-        utils.logging.update_rag_log(histories_word_id_database)
+        utils.zw_logging.update_rag_log(word_database)
+        utils.zw_logging.update_rag_log(histories_word_id_database)
 
 
 
@@ -141,7 +141,7 @@ def run_based_rag(message, her_previous):
         return
 
     # Clear the log, a new operation is beginning
-    utils.logging.clear_rag_log()
+    utils.zw_logging.clear_rag_log()
 
     #
     # EVALUATE OUR SENT ONES FIRST
@@ -252,7 +252,7 @@ def run_based_rag(message, her_previous):
             log_output_text += str(word_database['word'][highest_score_ids[x]]) + "\n"
             x = x + 1
 
-        utils.logging.update_rag_log(log_output_text)
+        utils.zw_logging.update_rag_log(log_output_text)
 
 
     #
@@ -305,7 +305,7 @@ def run_based_rag(message, her_previous):
     current_rag_message += "[System M]; This is the end of the memory!"
 
     if show_rag_debug:
-        utils.logging.update_rag_log(current_rag_message)
+        utils.zw_logging.update_rag_log(current_rag_message)
 
 
 
@@ -339,7 +339,7 @@ def parse_words_to_database(message, flag):
     refined_message = refined_message.replace("\n", " ")
 
     if show_rag_debug_deep:
-        utils.logging.update_rag_log(refined_message)
+        utils.zw_logging.update_rag_log(refined_message)
 
 
     while i < len(refined_message):
@@ -493,7 +493,7 @@ def add_message_to_database():
         return
 
     # Import History
-    history = API.Oogabooga_Api_Support.ooga_history
+    history = API.api_controller.ooga_history
     global word_database, manual_recalculate_ignore_latest, history_database
 
     # Do not add in if we just manually re-calculated, it is already in there
@@ -505,7 +505,7 @@ def add_message_to_database():
 
     # Do not add in if the content is the same as the last message (likely bugged / undo)
     if (history[new_msg][0] + history[new_msg][1]) == (history_database[-1][0] + history_database[-1][1]):
-        utils.logging.update_debug_log("Preventing dupe in RAG!")
+        utils.zw_logging.update_debug_log("Preventing dupe in RAG!")
         return
 
 
@@ -585,7 +585,7 @@ def load_rag_history():
         # File found, load
 
         if show_rag_debug:
-            utils.logging.update_rag_log("\nLoading RAG from pervious session!\n")
+            utils.zw_logging.update_rag_log("\nLoading RAG from pervious session!\n")
 
         with open(path, 'r') as openfile:
             word_database = json.load(openfile)
@@ -611,7 +611,7 @@ def manual_recalculate_database():
     # All in one
 
     print("\nManually re-calculating the RAG database. Give me some time...\n")
-    utils.logging.update_rag_log("\nManually re-calculating the RAG database. Give me some time...\n")
+    utils.zw_logging.update_rag_log("\nManually re-calculating the RAG database. Give me some time...\n")
     setup_based_rag()
 
 
