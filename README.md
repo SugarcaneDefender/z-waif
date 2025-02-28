@@ -58,46 +58,25 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.8-R3
+v1.9
 
-- Fixed a bug that would cause repeated phrases over and over while using chunking mode.
-- Fixed references to "whisper-turbo", should be "faster-whisper".
-- Made the default speech-to-text be multi-lingual. English use recommended to stay on "base.en".
+- Ollama Support!
+	- Thanks to @cootshk and myself!
+	- Properly functioning visual models!
+	- No need to load models manually after booting - it happens automatically.
+	- Memory is cached, meaning instant replies and ability to jack up the max memory w/o much penalty.
+	- Less control at the moment - beware! Max Tokens, Stopping Strings, and other model control features are non-functional.
+		- This is a priority to tinker with and fix.
+		- Also due to models having their settings (temperature, rep_penalty, ect.) baked into themselves.
+	- Tutorials will be out after I properly update it in a week or two.
 
----.---.---.---
+- Images can be sent at different sizes using "IMG_SCALE" in the .env.
+- API port for Oobabooga / other Open-AI typed endpoints can now be configured in the .env.
+- Tasks can now be set in configurables, although there is no way for the AI to access them right now.
 
-v1.8-R2
-
-- Fixed a bug that would cause random crashes in faster-whisper.
-	- Can now confirm no more crashes with it.
-	- Done by setting "temperature" setting to "0.0"
-
----.---.---.---
-
-v1.8
-
-- faster-whisper, a new ultra fast transcribing method
-	- Optional, off by default
-	- Roughly 4x as fast, with the same transcription quality!
-	- Needs CUDA Toolkit and cuDNN downloaded to work with GPU
-		- CUDA 12 (RTX 20 series+)
-	- You can also toggle it to just use the CPU instead, at a hit to quality/speed.
-	- WARNING: I have experienced random crashes with this, but it's likely due to low VRAM / improper install.
-
-- Chunked audio transcription
-	- Optional, on by default
-	- Takes in your audio and processes it while you are still speaking.
-	- Helps with response times. Reduces transcription quality slightly.
-	- Configurable chunking amount, Lower = process more often. Default is fairly high.
-
-- Mac support
-	- Use the statup.sh script.
-	- Thanks to @Cootshk !
-	- May require tinkering to figure out.
-
-- Fixed an issue where the first sentence said would cause a crash after that.
-- Fixed an issue with numba and sympy importing things, despite not existing.
-- Interruptible chats in Hangout Mode now work off their own audio file internally.
+- Removed classic transcription being hardcoded to English only.
+- Renamed "utils.logging" to "utils.zw_logging" so that it's not overlapping a base library.
+- Renamed "API.Oogabooga_API_Support" to "API.api_controller", as it is the generic now.
 
 ## To-Do
 
