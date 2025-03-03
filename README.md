@@ -58,6 +58,10 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+v1.9-R1
+
+- Fixed the .env file not being updated, crashing the whole program. GitHub likes to ignore that file and I forgot to check. Whoops!
+
 v1.9
 
 - Ollama Support!
