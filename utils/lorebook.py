@@ -3,7 +3,7 @@ import json
 import utils.zw_logging
 
 do_log_lore = True
-total_lore_default = "Here is some lore about the current topic from your lorebook;\n\n"
+total_lore_default = "Here is some lore about the current topics from your lorebook, please reference them;\n\n"
 
 
 # Load the LORE_BOOK, it is now JSON configurable!

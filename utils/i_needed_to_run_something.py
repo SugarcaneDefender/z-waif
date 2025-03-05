@@ -18,8 +18,11 @@ img_str = str(os.path.abspath('..\LiveImage.png'))
 print(img_str)
 
 response = chat(
-  model='nsheth/llama-3-lumimaid-8b-v0.1-iq-imatrix',
+  model='llava-phi3',
   messages=[
+    {
+      "role": "system", "content": "Yor name is Maria!" + "\n\n",
+    },
     {
       'role': 'user',
       'content': 'What is in this image? Be concise.',

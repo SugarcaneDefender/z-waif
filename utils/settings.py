@@ -3,11 +3,11 @@ char_name = ""
 hotkeys_locked = False
 speak_shadowchats = False
 
-max_tokens = 110
+max_tokens = 300
 stream_chats = True
 newline_cut = False
 asterisk_ban = False
-supress_rp = True
+supress_rp = False
 stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 
 semi_auto_chat = False
@@ -18,9 +18,9 @@ model_preset = "Default"
 
 cam_use_image_feed = False
 cam_direct_talk = True
-cam_reply_after = False
 cam_image_preview = True
 cam_use_screenshot = False
+# cam_reply_after = False
 
 # Valid values; "Faces", "Random", "None"
 eyes_follow = "None"

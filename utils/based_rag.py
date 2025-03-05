@@ -475,7 +475,7 @@ def evaluate_message(valued_word_ids, hist_word_ids):
         i = i + 1
 
     # Reduce the value of the statement if it is long, to avoid "fillabustering" (content getting picked via mass)
-    value = value - (len(hist_word_ids) / 120)
+    value = value - (len(hist_word_ids) / 105)
 
     # Never less than 0
     if value < 0:

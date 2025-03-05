@@ -290,18 +290,18 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             # Reply After
             #
 
-            with gr.Row():
-                def cam_reply_after_button_click():
-                    utils.settings.cam_reply_after = not utils.settings.cam_reply_after
-
-                    return
-
-
-                with gr.Row():
-                    cam_reply_after_button = gr.Button(value="Check/Uncheck")
-                    cam_reply_after_button.click(fn=cam_reply_after_button_click)
-
-                    cam_reply_after_checkbox_view = gr.Checkbox(label="Post Reply / Reply After Image")
+            # with gr.Row():
+            #     def cam_reply_after_button_click():
+            #         utils.settings.cam_reply_after = not utils.settings.cam_reply_after
+            #
+            #         return
+            #
+            #
+            #     with gr.Row():
+            #         cam_reply_after_button = gr.Button(value="Check/Uncheck")
+            #         cam_reply_after_button.click(fn=cam_reply_after_button_click)
+            #
+            #         cam_reply_after_checkbox_view = gr.Checkbox(label="Post Reply / Reply After Image")
 
 
 
@@ -340,11 +340,11 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     cam_capture_screenshot_checkbox_view = gr.Checkbox(label="Capture Screenshot")
 
             def update_visual_view():
-                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_reply_after, utils.settings.cam_image_preview, utils.settings.cam_use_screenshot
+                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_image_preview, utils.settings.cam_use_screenshot
 
 
             demo.load(update_visual_view, every=0.05,
-                      outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_reply_after_checkbox_view, cam_image_preview_checkbox_view, cam_capture_screenshot_checkbox_view])
+                      outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_image_preview_checkbox_view, cam_capture_screenshot_checkbox_view])
 
 
 

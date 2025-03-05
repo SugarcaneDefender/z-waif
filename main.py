@@ -554,9 +554,11 @@ def main_view_image():
     # View and process the image, storing the result
     transcript = API.api_controller.send_image_via_oobabooga(direct_talk_transcript)
 
-    # Fix up our transcript & show us
-    if not utils.settings.stream_chats:
-        print("\n" + transcript + "\n")
+    # Headers and checks
+    message_checks(transcript)
+
+    # Speak!
+    main_message_speak()
 
     # We can now undo the previous message
 
@@ -564,8 +566,10 @@ def main_view_image():
     undo_allowed = True
 
     # Check if we need to reply after the image
-    if utils.settings.cam_reply_after:
-        view_image_after_chat("So, what did you think of the image, " + char_name + "?")
+    # NOTE: Depriciated!
+    #
+    # if utils.settings.cam_reply_after:
+    #     view_image_after_chat("So, what did you think of the image, " + char_name + "?")
 
 
 

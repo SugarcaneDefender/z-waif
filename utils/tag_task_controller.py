@@ -3,6 +3,7 @@ import os
 import json
 import utils.cane_lib
 import utils.zw_logging
+import yaml
 
 # Loads tags and tasks
 def load_tags_tasks():
@@ -82,3 +83,13 @@ def get_pure_task():
     task_tag_clean = utils.settings.cur_task_char
     task_tag_clean = task_tag_clean.replace(utils.settings.char_name + "-", "")
     return task_tag_clean
+
+# Pulls the current task from the configurables.
+def get_cur_task_description():
+
+    # Search for it in the configurables
+    with open("Configurables/TaskProfiles/" + get_pure_task() + ".yaml", 'r') as openfile:
+        task_loder = yaml.load(openfile, Loader=yaml.FullLoader)
+        return task_loder["Description"]
+
+

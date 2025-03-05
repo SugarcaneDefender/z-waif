@@ -83,6 +83,8 @@ ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
 VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
 VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 
+vision_guidance_message = "There is an image attached to this message! Please look at it and describe it for everyone in vivid detail! Describe as many details of the image as you can, and comment on what you think of the features!"
+
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
     soft_reset_message = json.load(openfile)
@@ -188,7 +190,7 @@ def run(user_input, temp_level):
         received_message = API.oobaooga_api.api_standard(request)
 
     elif API_TYPE == "Ollama":
-        received_message = API.ollama_api.api_standard(history=messages_to_send)
+        received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
 
 
@@ -376,7 +378,7 @@ def run_streaming(user_input, temp_level):
 
 
     elif API_TYPE == "Ollama":
-        streamed_api_stringpuller = API.ollama_api.api_stream(history=messages_to_send)
+        streamed_api_stringpuller = API.ollama_api.api_stream(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
 
 
@@ -829,7 +831,7 @@ def summary_memory_run(messages_input, user_sent_message):
         received_message = API.oobaooga_api.api_standard(request)
 
     elif API_TYPE == "Ollama":
-        received_message = API.ollama_api.api_standard(history=messages_to_send)
+        received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
 
 
     # Translate issues with the received message
@@ -976,7 +978,7 @@ def view_image(direct_talk_transcript):
 
     # Append our system message, if we are using OLLAMA
     if API_TYPE == "Ollama":
-        past_messages.append({"role": "system", "content": API.character_card.character_card})
+        past_messages.append({"role": "system", "content": vision_guidance_message + "\n\n" + API.character_card.character_card})
 
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
@@ -995,11 +997,16 @@ def view_image(direct_talk_transcript):
 
     # Prep the prompt
 
-    base_prompt = YOUR_NAME + ", please view and describe this image in detail, for your main system: \n"
+    base_prompt = YOUR_NAME + ", please view and describe this image vivid in detail, for your main system: \n"
     if utils.settings.cam_direct_talk:
         base_prompt = direct_talk_transcript
 
-
+    # Set the stop right
+    stop = utils.settings.stopping_strings
+    if utils.settings.newline_cut:
+        stop.append("\n")
+    if utils.settings.asterisk_ban:
+        stop.append("*")
 
 
     # Send it in for viewing!
@@ -1014,9 +1021,6 @@ def view_image(direct_talk_transcript):
             img_str = base64.b64encode(f.read()).decode('utf-8')
             prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
             past_messages.append({"role": "user", "content": prompt})
-
-        # Set the stop right
-        stop = utils.settings.stopping_strings
 
         request = {
             'max_tokens': 300,
@@ -1042,7 +1046,7 @@ def view_image(direct_talk_transcript):
         img_str = str(os.path.abspath('LiveImage.png'))
         past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-        received_cam_message = API.ollama_api.api_standard(history=past_messages)
+        received_cam_message = API.ollama_api.api_standard_image(history=past_messages)
 
 
     # Translate issues with the received message
@@ -1085,6 +1089,9 @@ def view_image(direct_talk_transcript):
     # We are ending our API request!
     is_in_api_request = False
 
+    # Set our global, for the reading!
+    global received_message
+    received_message = received_cam_message
 
     return received_cam_message
 
@@ -1134,7 +1141,7 @@ def view_image_streaming(direct_talk_transcript):
 
     # Append our system message, if we are using OLLAMA
     if API_TYPE == "Ollama":
-        past_messages.append({"role": "system", "content": API.character_card.character_card})
+        past_messages.append({"role": "system", "content": vision_guidance_message})
 
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
@@ -1159,6 +1166,10 @@ def view_image_streaming(direct_talk_transcript):
 
     # Set the stop right
     stop = utils.settings.stopping_strings
+    if utils.settings.newline_cut:
+        stop.append("\n")
+    if utils.settings.asterisk_ban:
+        stop.append("*")
 
     supressed_rp = False
 
@@ -1201,11 +1212,11 @@ def view_image_streaming(direct_talk_transcript):
 
             'preset': VISUAL_PRESET_NAME,
 
-            'stream': True
+            'stream': True,
         }
 
         # Actual streaming bit
-        stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
+        stream_response = requests.post(IMG_URI, headers=headers, json=request, verify=False, stream=True)
         client = sseclient.SSEClient(stream_response)
 
         streamed_api_stringpuller = client.events()
@@ -1216,7 +1227,7 @@ def view_image_streaming(direct_talk_transcript):
         img_str = str(os.path.abspath('LiveImage.png'))
         past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-        streamed_api_stringpuller = API.ollama_api.api_stream(history=past_messages)
+        streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
 
 
     # Clear streamed emote list
@@ -1349,6 +1360,10 @@ def view_image_streaming(direct_talk_transcript):
     # We are ending our API request!
     is_in_api_request = False
 
+    # Set our global, for the reading!
+    global received_message
+    received_message = received_cam_message
+
 
     return received_cam_message
 
@@ -1403,11 +1418,12 @@ def encode_new_api(user_input):
 
     global ooga_history
 
-    messages_to_send = []
-
-    # Append our system message, if we are using OLLAMA
+    #
+    # Check for Ollama - if so, send it!
     if API_TYPE == "Ollama":
-        messages_to_send.append({"role": "system", "content": API.character_card.character_card})
+        return encode_new_api_ollama(user_input)
+
+    messages_to_send = []
 
     message_marker = len(ooga_history) - marker_length
     if message_marker < 0:          # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
@@ -1455,6 +1471,72 @@ def encode_new_api(user_input):
 
         i = i + 1
 
+
+    #
+    # Append our most recent message
+    #
+
+    messages_to_send.append({"role": "user", "content": user_input})
+
+    return messages_to_send
+
+
+def encode_new_api_ollama(user_input):
+    #
+    # Append 40 of the most recent history pairs (however long our marker length is)
+    #
+
+    global ooga_history
+
+    messages_to_send = []
+
+    # Append our system message, if we are using OLLAMA
+
+    #
+    # Gather and send our composite metadata!
+
+    # Char card
+    ollama_composite_content = API.character_card.character_card + "\n\n"
+
+    # Task
+    if utils.settings.cur_task_char != "" and utils.settings.cur_task_char != "None":
+        ollama_composite_content += utils.tag_task_controller.get_cur_task_description() + "\n\n"
+
+    # RAG Messegg
+    if utils.settings.rag_enabled:
+        ollama_composite_content += utils.based_rag.call_rag_message() + "\n\n"
+
+    # Lorebook Gathering
+    lore_gathered = utils.lorebook.lorebook_gather(ooga_history[-3:], user_input)
+
+    if lore_gathered != utils.lorebook.total_lore_default:
+        ollama_composite_content += lore_gathered + "\n\n"
+
+    # Time
+    if ENCODE_TIME:
+        timestamp_string = "The current time now is "
+        current_time = datetime.datetime.now()
+        timestamp_string += current_time.strftime("%d %B, %Y at %I:%M %p")
+        timestamp_string += "."
+        ollama_composite_content += timestamp_string + "\n\n"
+
+    # Appandage!
+    messages_to_send.append({"role": "system", "content": ollama_composite_content})
+
+    message_marker = len(ooga_history) - marker_length
+    if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
+        message_marker = 0
+
+    messages_to_send.append({"role": "user", "content": ooga_history[message_marker][0]})
+    messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker][1]})
+
+    i = 1
+    while i < marker_length and i < len(ooga_history):
+        messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
+        messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+
+
+        i = i + 1
 
     #
     # Append our most recent message
