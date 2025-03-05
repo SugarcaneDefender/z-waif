@@ -58,9 +58,34 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.9-R1
+v1.9-R3
+
+- While using Ollama, all system messages are appeneded as if they are the "Character Card", meaning they are more condensed in memory. Includes:
+	- Current Time
+	- Lorebook Additions
+	- Current Task
+	- RAG Memory
+
+- Can now define a different model for visual use while using Ollama.
+
+- RP Suppression starts off by default now.
+- Max Tokens default is now 300.
+
+- RAG prefers slightly more focused / shorter messages when picking from different options.
+
+- Re-added standard configs and random temps to Ollama.
+- "TOKEN_LIMIT" (aka context length) also works in Ollama now, and is no longer stuck to 2048.
+	- This makes it only somewhat faster while loading memory than Oobabooga, keep in mind.
+- Non-streamed image API now replies as if they are the waifu and not a "visual assistant".
+- Fixed errors being made due to the Oobabooga streaming image API going to the wrong port after the recent update.
+
+---.---.---.---
+
+v1.9-R2
 
 - Fixed the .env file not being updated, crashing the whole program. GitHub likes to ignore that file and I forgot to check. Whoops!
+
+---.---.---.---
 
 v1.9
 
