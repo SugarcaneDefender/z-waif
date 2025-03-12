@@ -2,7 +2,7 @@
 Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), alarm, and plenty more! Has a WebUI and hotkey shortcuts. All software is free (or extremely cheap)!
 
 Reccomended Windows 10/11 and a CUDA (NVidia) GPU with atleast 16GB+ of VRAM.
-Can now support Mac and Linux! Thanks [@cootshk](https://github.com/cootshk)!
+Can now support Mac and Linux! Thanks [@cootshk](https://github.com/cootshk)! Any brand (AMD, NVidia, Intel) GPU with 8GB+ VRAM bare mininum requirement.
 Uses Oobabooga, RVC, and Whisper to run AI systems locally. Works as a front end to tie many programs together into one cohesive whole.
 
 The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
