@@ -112,7 +112,7 @@ v1.9
 ### 📶 Enhancements
 - [ ] Make the RAG/Long Term Memory be multiprocessed for better performance
 - [X] Make the LLM input and TTS output streaming, to lower the "processing time"
-- [ ] Figure out how to load LLAMA 3.2 Vision, for better multimodal, and no needed loader
+- [X] Figure out how to load LLAMA 3.2 Vision, for better multimodal, and no needed loader
 
 ### 🤖 Improvements
 - [ ] Give internal dialoguing for chain of thought / reasoning
@@ -122,7 +122,7 @@ v1.9
 - [ ] Long term experience-based summarizations of ideas and history (pull form experience)
 
 ### 🦄 Imperium
-- [ ] Create more Youtube tutorials and other related content
+- [X] Create more Youtube tutorials and other related content
 - [ ] Look more into optimal LLMs and configs
 - [ ] Set up better Git and contribution methods
 - [ ] Create a way for users to auto-update the program without having to hack files together
