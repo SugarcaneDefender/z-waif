@@ -58,6 +58,19 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+v1.9-R4
+
+- Emergency patch for broken requirments.txt
+	- Broke any new installs (the UI in particular) this past week
+	- Still working on diagnosis - for now older requirements with "pip freeze" are being used
+ 	- Maybe for the best so that they stop changing automatically, sub-packages don't really need frequent updates.
+  	- People who have already installed and are having issues should;
+  		- Delete your old "venv" folder
+  	 	- Paste in the new "requirements.txt" file
+  	  	- Run "startup-install.bat"
+ 
+---.---.---.---
+
 v1.9-R3
 
 - While using Ollama, all system messages are appeneded as if they are the "Character Card", meaning they are more condensed in memory. Includes:
