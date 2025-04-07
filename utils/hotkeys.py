@@ -421,7 +421,7 @@ def input_change_listener_sensitivity():
         SPEAKING_VOLUME_SENSITIVITY = 104
     elif SPEAKING_VOLUME_SENSITIVITY >= 104:
         SPEAKING_VOLUME_SENSITIVITY = 9
-    print("\nSensitivity Set To " + str(SPEAKING_VOLUME_SENSITIVITY) + " !")
+    print("\nSensitivity Set To " + str(SPEAKING_VOLUME_SENSITIVITY) + "!")
 
 
 def input_change_listener_sensitivity_from_ui(value):
@@ -429,7 +429,7 @@ def input_change_listener_sensitivity_from_ui(value):
 
     SPEAKING_VOLUME_SENSITIVITY = value
 
-    print("\nSensitivity Set To " + str(SPEAKING_VOLUME_SENSITIVITY) + " !")
+    print("\nSensitivity Set To " + str(SPEAKING_VOLUME_SENSITIVITY) + "!")
 
 
 
