@@ -60,6 +60,16 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+
+v1.9-R5
+
+- Updated installer to automatically retry with a more heavyhanded approach if first install fails.
+	- Runs pip upgrade
+ 	- Manually installs setuptools
+  	- Runs ensurepip
+  
+---.---.---.---
+
 v1.9-R4
 
 - Emergency patch for broken requirments.txt
