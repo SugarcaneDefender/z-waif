@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 if [[ "$1" == "--help" ]]; then
-    echo "Usage: ./startup.sh [--help] [--reinstall] [--update-pip] [--keep-logs] [--log-file FILE] [--python-binary BIN] [main_file]"
+    echo "Usage: $0 [--help] [--reinstall] [--update-pip] [--keep-logs] [--log-file FILE] [--python-binary BIN] [main_file]"
     echo "Options:"
     echo "  --help          Show this help message and exit"
     echo "  --reinstall     Reinstall dependencies"
     echo "  --update-pip    Update pip"
     echo "  --keep-logs     Appends logs to an old log file instead of overwriting it"
     echo "  --log-file      Specify the log file to use (default: log.txt)"
-    echo "  --python-binary Specify the python binary to use (default: python3)"
+    echo "  --python-binary Specify the python binary to use (default: python3.11)"
     echo "  main_file       Specify the main file to run (default: main.py)"
     exit 0
 fi
