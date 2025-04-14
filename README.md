@@ -2,7 +2,7 @@
 Fully local &amp; open source AI Waifu. VTube Studio, Discord, Minecraft, custom made RAG (long term memory), alarm, and plenty more! Has a WebUI and hotkey shortcuts. All software is free (or extremely cheap)!
 
 Reccomended Windows 10/11 and a CUDA (NVidia) GPU with atleast 16GB+ of VRAM.
-Can now support Mac and Linux! Thanks [@cootshk](https://github.com/cootshk)! Any brand (AMD, NVidia, Intel) GPU with 8GB+ VRAM bare mininum requirement.
+Can now support Mac and Linux! Any brand (AMD, NVidia, Intel) GPU with 8GB+ VRAM bare mininum requirement!
 Uses Oobabooga, RVC, and Whisper to run AI systems locally. Works as a front end to tie many programs together into one cohesive whole.
 
 The goal of the project is less about giving an "all in one package", and moreso to give you the tools and knowledge for you to create your own AI Waifu!
@@ -60,77 +60,30 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
+v1.10
 
-v1.9-R5
+- Can now configure temperature and other model settings for Ollama.
+	- In "Configurables/OllamaModelConfigs".
+	- Ordered from normal/mid/high "randomness" levels.
+	- Defaults are better tuned than before (higher temeperature, more limits).
 
-- Updated installer to automatically retry with a more heavyhanded approach if first install fails.
-	- Runs pip upgrade
- 	- Manually installs setuptools
-  	- Runs ensurepip
-  
----.---.---.---
+- Added in a soundboard.
+	- Activated when /soundboard/FileName/ is typed.
+		- Good encoding for saving token space and LLM understanding.
+	- Put files in your Configurables/Soundboard.
+	- Only .wav audio supported.
+	- Sounds are played in order with other speech.
 
-v1.9-R4
+- Option in the settings for the bot to only speak back when spoken to.
+	- Still can generate, do inputs, make soundboard sounds ect., just won't talk out loud.
+	- Good for hanging out in calls so people can talk to them, without them constantly talking nonsense.
 
-- Emergency patch for broken requirments.txt
-	- Broke any new installs (the UI in particular) this past week
-	- Still working on diagnosis - for now older requirements with "pip freeze" are being used
- 	- Maybe for the best so that they stop changing automatically, sub-packages don't really need frequent updates.
-  	- People who have already installed and are having issues should;
-  		- Delete your old "venv" folder
-  	 	- Paste in the new "requirements.txt" file
-  	  	- Run "startup-install.bat"
- 
----.---.---.---
+- Added a setting for the chunky transcription to stop at a certain number of chunks.
+	- This can let your bot get a chance to speak when things are busy.
+	- Default is 14, change it in the .env.
 
-v1.9-R3
-
-- While using Ollama, all system messages are appeneded as if they are the "Character Card", meaning they are more condensed in memory. Includes:
-	- Current Time
-	- Lorebook Additions
-	- Current Task
-	- RAG Memory
-
-- Can now define a different model for visual use while using Ollama.
-
-- RP Suppression starts off by default now.
-- Max Tokens default is now 300.
-
-- RAG prefers slightly more focused / shorter messages when picking from different options.
-
-- Re-added standard configs and random temps to Ollama.
-- "TOKEN_LIMIT" (aka context length) also works in Ollama now, and is no longer stuck to 2048.
-	- This makes it only somewhat faster while loading memory than Oobabooga, keep in mind.
-- Non-streamed image API now replies as if they are the waifu and not a "visual assistant".
-- Fixed errors being made due to the Oobabooga streaming image API going to the wrong port after the recent update.
-
----.---.---.---
-
-v1.9-R2
-
-- Fixed the .env file not being updated, crashing the whole program. GitHub likes to ignore that file and I forgot to check. Whoops!
-
----.---.---.---
-
-v1.9
-
-- Ollama Support!
-	- Thanks to @cootshk and myself!
-	- Properly functioning visual models!
-	- No need to load models manually after booting - it happens automatically.
-	- Memory is cached, meaning instant replies and ability to jack up the max memory w/o much penalty.
-	- Less control at the moment - beware! Max Tokens, Stopping Strings, and other model control features are non-functional.
-		- This is a priority to tinker with and fix.
-		- Also due to models having their settings (temperature, rep_penalty, ect.) baked into themselves.
-	- Tutorials will be out after I properly update it in a week or two.
-
-- Images can be sent at different sizes using "IMG_SCALE" in the .env.
-- API port for Oobabooga / other Open-AI typed endpoints can now be configured in the .env.
-- Tasks can now be set in configurables, although there is no way for the AI to access them right now.
-
-- Removed classic transcription being hardcoded to English only.
-- Renamed "utils.logging" to "utils.zw_logging" so that it's not overlapping a base library.
-- Renamed "API.Oogabooga_API_Support" to "API.api_controller", as it is the generic now.
+- Improved setup in MacOS, thanks @Cootshk !
+- Fixed grammatic error, thanks @FriskTemmie !
 
 ## To-Do
 
