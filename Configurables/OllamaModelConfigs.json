@@ -1,0 +1,26 @@
+[
+    {
+        "temperature": 1.17,
+        "min_p": 0.0597,
+        "top_p": 0.87,
+        "top_k": 64,
+        "repeat_penalty": 1.1,
+        "repeat_last_n": 2048
+    },
+    {
+        "temperature": 1.27,
+        "min_p": 0.0497,
+        "top_p": 0.87,
+        "top_k": 79,
+        "repeat_penalty": 1.12,
+        "repeat_last_n": 2048
+    },
+    {
+        "temperature": 1.47,
+        "min_p": 0.0397,
+        "top_p": 0.97,
+        "top_k": 119,
+        "repeat_penalty": 1.19,
+        "repeat_last_n": 2048
+    }
+]

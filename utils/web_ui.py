@@ -11,6 +11,9 @@ import utils.tag_task_controller
 import utils.voice
 import json
 
+#from API.api_controller import soft_reset
+#from utils.settings import speak_only_spokento
+
 # Import the gradio theme color
 with open("Configurables/GradioThemeColor.json", 'r') as openfile:
     gradio_theme_color = json.load(openfile)
@@ -221,7 +224,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle(), utils.settings.semi_auto_chat, utils.settings.hangout_mode
 
 
-        demo.load(update_settings_view, every=0.05,
+        demo.load(update_settings_view, every=0.06,
                   outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view, hangout_mode_checkbox_view])
 
 
@@ -343,7 +346,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_image_preview, utils.settings.cam_use_screenshot
 
 
-            demo.load(update_visual_view, every=0.05,
+            demo.load(update_visual_view, every=0.1,
                       outputs=[cam_use_image_feed_checkbox_view, cam_direct_talk_checkbox_view, cam_image_preview_checkbox_view, cam_capture_screenshot_checkbox_view])
 
 
@@ -388,6 +391,23 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 shadowchats_button.click(fn=shadowchats_button_click)
 
                 shadowchats_checkbox_view = gr.Checkbox(label="Speak Typed Chats / Shadow Chats")
+
+
+        #
+        # Audible Talking Settings
+        #
+
+        with gr.Row():
+            def speaking_choice_button_click():
+                utils.settings.speak_only_spokento = not utils.settings.speak_only_spokento
+                print(utils.settings.speak_only_spokento)
+                return
+
+            speak_only_spokento_button = gr.Button(value="Check/Uncheck")   # <-- literally me
+            speak_only_spokento_button.click(fn=speaking_choice_button_click)
+
+            speak_only_spokento_checkbox_view = gr.Checkbox(label="Speak Only When Spoken To")
+
 
 
         #
@@ -533,10 +553,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def update_settings_view():
 
-            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.supress_rp, utils.settings.newline_cut, utils.settings.asterisk_ban
+            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.speak_only_spokento, utils.settings.supress_rp, utils.settings.newline_cut, utils.settings.asterisk_ban
 
 
-        demo.load(update_settings_view, every=0.05, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view])
+        demo.load(update_settings_view, every=0.1, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, speak_only_spokento_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view])
 
 
 
@@ -627,7 +647,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             demo.load(update_autogaming_check, every=0.05,
                       outputs=[gaming_loop_checkbox_view])
 
-        demo.load(update_tag_task_view, every=0.05, outputs=[cur_task_box, previous_tasks_box, cur_tags_box, previous_tags_box])
+        demo.load(update_tag_task_view, every=0.1, outputs=[cur_task_box, previous_tasks_box, cur_tags_box, previous_tags_box])
 
 
 
@@ -645,7 +665,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         def update_logs():
             return utils.zw_logging.debug_log, utils.zw_logging.rag_log, utils.zw_logging.kelvin_log
 
-        demo.load(update_logs, every=0.05, outputs=[debug_log, rag_log, kelvin_log])
+        demo.load(update_logs, every=0.1, outputs=[debug_log, rag_log, kelvin_log])
 
 
 

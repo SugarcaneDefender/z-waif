@@ -70,6 +70,7 @@ forced_token_level = 120
 stored_received_message = "None!"
 currently_sending_message = ""
 currently_streaming_message = ""
+last_message_received_has_own_name = False
 last_message_streamed = False
 streaming_sentences_ticker = 0
 
@@ -83,7 +84,7 @@ ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
 VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
 VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 
-vision_guidance_message = "There is an image attached to this message! Please look at it and describe it for everyone in vivid detail! Describe as many details of the image as you can, and comment on what you think of the features!"
+vision_guidance_message = "There is an image attached to this message! Please look at it and describe it for yourself in vivid detail! Describe as many details of the image as you can, and comment on what you think of the features!"
 
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
@@ -113,6 +114,9 @@ def run(user_input, temp_level):
     # Clear the old streaming message, also we are not streaming so set it so
     currently_streaming_message = ""
     last_message_streamed = False
+
+    # Did the last message we got contain our name?
+    check_for_name_in_message(user_input)
 
     # Load the history from JSON, to clean up the quotation marks
     #
@@ -278,6 +282,9 @@ def run_streaming(user_input, temp_level):
     # Clear the old streaming message
     currently_streaming_message = ""
     last_message_streamed = True
+
+    # Did the last message we got contain our name?
+    check_for_name_in_message(user_input)
 
     # Load the history from JSON, to clean up the quotation marks
     #
@@ -959,6 +966,9 @@ def view_image(direct_talk_transcript):
     currently_streaming_message = ""
     last_message_streamed = False
 
+    # Did the last message we got contain our name?
+    check_for_name_in_message(direct_talk_transcript)
+
     # Write last, non-system message to RAG (Since this is going in addition)
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
     utils.based_rag.add_message_to_database()
@@ -1121,6 +1131,9 @@ def view_image_streaming(direct_talk_transcript):
     currently_streaming_message = ""
     assistant_message = ''
     last_message_streamed = True
+
+    # Did the last message we got contain our name?
+    check_for_name_in_message(direct_talk_transcript)
 
     # Write last, non-system message to RAG (Since this is going in addition)
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
@@ -1627,3 +1640,12 @@ def force_tokens_count(tokens):
 def pop_if_sent_is_latest(user_input):
     if user_input == ooga_history[-1][0]:
         ooga_history.pop()
+
+def check_for_name_in_message(message):
+    global last_message_received_has_own_name
+
+    if message.__contains__(utils.settings.char_name):
+        last_message_received_has_own_name = True
+
+    else:
+        last_message_received_has_own_name = False

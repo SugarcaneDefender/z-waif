@@ -14,6 +14,7 @@ import utils.transcriber_translate
 
 CHUNK = 1024
 CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE")
+MAX_CHUNKS = int(os.environ.get("WHISPER_CHUNKS_MAX"))
 
 FORMAT = pyaudio.paInt16
 
@@ -181,6 +182,7 @@ def record_ordus():
 def record_chunky():
     frames = []
     all_frames = []
+    utils.transcriber_translate.clear_transcription_chunks()    # Clear old chunks
 
     # Check for if we want to add our audio buffer
     global chat_buffer_frames
@@ -188,7 +190,7 @@ def record_chunky():
         frames = chat_buffer_frames.copy()
 
     # Loop through until done recording, and limit it to X frames
-    while utils.hotkeys.get_speak_input():
+    while utils.hotkeys.get_speak_input() and (1 + len(utils.transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
         p = pyaudio.PyAudio()
         stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 

@@ -4,9 +4,14 @@ from ollama import generate
 
 import os
 import API.api_controller
+import json
 
 ollama_model = os.environ.get("ZW_OLLAMA_MODEL")
 ollama_model_visual = os.environ.get("ZW_OLLAMA_MODEL_VISUAL")
+
+# Load our configs for our different temperatures
+with open("Configurables/OllamaModelConfigs.json", 'r') as openfile:
+    model_configs = json.load(openfile)
 
 def api_standard(history, temp_level, stop, max_tokens):
 
@@ -70,13 +75,14 @@ def get_temperature_options(temp_level, stop, max_tokens):
         return None
 
 
+    return {"temperature": model_configs[temp_level]['temperature'],
+            "min_p": model_configs[temp_level]['min_p'],
+            "top_p": model_configs[temp_level]['top_p'],
+            "top_k": model_configs[temp_level]['top_k'],
+            "num_ctx": API.api_controller.max_context,
+            "repeat_penalty": model_configs[temp_level]['repeat_penalty'],
+            "stop": stop,
+            "num_predict": max_tokens,
+            "repeat_last_n": model_configs[temp_level]['repeat_last_n']}
 
-    if temp_level == 0:
-        return {"temperature": 1.17, "min_p": 0.0597, "top_p": 0.87, "top_k": 64, "num_ctx": API.api_controller.max_context, "repeat_penalty": 1.09, "stop": stop, "num_predict": max_tokens, "repeat_last_n": -1}
-
-    if temp_level == 1:
-        return {"temperature": 1.27, "min_p": 0.0497, "top_p": 0.87, "top_k": 72, "num_ctx": API.api_controller.max_context, "repeat_penalty": 1.12, "stop": stop, "num_predict": max_tokens, "repeat_last_n": -1}
-
-    if temp_level == 2:
-        return {"temperature": 1.47, "min_p": 0.0397, "top_p": 0.97, "top_k": 99, "num_ctx": API.api_controller.max_context, "repeat_penalty": 1.19, "stop": stop, "num_predict": max_tokens, "repeat_last_n": -1}
 

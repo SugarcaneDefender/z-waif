@@ -1,0 +1,1 @@
+Put sounds here. .wav only. For bot to use them, tell them to do /soundboard/filename/, you can specify per sound in the soundboard

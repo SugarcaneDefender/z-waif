@@ -7,6 +7,9 @@ import win32com.client
 import utils.hotkeys
 import utils.voice_splitter
 import utils.zw_logging
+import utils.soundboard
+import utils.settings
+import API.api_controller
 
 is_speaking = False
 cut_voice = False
@@ -20,8 +23,16 @@ def speak_line(s_message, refuse_pause):
 
     for chunk in chunky_message:
         try:
+            # Play soundbaord sounds, if any
+            pure_chunk = utils.soundboard.extract_soundboard(chunk)
+
+            # Cut out if we are not speaking unless spoken to!
+            if utils.settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
+                continue
+
+            # Speak
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
-            speaker.Speak(chunk)
+            speaker.Speak(pure_chunk)
 
             if not refuse_pause:
                 time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
