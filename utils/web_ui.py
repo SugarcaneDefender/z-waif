@@ -160,7 +160,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
         def change_autochat_sensitivity(autochat_sens):
-
+            
+            if not is_integer(autochat_sens): #band-aid fix, but it just works TM
+                autochat_sens = 4
+            
             utils.hotkeys.input_change_listener_sensitivity_from_ui(autochat_sens)
             return
 
