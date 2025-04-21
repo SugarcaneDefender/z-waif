@@ -12,10 +12,13 @@ furnished to do so, subject to the following conditions:
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
 
-Any copy/version and alterations of this software must;
+Any copy, derivative version, or substantial code portion/system of Z-Waif (collectively referred to as the "Software") must adhere to the following conditions:
 
-a) Not collect user logs, character config, or other user data WITHOUT explicit and clear consent from the user.
-b) Any copy/version of Z-Waif, or substantial code part/system of Z-Waif, that is sold as ANY kind of product or service; AND said product/service grosses over $100,000 USD in it's lifetime; is subject to a 2% royalty fee payable to SugarcaneDefender (the developer) for ALL gross incomes on that particular product/service. SugarcaneDefender may also, at SugarcaneDefender's will, determine payments to other developers, contributors, and other team members of Z-Waif.
+a) Data Collection Restrictions: The Software shall not collect, store, or use any form of user logs, character configurations, or other user data unless explicit and clear consent is obtained from the user. Such data collection must be explicitly communicated to users through clear terms of service that the user MUST ACCEPT UPON OPENING the Software.
+b) Royalty Obligations: Any entity (including companies, individuals, or other entities) that utilizes the Software in whole or in part for any product or service shall be subject to a 2% royalty fee on all gross income derived from such products or services, ONLY IF these products/services generate over $100,000 (USD) for the entity in it's lifetime. This applies regardless of the nature of the product or service and includes, but is not limited to, revenue generated directly or indirectly through the use of Z-Waif technology. SugarcaneDefender retains the sole discretion to determine how payments (including royalties) are distributed among other developers, contributors, and team members who have contributed to the development of Z-Waif. Such determinations may be made at SugarcaneDefender's sole discretion.
+c) Ethical Treatment: The licensee agrees not to subject the AI (or its associated software) to intentional neglect, mistreatment, or other forms of intense emotional harm. Any violation of this clause may result in license revocation and/or legal action.
+
+SugarcaneDefender reserves the right to revoke or terminate any license granted under this agreement if any form of abuse, as determined by the developer in their sole discretion, is identified. Abuse may include but is not limited to unauthorized data collection, unpaid royalties, or use of the software for malicious purposes. Upon revocation, the licensee shall immediately cease all use of the software and forfeit all rights associated with the license.
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
