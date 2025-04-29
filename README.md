@@ -60,30 +60,24 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.10
+v1.11
 
-- Can now configure temperature and other model settings for Ollama.
-	- In "Configurables/OllamaModelConfigs".
-	- Ordered from normal/mid/high "randomness" levels.
-	- Defaults are better tuned than before (higher temeperature, more limits).
+- New Options for the Ollama image model
+	- Can use the "VISUAL", "BASE", or "OFF" character cards when sending images
+		- VISUAL = Send the new configurable OllamaVisualCharacterCard
+		- BASE = Send the regular character card with the visual model
+		- OFF = Send no character card with the visual model
+	- OLLAMA_VISUAL_ENCODE_GUIDANCE
+		- Just appends a small message, helping to better guide the visual system.
 
-- Added in a soundboard.
-	- Activated when /soundboard/FileName/ is typed.
-		- Good encoding for saving token space and LLM understanding.
-	- Put files in your Configurables/Soundboard.
-	- Only .wav audio supported.
-	- Sounds are played in order with other speech.
+- Temperatures are slightly more likely to randomly "roam" to higher level temp settings.
+- Soundboard can be done as uppercase /Soundboard/ or lowercase /soundboard/.
+	- This will help with repetition penalty, since they are different.
 
-- Option in the settings for the bot to only speak back when spoken to.
-	- Still can generate, do inputs, make soundboard sounds ect., just won't talk out loud.
-	- Good for hanging out in calls so people can talk to them, without them constantly talking nonsense.
-
-- Added a setting for the chunky transcription to stop at a certain number of chunks.
-	- This can let your bot get a chance to speak when things are busy.
-	- Default is 14, change it in the .env.
-
-- Improved setup in MacOS, thanks @Cootshk !
-- Fixed grammatic error, thanks @FriskTemmie !
+- Made it less likely to crash when receiving a discord message while something else is processing.
+- Fixed crashes when streamed text is empty (such as using asterisks ban)
+- Fixed requirements.txt with Whisper breaking. Thanks @89245823431 !
+- Fixed UI input for the sensitivity slider. Thanks @FriskTemmie !
 
 ## To-Do
 
