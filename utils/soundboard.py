@@ -3,11 +3,16 @@
 #
 
 import os
+import random
+
 from pydub import AudioSegment
 from pydub.playback import play
 import time
 
 def extract_soundboard(input_string):
+
+    input_string = input_string.replace("/Soundboard/", "/soundboard/")
+
     # If the very start of this is a soundboard sound, as some dummy spaces behind it so it splits fine
     if input_string.startswith("/soundboard/"):
         input_string = " " + input_string
@@ -47,3 +52,4 @@ def soundboard_playsound(sound_name):
 
     except:
         return
+

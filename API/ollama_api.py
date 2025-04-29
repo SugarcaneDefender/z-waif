@@ -83,6 +83,9 @@ def get_temperature_options(temp_level, stop, max_tokens):
             "repeat_penalty": model_configs[temp_level]['repeat_penalty'],
             "stop": stop,
             "num_predict": max_tokens,
-            "repeat_last_n": model_configs[temp_level]['repeat_last_n']}
+            "repeat_last_n": model_configs[temp_level]['repeat_last_n'],
+            "frequency_penalty": model_configs[temp_level]['frequency_penalty'],
+            "presence_penalty": model_configs[temp_level]['presence_penalty']
+            }
 
 

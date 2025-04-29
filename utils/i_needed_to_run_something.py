@@ -54,5 +54,14 @@ from ollama import chat
 # play(sound)
 # print("Sound played!")
 
-import soundboard
-print(soundboard.extract_soundboard("there is no soundboard sound here at all! and also /soundboard/Horse/ but forget that and also /soundboard/Fish/"))
+#
+# import win32com.client
+#
+# speaker = win32com.client.Dispatch("SAPI.SpVoice")
+# speaker.Speak("I am Maria! Rawr!")
+
+# input_string = "/Soundboard/Fish/"
+#
+# input_string = input_string.replace("/Soundboard/", "/soundboard/")
+# print(input_string)
+

@@ -2,6 +2,7 @@
 import asyncio
 import json
 import os
+import time
 
 import discord
 import main
@@ -25,6 +26,10 @@ async def on_message(message):
 
     if message.author == client.user:
         return
+
+    # DO NOT RUN while we are in an active API request, it could crash!
+    while main.is_live_pipe or API.api_controller.is_in_api_request:
+        time.sleep(0.1)
 
 
     if (message.content == "/regen") or (message.content == "/reroll") or (message.content == "/redo"):

@@ -403,7 +403,6 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         with gr.Row():
             def speaking_choice_button_click():
                 utils.settings.speak_only_spokento = not utils.settings.speak_only_spokento
-                print(utils.settings.speak_only_spokento)
                 return
 
             speak_only_spokento_button = gr.Button(value="Check/Uncheck")   # <-- literally me

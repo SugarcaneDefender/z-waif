@@ -1,5 +1,27 @@
 Changelog
 
+v1.11
+
+- New Options for the Ollama image model
+	- Can use the "VISUAL", "BASE", or "OFF" character cards when sending images
+		- VISUAL = Send the new configurable OllamaVisualCharacterCard
+		- BASE = Send the regular character card with the visual model
+		- OFF = Send no character card with the visual model
+	- OLLAMA_VISUAL_ENCODE_GUIDANCE
+		- Just appends a small message, helping to better guide the visual system.
+
+- Temperatures are slightly more likely to randomly "roam" to higher level temp settings.
+- Soundboard can be done as uppercase /Soundboard/ or lowercase /soundboard/.
+	- This will help with repetition penalty, since they are different.
+
+- Made it less likely to crash when receiving a discord message while something else is processing.
+- Fixed crashes when streamed text is empty (such as using asterisks ban)
+- Fixed requirements.txt with Whisper breaking. Thanks @89245823431 !
+- Fixed UI input for the sensitivity slider. Thanks @FriskTemmie !
+
+
+---.---.---.---
+
 v1.10
 
 - Can now configure temperature and other model settings for Ollama.
@@ -24,7 +46,6 @@ v1.10
 
 - Improved setup in MacOS, thanks @Cootshk !
 - Fixed grammatic error, thanks @FriskTemmie !
-
 
 
 ---.---.---.---

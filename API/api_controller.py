@@ -36,6 +36,7 @@ from ollama import ChatResponse
 
 from pathlib import Path
 
+from API.character_card import character_card
 
 load_dotenv()
 
@@ -81,10 +82,13 @@ is_in_api_request = False
 
 ENCODE_TIME = os.environ.get("TIME_IN_ENCODING")
 
-VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
-VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
+OOBA_VISUAL_CHARACTER_NAME = os.environ.get("VISUAL_CHARACTER_NAME")
+OOBA_VISUAL_PRESET_NAME = os.environ.get("VISUAL_PRESET_NAME")
 
-vision_guidance_message = "There is an image attached to this message! Please look at it and describe it for yourself in vivid detail! Describe as many details of the image as you can, and comment on what you think of the features!"
+OLLAMA_VISUAL_ENCODE_GUIDANCE = os.environ.get("OLLAMA_VISUAL_ENCODE_GUIDANCE")
+OLLAMA_VISUAL_CARD = os.environ.get("OLLAMA_VISUAL_CARD")
+
+vision_guidance_message = "There is an image attached to this message! Describe what details you see, and comment on what you think of the features, while keeping in role and continuing the conversation!"
 
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
@@ -296,10 +300,10 @@ def run_streaming(user_input, temp_level):
 
     preset = 'Z-Waif-ADEF-Standard'
 
-    if random.random() > 0.77:
+    if random.random() > 0.7:
         preset = 'Z-Waif-ADEF-Tempered'
 
-    if random.random() > 0.994:
+    if random.random() > 0.99:
         preset = 'Z-Waif-ADEF-Blazing'
 
 
@@ -469,7 +473,7 @@ def run_streaming(user_input, temp_level):
             utils.vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak:
+        if not main.live_pipe_no_speak and len(sentence_list) > 0:
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
 
@@ -682,8 +686,16 @@ def check_load_past_chat():
         # Load in our Based RAG as well
         utils.based_rag.load_rag_history()
 
-        # Make a quick backup of our file (if big enough, that way it won't clear if they happen to load again after it errors to 0 somehow)
-        if len(ooga_history) > 30:
+        # Make a quick backup of our file, if the new one is larger than the old one
+        ooga_history_old = []
+
+        try:
+            with open("LiveLogBackup.bak", 'r') as twopenfile:
+                ooga_history_old = json.load(twopenfile)
+        except:
+            pass
+
+        if len(ooga_history) > len(ooga_history_old):
             # Export to JSON
             with open("LiveLogBackup.bak", 'w') as outfile:
                 json.dump(ooga_history, outfile, indent=4)
@@ -986,9 +998,26 @@ def view_image(direct_talk_transcript):
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    # Append our system message, if we are using OLLAMA
+    #
+    # Append our system message, if we are using OLLAMA, configs for guidance message and what character card to use
+    #
     if API_TYPE == "Ollama":
-        past_messages.append({"role": "system", "content": vision_guidance_message + "\n\n" + API.character_card.character_card})
+
+        system_message = ""
+
+        if OLLAMA_VISUAL_ENCODE_GUIDANCE == "ON":
+            system_message += vision_guidance_message + "\n\n"
+
+        if OLLAMA_VISUAL_CARD == "BASE":
+            system_message += API.character_card.character_card
+
+        if OLLAMA_VISUAL_CARD == "VISUAL":
+            system_message += API.character_card.visual_character_card
+
+        # If we have any visual message to append, go for it!
+        if system_message != "":
+            past_messages.append({"role": "system", "content": system_message})
+    #
 
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
@@ -1037,14 +1066,14 @@ def view_image(direct_talk_transcript):
             'prompt': "This image",
             'messages': past_messages,
             'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': VISUAL_CHARACTER_NAME,
+            'character': OOBA_VISUAL_CHARACTER_NAME,
             'your_name': YOUR_NAME,
             'regenerate': False,
             '_continue': False,
             'truncation_length': 2048,
             'stop': stop,
 
-            'preset': VISUAL_PRESET_NAME
+            'preset': OOBA_VISUAL_PRESET_NAME
         }
 
         response = requests.post(IMG_URI, json=request)
@@ -1152,9 +1181,26 @@ def view_image_streaming(direct_talk_transcript):
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    # Append our system message, if we are using OLLAMA
+    #
+    # Append our system message, if we are using OLLAMA, configs for guidance message and what character card to use
+    #
     if API_TYPE == "Ollama":
-        past_messages.append({"role": "system", "content": vision_guidance_message})
+
+        system_message = ""
+
+        if OLLAMA_VISUAL_ENCODE_GUIDANCE == "ON":
+            system_message += vision_guidance_message + "\n\n"
+
+        if OLLAMA_VISUAL_CARD == "BASE":
+            system_message += API.character_card.character_card
+
+        if OLLAMA_VISUAL_CARD == "VISUAL":
+            system_message += API.character_card.visual_character_card
+
+        # If we have any visual message to append, go for it!
+        if system_message != "":
+            past_messages.append({"role": "system", "content": system_message})
+    #
 
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
@@ -1216,14 +1262,14 @@ def view_image_streaming(direct_talk_transcript):
             'prompt': "This image",
             'messages': past_messages,
             'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': VISUAL_CHARACTER_NAME,
+            'character': OOBA_VISUAL_CHARACTER_NAME,
             'your_name': YOUR_NAME,
             'regenerate': False,
             '_continue': False,
             'truncation_length': 2048,
             'stop': stop,
 
-            'preset': VISUAL_PRESET_NAME,
+            'preset': OOBA_VISUAL_PRESET_NAME,
 
             'stream': True,
         }
@@ -1327,7 +1373,7 @@ def view_image_streaming(direct_talk_transcript):
             utils.vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak:
+        if not main.live_pipe_no_speak and len(sentence_list) > 0:
             utils.voice.set_speaking(True)
             utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
 
