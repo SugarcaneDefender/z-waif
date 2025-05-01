@@ -1,32 +1,32 @@
 [
     {
-        "temperature": 1.07,
+        "temperature": 1.05,
         "min_p": 0.047,
         "top_p": 0.89,
-        "top_k": 99,
-        "repeat_penalty": 1.092,
+        "top_k": 72,
+        "repeat_penalty": 1.079,
         "repeat_last_n": 3096,
-		"frequency_penalty": 0.06,
-		"presence_penalty": 0.10
+	"frequency_penalty": 0.03,
+	"presence_penalty": 0.03
     },
     {
         "temperature": 1.14,
         "min_p": 0.037,
         "top_p": 0.91,
-        "top_k": 128,
-        "repeat_penalty": 1.14,
+        "top_k": 120,
+        "repeat_penalty": 1.1,
         "repeat_last_n": -1,
-		"frequency_penalty": 0.10,
-		"presence_penalty": 0.12
+	"frequency_penalty": 0.04,
+	"presence_penalty": 0.04
     },
     {
-        "temperature": 1.37,
+        "temperature": 1.27,
         "min_p": 0.027,
         "top_p": 0.97,
         "top_k": 256,
-        "repeat_penalty": 1.2,
+        "repeat_penalty": 1.14,
         "repeat_last_n": -1,
-		"frequency_penalty": 0.12,
-		"presence_penalty": 0.20
+	"frequency_penalty": 0.06,
+	"presence_penalty": 0.06
     }
 ]
