@@ -60,24 +60,29 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.11
+v1.12
 
-- New Options for the Ollama image model
-	- Can use the "VISUAL", "BASE", or "OFF" character cards when sending images
-		- VISUAL = Send the new configurable OllamaVisualCharacterCard
-		- BASE = Send the regular character card with the visual model
-		- OFF = Send no character card with the visual model
-	- OLLAMA_VISUAL_ENCODE_GUIDANCE
-		- Just appends a small message, helping to better guide the visual system.
+- Silero VAD
+	- Voice activity detection for the autochat. Based on if speech is detected, instead of just volume.
+	- Around ~0.7 seconds of additional delay, but more accurate.
+	- Toggleable in the .env, ON by default.
 
-- Temperatures are slightly more likely to randomly "roam" to higher level temp settings.
-- Soundboard can be done as uppercase /Soundboard/ or lowercase /soundboard/.
-	- This will help with repetition penalty, since they are different.
+- Improved repeat detection at the end of messages.
+	- No longer splits with punctuation, but loops through increasing string segments to check for repetition.
+	- Old version is kept in code, renamed to "old_remove_repeats".
 
-- Made it less likely to crash when receiving a discord message while something else is processing.
-- Fixed crashes when streamed text is empty (such as using asterisks ban)
-- Fixed requirements.txt with Whisper breaking. Thanks @89245823431 !
-- Fixed UI input for the sensitivity slider. Thanks @FriskTemmie !
+- Added a configurable option in the .env to let you change the minimum activation length for the autochat.
+- Widened the autochat buffer (amount of recording picked up before chat is triggered) a bit.
+
+- Asterisks will no longer be read out loud.
+- Requests through the API will only automatically retry 4 times.
+	- This is the "Bad message - redoing...", when you see that.
+	- Saves resources, it is a lost cause at that point.
+- Fixed an issue where multiple exclamation marks would cause the bot to not speak the sentence aloud.
+- Added a "/RipOut/" command for bots to use. If they generate this, it will close the program.
+	- Good to let them know about it if left on their own for a bit, that way they don't spiral.
+- Adjusted default options for Ollama.
+- Adjusted default options for Oobabooga.
 
 ## To-Do
 
