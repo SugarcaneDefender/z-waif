@@ -75,6 +75,9 @@ last_message_received_has_own_name = False
 last_message_streamed = False
 streaming_sentences_ticker = 0
 
+regenerate_requests_count = 0
+regenerate_requests_limit = 5
+
 force_skip_streaming = False
 flag_end_streaming = False
 
@@ -213,9 +216,11 @@ def run(user_input, temp_level):
 
     # If her reply is the same as the last stored one, run another request
     global stored_received_message
+    global regenerate_requests_count
 
-    if received_message == stored_received_message:
+    if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
         utils.zw_logging.update_debug_log("Bad message received; same as last attempted generation. Re-generating the reply...")
+        regenerate_requests_count += 1
         run(user_input, 2)
         return
 
@@ -223,18 +228,22 @@ def run(user_input, temp_level):
 
 
     # If her reply is the same as any in the past 20 chats, run another request
-    if check_if_in_history(received_message):
+    if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
         utils.zw_logging.update_debug_log("Bad message received; same as a recent chat. Re-generating the reply...")
+        regenerate_requests_count += 1
         run(user_input, 1)
         return
 
     # If her reply is blank, request another run, clearing the previous history add, and escape
-    if len(received_message) < 3:
+    if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
         utils.zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Re-generating the reply...")
+        regenerate_requests_count += 1
         run(user_input, 1)
         return
 
 
+    # Clear our regen requests count, we have hit our limit
+    regenerate_requests_count = 0
 
     # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
     log_user_input = "{0}".format(user_input)
@@ -490,10 +499,12 @@ def run_streaming(user_input, temp_level):
 
     # If her reply is the same as the last stored one, run another request
     global stored_received_message
+    global regenerate_requests_count
 
-    if received_message == stored_received_message:
+    if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
         print("\nBad message, redoing!\n")
         utils.zw_logging.update_debug_log("Bad message received; same as last attempted generation. Re-generating the reply...")
+        regenerate_requests_count += 1
         run_streaming(user_input, 2)
         return
 
@@ -501,20 +512,24 @@ def run_streaming(user_input, temp_level):
 
 
     # If her reply is the same as any in the past 20 chats, run another request
-    if check_if_in_history(received_message):
+    if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
         print("\nBad message, redoing!\n")
         utils.zw_logging.update_debug_log("Bad message received; same as a recent chat. Re-generating the reply...")
+        regenerate_requests_count += 1
         run_streaming(user_input, 1)
         return
 
     # If her reply is blank, request another run, clearing the previous history add, and escape
-    if len(received_message) < 3:
+    if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
         print("\nBad message, redoing!\n")
         utils.zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Re-generating the reply...")
+        regenerate_requests_count += 1
         run_streaming(user_input, 1)
         return
 
 
+    # Clear our regen requests count, we have hit our limit
+    regenerate_requests_count = 0
 
     # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
     log_user_input = "{0}".format(user_input)

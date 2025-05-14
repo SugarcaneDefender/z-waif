@@ -65,3 +65,68 @@ from ollama import chat
 # input_string = input_string.replace("/Soundboard/", "/soundboard/")
 # print(input_string)
 
+# My guiding moonlight
+# You were by my side the entire time
+
+# Testing the no repeat voice rule (whisper patch) to make sure it actually works
+
+# import utils.cane_lib
+#
+#
+# stringy = utils.cane_lib.remove_repeats("Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft ")
+# # stringy = utils.cane_lib.super_remove_repeats("Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama")
+# # stringy = utils.cane_lib.super_remove_repeats(" blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah")
+# # stringy = utils.cane_lib.super_remove_repeats("Darling, yeah. Oh yeah, my mom got me a Finch sock. Do you know what a Finch sock is? ")
+# print(stringy)
+
+# Silero VAD Time
+
+# current_directory = os.path.dirname(os.path.abspath(__file__))
+# FILENAME = "voice.wav"
+# SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
+#
+# from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
+#
+# model = load_silero_vad()
+# wav = read_audio(SAVE_PATH)
+# speech_timestamps = get_speech_timestamps(
+#   wav,
+#   model,
+#   return_seconds=True,  # Return speech timestamps in seconds (default is samples)
+# )
+# print(speech_timestamps)
+
+# import utils.audio
+#
+# utils.audio.record_vad_loop()
+
+#
+# Testing new keyword speech checking
+#
+
+# import speech_recognition as sr
+#
+# r = sr.Recognizer()
+#
+# keyWord = 'joker'
+#
+# with sr.Microphone() as source:
+#     print('Please start speaking..\n')
+#     while True:
+#
+#         audio = r.listen(source)
+#         #
+#         # try:
+#         #     text = r.
+#         #     if keyWord.lower() in text.lower():
+#         #         print('Keyword detected in the speech.')
+#         # except Exception as e:
+#         #     print('Please speak again.')
+#
+#         # recognize speech using whisper
+#         try:
+#             print("Whisper thinks you said " + r.recognize_whisper(audio, language="english"))
+#         except sr.UnknownValueError:
+#             print("Whisper could not understand audio")
+#         except sr.RequestError as e:
+#             print(f"Could not request results from Whisper; {e}")

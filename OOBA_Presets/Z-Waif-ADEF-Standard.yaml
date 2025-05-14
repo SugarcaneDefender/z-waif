@@ -1,7 +1,11 @@
-temperature: 1.16
-top_p: 0.7
-min_p: 0.05
+temperature: 1.17
+dynatemp_low: 1.04
+dynatemp_high: 1.27
+smoothing_factor: 0.04
+smoothing_curve: 1.04
+min_p: 0.03
 top_k: 72
-repetition_penalty: 1.09
-presence_penalty: 0.1
-repetition_penalty_range: 0
+dry_multiplier: 0.84
+repetition_penalty: 1.1
+repetition_penalty_range: 1920
+dynamic_temperature: true

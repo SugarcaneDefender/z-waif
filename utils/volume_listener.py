@@ -4,6 +4,7 @@ import sounddevice as sd
 #from sympy import false
 
 import utils.hotkeys
+from utils.settings import use_silero_vad
 
 duration = 10 #in seconds
 
@@ -42,6 +43,10 @@ def get_vol_level():
 
 
 def run_volume_listener():
+
+    # Do not run this if we are using Silero VAD instead!
+    if utils.settings.use_silero_vad == True:
+        return
 
     allow_mic = False
 

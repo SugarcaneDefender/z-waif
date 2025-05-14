@@ -30,6 +30,15 @@ def speak_line(s_message, refuse_pause):
             if utils.settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
                 continue
 
+            # Remove any asterisks from being spoken
+            pure_chunk = pure_chunk.replace("*", "")
+
+            # Change any !!! or other multi-exclamations to single use
+            pure_chunk = pure_chunk.replace("!!", "!")
+            pure_chunk = pure_chunk.replace("!!!", "!")
+            pure_chunk = pure_chunk.replace("!!!!", "!")
+            pure_chunk = pure_chunk.replace("!!!!!", "!")
+
             # Speak
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
             speaker.Speak(pure_chunk)

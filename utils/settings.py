@@ -14,6 +14,9 @@ stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 semi_auto_chat = False
 hangout_mode = False
 
+autochat_mininum_chat_frames = 149
+use_silero_vad = True
+
 alarm_time = "09:09"
 model_preset = "Default"
 

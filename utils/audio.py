@@ -11,6 +11,10 @@ import sounddevice as sd
 
 import utils.volume_listener
 import utils.transcriber_translate
+import utils.settings
+import utils.voice
+
+from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
 
 CHUNK = 1024
 CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE")
@@ -26,11 +30,13 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 FILENAME = "voice.wav"
 SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
 SAVE_PATH_ORDUS = os.path.join(current_directory, "resource", "voice_in", "interrupt_voice.wav")
+SAVE_PATH_VAD = os.path.join(current_directory, "resource", "voice_in", "vad_voice.wav")
 
 chat_buffer_frames = []
 
 latest_chat_frame_count = 0
 
+vad_voice_detected = False
 
 
 def play_mp3(path, audio_level_callback=None):
@@ -260,7 +266,66 @@ def autochat_audio_buffer_record():
             chat_buffer_frames.append(data)
 
             # Clearing anything over the buffer
-            if len(chat_buffer_frames) > 74:
+            if len(chat_buffer_frames) > 91:
                 chat_buffer_frames.pop(0)
 
+def record_vad_loop():
+    global vad_voice_detected
+    time.sleep(7)   # 7 second rest to ensure there is time to boot up
+
+    # Close out if we are to not use Silero VAD
+    if utils.settings.use_silero_vad == False:
+        return
+
+    #
+    # Loop us
+    while True:
+
+        # Breaker here to sleep if our VAD/Autochat/Whatever is not running
+        while utils.hotkeys.get_autochat_toggle() == False or utils.hotkeys.SPEAKING_TIMER_COOLDOWN > 0:
+            vad_voice_detected = False
+            time.sleep(0.01)
+
+
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        frames = []
+        vad_loop_frames_limit = 32
+        vad_loop_cur_frames = 0
+
+        while vad_loop_cur_frames <= vad_loop_frames_limit:
+            data = stream.read(CHUNK)
+            frames.append(data)
+            vad_loop_cur_frames += 1
+
+        stream.stop_stream()
+        stream.close()
+
+        p.terminate()
+
+
+        wf = wave.open(SAVE_PATH_VAD, 'wb')
+
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+
+        time.sleep(0.01)    # Rest to write the file and do system I/O (also slight delay)
+
+        # Now that we have written, look for voice activity!
+        model = load_silero_vad()
+        wav = read_audio(SAVE_PATH_VAD)
+        speech_timestamps = get_speech_timestamps(
+            wav,
+            model,
+            return_seconds=True,  # Return speech timestamps in seconds (default is samples)
+        )
+
+        # If we have voice activity, flag it as valid
+        if len(speech_timestamps) > 0:
+            vad_voice_detected = True
+        else:
+            vad_voice_detected = False
 

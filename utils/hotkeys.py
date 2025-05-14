@@ -358,20 +358,41 @@ def listener_timer():
 
 
     while True:
-        vol_listener_level = utils.volume_listener.get_vol_level()
 
-        # If we are speaking, add to counter, if not remove from it
-        if (vol_listener_level > SPEAKING_VOLUME_SENSITIVITY) and (SPEAKING_TIMER_COOLDOWN == 0):
-            SPEAKING_TIMER += 40
-            if SPEAKING_TIMER > 109:
-                SPEAKING_TIMER = 109
+        #
+        # Option for traditional volume listener
+        if not utils.settings.use_silero_vad:
+            vol_listener_level = utils.volume_listener.get_vol_level()
 
+            # If we are speaking, add to counter, if not remove from it
+            if (vol_listener_level > SPEAKING_VOLUME_SENSITIVITY) and (SPEAKING_TIMER_COOLDOWN == 0):
+                SPEAKING_TIMER += 40
+                if SPEAKING_TIMER > 109:
+                    SPEAKING_TIMER = 109
+
+            else:
+                SPEAKING_TIMER -= 1
+                if SPEAKING_TIMER < 0:
+                    SPEAKING_TIMER = 0
+
+        #
+        # Option for VAD listener
         else:
-            SPEAKING_TIMER -= 1
-            if SPEAKING_TIMER < 0:
-                SPEAKING_TIMER = 0
+            if utils.audio.vad_voice_detected and SPEAKING_TIMER_COOLDOWN == 0:
+                SPEAKING_TIMER += 10
+                if SPEAKING_TIMER > 87:
+                    SPEAKING_TIMER = 87
 
+            else:
+                SPEAKING_TIMER -= 1
+                if SPEAKING_TIMER < 0:
+                    SPEAKING_TIMER = 0
 
+        #
+        # Control
+
+        if SPEAKING_TIMER_COOLDOWN > 0:     # If on cooldown, always set us to 0 on our speak timer
+            SPEAKING_TIMER = 0
 
         # No full auto indoors! Check to see if we need to flop it lmao
         if FULL_AUTO_TOGGLED:
@@ -402,7 +423,7 @@ def cooldown_listener_timer():
     global SPEAKING_TIMER_COOLDOWN
 
     SPEAKING_TIMER = 0
-    SPEAKING_TIMER_COOLDOWN = 0.47
+    SPEAKING_TIMER_COOLDOWN = 1.97
 
 
 def input_change_listener_sensitivity():
