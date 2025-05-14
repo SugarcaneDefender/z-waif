@@ -1,3 +1,4 @@
+import sys
 import time
 
 import colorama
@@ -137,7 +138,7 @@ def main_converse():
         transcript = "Whoops! The code is having some issues, chill for a second."
 
         # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
-        if utils.audio.latest_chat_frame_count < 159 and utils.hotkeys.get_autochat_toggle():
+        if utils.audio.latest_chat_frame_count < utils.settings.autochat_mininum_chat_frames and utils.hotkeys.get_autochat_toggle():
             print("Audio length too small for autochat - cancelling...")
             utils.zw_logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
             utils.transcriber_translate.clear_transcription_chunks()
@@ -264,6 +265,16 @@ def message_checks(message):
 
     if utils.settings.gaming_enabled:
         utils.gaming_control.message_inputs(message)
+
+    #
+    # Check if we need to close the program (botside killword)
+    #
+
+    if message.lower().__contains__("/ripout/"):
+        print("\n\nBot is knowingly closing the program! This is typically done as a last resort! Please re-evaluate your actions! :(\n\n")
+        sys.exit("Closing...")
+        exit()
+
 
 
     # We can now undo the previous message
@@ -687,7 +698,7 @@ def hangout_converse():
 
         # Check for if we are in autochat and the audio is not big enough, then just return and forget about this
         # This will cause us to re-loop! Awesome!
-        if utils.audio.latest_chat_frame_count < 159 and utils.hotkeys.get_autochat_toggle():
+        if utils.audio.latest_chat_frame_count < utils.settings.autochat_mininum_chat_frames and utils.hotkeys.get_autochat_toggle():
             print("Audio length too small for autochat - cancelling...")
             utils.zw_logging.update_debug_log("Autochat too small in length. Assuming anomaly and not actual speech...")
             utils.transcriber_translate.clear_transcription_chunks()
@@ -916,6 +927,13 @@ def run_program():
     # Other settings
 
     utils.settings.eyes_follow = os.environ.get("EYES_FOLLOW")
+    utils.settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH"))
+
+    silero_string = os.environ.get("SILERO_VAD")
+    if silero_string == "ON":
+        utils.settings.use_silero_vad = True
+    else:
+        utils.settings.use_silero_vad = False
 
     newline_cut_enabled_string = os.environ.get("NEWLINE_CUT_BOOT")
     if newline_cut_enabled_string == "ON":
@@ -968,15 +986,21 @@ def run_program():
         alarm_thread.start()
 
 
-    # Start another thread for the volume levels, and another for the full auto toggle
+    # Start another thread for the different voice detections
     volume_listener = threading.Thread(target=utils.volume_listener.run_volume_listener)
     volume_listener.daemon = True
     volume_listener.start()
 
-    volume_listener_toggle = threading.Thread(target=utils.hotkeys.listener_timer)
-    volume_listener_toggle.daemon = True
-    volume_listener_toggle.start()
+    vad_listener = threading.Thread(target=utils.audio.record_vad_loop)
+    vad_listener.daemon = True
+    vad_listener.start()
 
+    listener_toggle = threading.Thread(target=utils.hotkeys.listener_timer)
+    listener_toggle.daemon = True
+    listener_toggle.start()
+
+
+    # Buffer loop
     chat_recording_buffer = threading.Thread(target=utils.audio.autochat_audio_buffer_record)
     chat_recording_buffer.daemon = True
     chat_recording_buffer.start()
@@ -1022,7 +1046,6 @@ def run_program():
     if API.api_controller.API_TYPE == "Ollama":
         API.character_card.load_char_card()
         API.task_profiles.load_task_profiles()
-
 
     # Run the primary loop
     main()

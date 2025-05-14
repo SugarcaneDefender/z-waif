@@ -1,5 +1,32 @@
 Changelog
 
+v1.12
+
+- Silero VAD
+	- Voice activity detection for the autochat. Based on if speech is detected, instead of just volume.
+	- Around ~0.7 seconds of additional delay, but more accurate.
+	- Toggleable in the .env, ON by default.
+
+- Improved repeat detection at the end of messages.
+	- No longer splits with punctuation, but loops through increasing string segments to check for repetition.
+	- Old version is kept in code, renamed to "old_remove_repeats".
+
+- Added a configurable option in the .env to let you change the minimum activation length for the autochat.
+- Widened the autochat buffer (amount of recording picked up before chat is triggered) a bit.
+
+- Asterisks will no longer be read out loud.
+- Requests through the API will only automatically retry 4 times.
+	- This is the "Bad message - redoing...", when you see that.
+	- Saves resources, it is a lost cause at that point.
+- Fixed an issue where multiple exclamation marks would cause the bot to not speak the sentence aloud.
+- Added a "/RipOut/" command for bots to use. If they generate this, it will close the program.
+	- Good to let them know about it if left on their own for a bit, that way they don't spiral.
+- Adjusted default options for Ollama.
+- Adjusted default options for Oobabooga.
+
+
+---.---.---.---
+
 v1.11
 
 - New Options for the Ollama image model
