@@ -56,9 +56,9 @@ narwhals==1.25.2
 networkx==3.3
 numba==0.61.0
 numpy==1.24.4
-ollama==0.4.8
+ollama==0.5.1
 onnxruntime==1.20.1
-openai-whisper==20240930
+openai-whisper
 opencv-python==4.11.0.86
 orjson==3.10.15
 packaging==24.2
@@ -106,9 +106,9 @@ sympy==1.13.3
 tiktoken==0.8.0
 tokenizers==0.21.0
 tomlkit==0.12.0
-torch==2.7.0+cu118
-torchaudio==2.7.0+cu118
-torchvision==0.22.0+cu118
+torch==2.7.1+cu118
+torchaudio==2.7.1+cu118
+torchvision==0.22.1+cu118
 tqdm==4.67.1
 typer==0.15.1
 typing_extensions==4.12.2
