@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --update-pip)
-            export UPDATE_PIP=1
+            export UPDATE=1
             shift
             ;;
         --keep-logs)
