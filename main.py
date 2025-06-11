@@ -25,6 +25,7 @@ import utils.lorebook
 import utils.camera
 
 import utils.z_waif_discord
+import utils.z_waif_twitch
 import utils.web_ui
 
 import utils.settings
@@ -353,6 +354,49 @@ def main_discord_chat(message):
 
 
 
+
+
+def main_twitch_chat(message):
+
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
+    # Actual sending of the message, waits for reply automatically
+    API.api_controller.send_via_oogabooga(message)
+
+    #
+    # CHATS WILL BE GRABBED AFTER THIS RUNS!
+    #
+
+    # Run our message checks
+    reply_message = API.api_controller.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
+        main_message_speak()
+
+
+def main_twitch_next():
+
+    # This is a shadow chat
+    global live_pipe_no_speak
+    if (not utils.settings.speak_shadowchats) and utils.settings.stream_chats:
+        live_pipe_no_speak = True
+
+    API.api_controller.next_message_oogabooga()
+
+    # Run our message checks
+    reply_message = API.api_controller.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    live_pipe_no_speak = False
+    if utils.settings.speak_shadowchats and not utils.settings.stream_chats:
+        main_message_speak()
 
 
 def main_web_ui_chat(message):
@@ -882,10 +926,7 @@ def run_program():
 
     # Load the defaults for modules being on/off in the settings
     minecraft_enabled_string = os.environ.get("MODULE_MINECRAFT")
-    if minecraft_enabled_string == "ON":
-        utils.settings.minecraft_enabled = True
-    else:
-        utils.settings.minecraft_enabled = False
+    utils.settings.minecraft_enabled = minecraft_enabled_string == "ON" and os.name != "posix"
 
     alarm_enabled_string = os.environ.get("MODULE_ALARM")
     if alarm_enabled_string == "ON":
@@ -904,6 +945,12 @@ def run_program():
         utils.settings.discord_enabled = True
     else:
         utils.settings.discord_enabled = False
+
+    twitch_enabled_string = os.environ.get("MODULE_TWITCH")
+    if twitch_enabled_string == "ON":
+        utils.settings.twitch_enabled = True
+    else:
+        utils.settings.twitch_enabled = False
 
     rag_enabled_string = os.environ.get("MODULE_RAG")
     if rag_enabled_string == "ON":
@@ -1017,6 +1064,12 @@ def run_program():
         discord_thread = threading.Thread(target=utils.z_waif_discord.run_z_waif_discord)
         discord_thread.daemon = True
         discord_thread.start()
+
+    # Start another thread for Twitch
+    if utils.settings.twitch_enabled:
+        twitch_thread = threading.Thread(target=utils.z_waif_twitch.run_z_waif_twitch)
+        twitch_thread.daemon = True
+        twitch_thread.start()
 
     # Start another thread for camera facial track, if we want that
     if utils.settings.eyes_follow == "Faces":
