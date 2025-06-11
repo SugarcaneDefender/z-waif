@@ -43,5 +43,14 @@ gaming_enabled = True
 alarm_enabled = True
 vtube_enabled = True
 discord_enabled = True
+twitch_enabled = True
 rag_enabled = True
 vision_enabled = True
+
+# Twitch-specific settings
+TWITCH_ENABLED = True
+twitch_personality = "friendly"
+twitch_auto_respond = True
+twitch_response_chance = 0.8  # 80% chance to respond to messages
+twitch_cooldown_seconds = 3
+twitch_max_message_length = 450
