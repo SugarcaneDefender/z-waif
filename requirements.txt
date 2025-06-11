@@ -87,7 +87,7 @@ python-multipart==0.0.20
 pytweening==1.2.0
 pytz==2025.1
 pyvts==0.3.3
-pywin32==308
+pywin32==308 ; sys_platform == 'win32'
 PyYAML==6.0.2
 referencing==0.36.2
 regex==2024.11.6
@@ -121,3 +121,11 @@ urllib3==2.3.0
 uvicorn==0.34.0
 websockets==11.0.3
 yarl==1.18.3
+
+# Extras
+-e git+https://github.com/openai/whisper.git#egg=openai-whisper
+
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+torchvision
+torchaudio

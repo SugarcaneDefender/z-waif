@@ -43,13 +43,13 @@ python -m ensurepip --upgrade
 python -m pip install --upgrade pip
 
 REM Install PyTorch, torchvision, and torchaudio from a specific index URL
-python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
+REM python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
 
 REM Install openai-whisper from the GitHub repository
-python -m pip install git+https://github.com/openai/whisper.git 2>> "%LOG_FILE%"
+REM python -m pip install git+https://github.com/openai/whisper.git 2>> "%LOG_FILE%"
 
 REM Needed upgrades that won't install normally
-python -m pip install --upgrade pywin32
+REM python -m pip install --upgrade pywin32
 
 REM Install the remaining dependencies from requirements.txt
 python -m pip install -r requirements.txt 2>> "%LOG_FILE%"
