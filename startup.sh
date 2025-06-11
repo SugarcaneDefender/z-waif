@@ -76,6 +76,10 @@ if [[ -z "$LOG_FILE" ]]; then
 fi
 # Move into the script dir
 cd "$SCRIPT_DIR"
+# Make a .env file if it doesn't exist
+if [[ ! -f ".env" ]]; then
+    cp .env.example .env
+fi
 # Regenerate the log file if it doesn't exist
 if [[ "$KEEP_LOGS" != "1" ]]; then
     # Remove the log file if it exists
