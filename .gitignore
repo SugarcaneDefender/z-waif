@@ -1,0 +1,14 @@
+.env
+.direnv
+venv/
+**/*.pyc
+.DS_Store
+**/__pycache__/
+.mypy_cache/
+log.txt
+
+Logs/Drop_Converts_Here/
+!Logs/Drop_Converts_Here/CONVERT_LOGS.txt
+
+RAG_Database/
+!RAG_Database/RAG_WILL_GENERATE_HERE.txt
