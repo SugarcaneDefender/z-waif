@@ -12,7 +12,7 @@
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs;
-            [ mypy python311Full python311Packages.pip ] ++ libs;
+            [ mypy python311Full python311Packages.pip git ] ++ libs;
           shellHook = ''
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.portaudio.out}
             export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${pkgs.libglvnd.out}/lib
