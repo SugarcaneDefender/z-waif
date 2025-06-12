@@ -14,6 +14,14 @@ REM Create and activate the main virtual environment
 python -m venv venv
 call venv\Scripts\activate
 
+REM Copy the .env file
+IF NOT EXIST ".env" (
+    echo Copying .env file...
+    copy ".env.example" ".env"
+) ELSE (
+    echo .env file already exists, skipping copy.
+)
+
 REM Install PyTorch, torchvision, and torchaudio from a specific index URL
 python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
 
