@@ -278,18 +278,18 @@ class TwitchBot(commands.Bot):
             log_error(f"Error processing regeneration: {e}")
             await message.channel.send(f"@{message.author.name} ❌ Error processing regeneration")
     
-    @commands.command(name='stats')
-    async def stats_command(self, ctx):
-        """Show AI statistics"""
-        try:
-            memory_stats = await self.memory_manager.get_memory_stats()
-            user_stats = get_user_stats("twitch")
-            
-            stats_msg = f"🤖 AI Stats: {memory_stats['total_memories']} memories, {user_stats['total_users']} users tracked"
-            await ctx.send(stats_msg)
-        except Exception as e:
-            log_error(f"Error getting stats: {e}")
-            await ctx.send("❌ Error getting stats")
+    # @commands.command(name='stats')
+    # async def stats_command(self, ctx):
+    #     """Show AI statistics"""
+    #     try:
+    #         memory_stats = await self.memory_manager.get_memory_stats()
+    #         user_stats = get_user_stats("twitch")
+    #
+    #         stats_msg = f"🤖 AI Stats: {memory_stats['total_memories']} memories, {user_stats['total_users']} users tracked"
+    #         await ctx.send(stats_msg)
+    #     except Exception as e:
+    #         log_error(f"Error getting stats: {e}")
+    #         await ctx.send("❌ Error getting stats")
     
     @commands.command(name='personality')
     async def personality_command(self, ctx, new_personality: str = None):
