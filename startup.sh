@@ -68,6 +68,25 @@ if [[ "$PYTHON_VERSION" != "11" ]]; then
     exit 1
 fi
 
+# Check for existence of PortAudio
+export LIBS="/lib:/lib64:/usr/lib:/usr/lib64:/usr/libexec:/usr/include"
+if [[ ! -z "$LD_LIBRARY_PATH" ]]; then
+    export LIBS="$LIBS:$LD_LIBRARY_PATH"
+fi
+# what the hell, bash
+printf %s "$LIBS" | while IFS= read -rd: dir || [ -n "$dir" ]; do
+    # echo DEBUG: Checking $dir
+    if [[ -f "$dir/libportaudio.so" ]]; then
+        # Throw an error, i guess?
+        exit 1
+    fi
+done
+if [[ "$?" != "1" && -z "$SKIP_PORT_AUDIO_CHECK" ]]; then
+    echo "ERROR: PortAudio could not be located on your machine. "
+    echo "       Please install the relevant portaudio package first."
+    exit 1
+fi
+
 # Set script dir to this file's dir
 export SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Set the log file path
