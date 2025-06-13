@@ -73,6 +73,7 @@ from ollama import chat
 # from utils import cane_lib
 #
 #
+# WHY IS THIS HERE. WHAT HAVE YOU DONE, SUGARCANE?
 # stringy = cane_lib.remove_repeats("Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft ")
 # # stringy = cane_lib.super_remove_repeats("Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama")
 # # stringy = cane_lib.super_remove_repeats(" blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah")
