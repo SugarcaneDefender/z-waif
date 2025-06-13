@@ -2,12 +2,15 @@
 .direnv
 venv/
 **/*.pyc
+**/*.bak
 .DS_Store
 **/__pycache__/
 .mypy_cache/
 log.txt
+.vscode/
+.idea/
 
-Logs/Drop_Converts_Here/
+[lL]ogs/
 !Logs/Drop_Converts_Here/CONVERT_LOGS.txt
 
 RAG_Database/
