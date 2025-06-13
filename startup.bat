@@ -10,6 +10,9 @@ set "LOG_FILE=%SCRIPT_DIR%\log.txt"
 REM Change to the script directory
 cd /d "%SCRIPT_DIR%"
 
+REM Add current directory to Python path
+set "PYTHONPATH=%SCRIPT_DIR%;%PYTHONPATH%"
+
 REM Create and activate the main virtual environment
 python -m venv venv
 call venv\Scripts\activate
