@@ -1,7 +1,6 @@
 import re
 import html
-from typing import str
-from utils.logging import log_info, log_error
+from utils.logging import log_info
 
 def clean_response(response: str, platform: str) -> str:
     """Clean and format AI response for specific platform"""
@@ -114,7 +113,7 @@ def format_username_mention(username: str, platform: str) -> str:
     if platform.lower() == "twitch":
         return f"@{username}"
     elif platform.lower() == "discord":
-        return f"<@{username}>"  # This would need actual user ID for Discord
+        return f"<@{username}>"  # This would need actual user ID because Discord
     else:
         return f"@{username}"
 
@@ -133,7 +132,7 @@ def escape_markdown(text: str) -> str:
         text = text.replace(char, f'\\{char}')
     return text
 
-def extract_emotes_and_mentions(message: str) -> dict:
+def extract_emotes_and_mentions(message: str) -> dict[str, list[str]]:
     """Extract emotes and mentions from a message"""
     # Extract Twitch emotes (basic pattern)
     emotes = re.findall(r'\b[A-Z][a-z]*[A-Z][a-zA-Z]*\b', message)
