@@ -1,8 +1,8 @@
-from ai_handler import AIHandler
+from utils.ai_handler import AIHandler
 from memory_manager import MemoryManager, MultiprocessRAG
 from sentence_transformers import SentenceTransformer
 import logging
-from logging import log_info, log_error
+from utils.zw_logging import log_info, log_error
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

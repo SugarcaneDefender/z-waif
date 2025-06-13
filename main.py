@@ -917,6 +917,9 @@ def hangout_interrupt_audio_recordable():
 
 
 def run_program():
+    # Set up logging first
+    from utils.logging import setup_logging
+    setup_logging()
 
     # Announce that the program is running
     print("Welcome back! Loading chat interface...\n\n", end="", flush=True)
@@ -1034,9 +1037,9 @@ def run_program():
 
 
     # Start another thread for the different voice detections
-    volume_listener = threading.Thread(target=volume_listener.run_volume_listener)
-    volume_listener.daemon = True
-    volume_listener.start()
+    volume_listener_thread = threading.Thread(target=volume_listener.run_volume_listener)
+    volume_listener_thread.daemon = True
+    volume_listener_thread.start()
 
     vad_listener = threading.Thread(target=audio.record_vad_loop)
     vad_listener.daemon = True

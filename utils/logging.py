@@ -1,29 +1,26 @@
-debug_log = "General Debug log will go here!\n\nAnd here!"
-rag_log = "RAG log will go here!"
-kelvin_log = "Live temperature randomness will go here!"
+import logging
+import os
+from datetime import datetime
 
-from typing import Any
-from zw_logging import log_info as zw_log_info, log_error as zw_log_error
+# Configure logging
+def setup_logging():
+    # Create logs directory if it doesn't exist
+    if not os.path.exists('Logs'):
+        os.makedirs('Logs')
+    
+    # Set up logging configuration
+    log_file = os.path.join('Logs', f'zwaif_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log')
+    
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler(log_file),
+            logging.StreamHandler()
+        ]
+    )
 
-def update_debug_log(text: Any):
-    global debug_log
-    debug_log += "\n\n" + str(text)
+def get_logger(name):
+    return logging.getLogger(name)
 
-
-def update_rag_log(text: Any):
-    global rag_log
-    rag_log += "\n\n" + str(text)
-
-def clear_rag_log():
-    global rag_log
-    rag_log = ""
-
-def update_kelvin_log(text: str):
-    global kelvin_log
-    kelvin_log = text
-
-def log_info(message: str):
-    zw_log_info(message)
-
-def log_error(message: str):
-    zw_log_error(message)
+# Don't call setup_logging here to avoid circular imports 

@@ -5,20 +5,25 @@ import asyncio
 import random
 from dotenv import load_dotenv
 from utils import settings
-from zw_logging import (
+from utils.zw_logging import (
     log_info, log_error, log_startup, log_message_length_warning,
 )
 import threading
-from user_context import get_user_context, update_user_context
-from message_processing import clean_response, validate_message_safety, add_personality_flavor
-from ai_message_tracker import should_ai_respond, record_ai_message
-from user_relationships import (
+from utils.user_context import get_user_context, update_user_context
+from utils.message_processing import clean_response, validate_message_safety, add_personality_flavor
+from utils.ai_message_tracker import should_ai_respond, record_ai_message
+from utils.user_relationships import (
     add_relationship_context_to_response,
-    update_relationship,
-    analyze_conversation_style
+    update_relationship_status,
+    get_relationship_status,
+    get_relationship_level,
+    get_relationship_history,
+    set_relationship_level,
+    set_relationship_status,
+    set_relationship_history,
 )
 from memory_manager import MemoryManager, MultiprocessRAG
-from ai_handler import AIHandler
+from utils.ai_handler import AIHandler
 from sentence_transformers import SentenceTransformer
 # import main
 
@@ -50,9 +55,13 @@ class TwitchBot(commands.Bot):
             channel: str = TWITCH_CHANNEL
             client_id = TWITCH_CLIENT_ID
             
-            if not token.startswith('oauth:'):
-                token = f'oauth:{token}'
-                
+            # Debug logging
+            log_info("=== Twitch Debug Info ===")
+            log_info(f"Raw Token Length: {len(token)}")
+            log_info(f"Raw Token: {token}")
+            log_info(f"Channel: {channel}")
+            log_info(f"Client ID: {client_id}")
+            
             log_info(f"=== Initializing Enhanced Twitch Bot ===")
             log_info(f"Channel: {channel}")
             log_info(f"Token Status: {'Valid' if token else 'Missing'}")
@@ -138,7 +147,7 @@ class TwitchBot(commands.Bot):
             }, "twitch")
             
             # Update relationship data
-            update_relationship(user_id, "twitch", "neutral")
+            update_relationship_status(user_id, "twitch", "neutral")
             analyze_conversation_style(message, user_id, "twitch")
             
             # Add to memory without generating response
@@ -191,7 +200,7 @@ class TwitchBot(commands.Bot):
                 "message_count": 1,
                 "username": username
             }, "twitch")
-            update_relationship(user_id, "twitch", "neutral")
+            update_relationship_status(user_id, "twitch", "neutral")
             analyze_conversation_style(user_message, user_id, "twitch")
             
             # Get relevant memories

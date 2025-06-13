@@ -9,9 +9,7 @@ import API.api_controller
 from utils import settings
 import json
 
-from settings import minecraft_enabled
-
-if minecraft_enabled:
+if settings.minecraft_enabled:
     chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
 
 last_chat = "None!"

@@ -3,8 +3,8 @@ import os
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from logging import log_info, log_error
-from user_context import get_user_context, update_user_context
+from utils.zw_logging import log_info, log_error
+from utils.user_context import get_user_context, update_user_context
 
 # File to store relationship data
 RELATIONSHIPS_FILE = "Configurables/user_relationships.json"
@@ -347,6 +347,58 @@ def cleanup_inactive_relationships(days_inactive: int = 30):
     if users_to_remove:
         save_relationships()
         log_info(f"Cleaned up {len(users_to_remove)} inactive relationships")
+
+def update_relationship_status(user_id: str, platform: str, status: str):
+    """Update the relationship status for a user."""
+    user_key = f"{platform}_{user_id}"
+    rel_data = get_relationship_data(user_id, platform)
+    rel_data["relationship_status"] = status
+    relationships_data[user_key] = rel_data
+    save_relationships()
+    log_info(f"Updated relationship status for {user_id} to {status}")
+
+# --- Relationship Status Functions Needed by z_waif_twitch.py ---
+def get_relationship_status(user_id: str, platform: str) -> str:
+    """Get the relationship status for a user."""
+    rel_data = get_relationship_data(user_id, platform)
+    return rel_data.get("relationship_status", "unknown")
+
+def get_relationship_level(user_id: str, platform: str) -> str:
+    """Get the relationship level for a user."""
+    rel_data = get_relationship_data(user_id, platform)
+    return rel_data.get("relationship_level", "stranger")
+
+def get_relationship_history(user_id: str, platform: str):
+    """Get the relationship history for a user."""
+    rel_data = get_relationship_data(user_id, platform)
+    return rel_data.get("relationship_history", [])
+
+def set_relationship_level(user_id: str, platform: str, level: str):
+    """Set the relationship level for a user."""
+    user_key = f"{platform}_{user_id}"
+    rel_data = get_relationship_data(user_id, platform)
+    rel_data["relationship_level"] = level
+    relationships_data[user_key] = rel_data
+    save_relationships()
+    log_info(f"Set relationship level for {user_id} to {level}")
+
+def set_relationship_status(user_id: str, platform: str, status: str):
+    """Set the relationship status for a user."""
+    user_key = f"{platform}_{user_id}"
+    rel_data = get_relationship_data(user_id, platform)
+    rel_data["relationship_status"] = status
+    relationships_data[user_key] = rel_data
+    save_relationships()
+    log_info(f"Set relationship status for {user_id} to {status}")
+
+def set_relationship_history(user_id: str, platform: str, history):
+    """Set the relationship history for a user."""
+    user_key = f"{platform}_{user_id}"
+    rel_data = get_relationship_data(user_id, platform)
+    rel_data["relationship_history"] = history
+    relationships_data[user_key] = rel_data
+    save_relationships()
+    log_info(f"Set relationship history for {user_id}")
 
 # Load relationships on module import
 load_relationships() 

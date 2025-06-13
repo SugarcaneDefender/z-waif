@@ -4,7 +4,7 @@ import sounddevice as sd
 #from sympy import false
 
 from utils import hotkeys
-from settings import use_silero_vad
+from utils import settings
 
 duration = 10 #in seconds
 
