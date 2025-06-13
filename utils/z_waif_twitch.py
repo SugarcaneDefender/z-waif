@@ -1,3 +1,4 @@
+import twitchio
 from twitchio.ext import commands # type: ignore
 import os
 import asyncio
@@ -23,8 +24,9 @@ from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
-TWITCH_TOKEN = os.getenv("TWITCH_TOKEN")
-TWITCH_CHANNEL = os.getenv("TWITCH_CHANNEL")
+TWITCH_TOKEN = os.getenv("TWITCH_TOKEN", "")
+TWITCH_CHANNEL = os.getenv("TWITCH_CHANNEL", "")
+TWITCH_CLIENT_ID = os.environ.get('TWITCH_CLIENT_ID', "")
 
 if not TWITCH_TOKEN or not TWITCH_CHANNEL:
     log_error("TWITCH_TOKEN or TWITCH_CHANNEL not found. Twitch module disabled.")
@@ -44,9 +46,9 @@ class TwitchBot(commands.Bot):
             self.ai_handler = AIHandler()
             
             # Get credentials
-            token = TWITCH_TOKEN
-            channel = TWITCH_CHANNEL
-            client_id = os.environ.get('TWITCH_CLIENT_ID')
+            token: str = TWITCH_TOKEN
+            channel: str = TWITCH_CHANNEL
+            client_id = TWITCH_CLIENT_ID
             
             if not token.startswith('oauth:'):
                 token = f'oauth:{token}'
@@ -84,14 +86,14 @@ class TwitchBot(commands.Bot):
         except Exception as e:
             log_error(f"Error in event_ready: {str(e)}")
 
-    async def event_message(self, message):
+    async def event_message(self, message: twitchio.Message): # type: ignore
         if message.echo:
             return
             
         try:
             # Check message length
-            if len(message.content) > 2000:
-                log_message_length_warning(message.content, len(message.content), "Twitch")
+            if len(message.content) > 2000: # type: ignore
+                log_message_length_warning(message.content, len(message.content), "Twitch") # type: ignore
                 return
                 
             log_info(f"Twitch message from {message.author.name}: {message.content}")
@@ -100,14 +102,14 @@ class TwitchBot(commands.Bot):
             await self.handle_commands(message)
             
             # Check if we should respond to this message
-            if not should_ai_respond(message.content, "twitch", str(message.channel)):
-                log_info(f"Skipping Twitch message (own message or cooldown): {message.content[:50]}...")
+            if not should_ai_respond(message.content, "twitch", str(message.channel)): # type: ignore
+                log_info(f"Skipping Twitch message (own message or cooldown): {message.content[:50]}...") # type: ignore
                 return
             
             # Get user information
-            user_id = str(message.author.id)
-            username = message.author.name
-            user_message = message.content
+            user_id = str(message.author.id) # type: ignore
+            username: str = message.author.name # type: ignore
+            user_message: str = message.content # type: ignore
             
             # Skip if message is just a command without content
             if user_message.strip() in ['!chat', '!ai'] or (user_message.startswith('!') and len(user_message.strip()) <= 10):
@@ -148,7 +150,7 @@ class TwitchBot(commands.Bot):
         except Exception as e:
             log_error(f"Error updating user data: {str(e)}")
 
-    async def _process_chat_message(self, message, user_id: str, username: str, user_message: str):
+    async def _process_chat_message(self, message: twitchio.Message, user_id: str, username: str, user_message: str):
         """Process chat message with full AI capabilities"""
         try:
             # Handle special regeneration commands

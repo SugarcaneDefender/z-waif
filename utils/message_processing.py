@@ -1,8 +1,8 @@
 import re
 import html
-from logging import log_info
+from utils.zw_logging import log_info
 
-def clean_response(response: str, platform: str) -> str:
+def clean_response(response: str, platform: str = "") -> str:
     """Clean and format AI response for specific platform"""
     if not response:
         return ""
