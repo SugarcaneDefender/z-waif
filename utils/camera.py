@@ -29,7 +29,7 @@ if settings.vision_enabled:
 root = tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
-img_scale = float(os.environ.get("IMG_SCALE"))
+IMG_SCALE = float(os.environ.get("IMG_SCALE", "1.0"))
 
 
 def capture_pic():
@@ -41,7 +41,7 @@ def capture_pic():
     # show result
     if result:
 
-        image = cv2.resize(image,(int(320*img_scale), int(240*img_scale)))
+        image = cv2.resize(image,(int(320*IMG_SCALE), int(240*IMG_SCALE)))
         # saving image in local storage
         cv2.imwrite("LiveImage.png", image)
 
@@ -68,8 +68,8 @@ def use_image_feed():
     image = cv2.imread(browse_feed_image())
 
     # Resize it accoring to max width/height
-    maxwidth = int(360*img_scale)
-    maxheight = int(360*img_scale)
+    maxwidth = int(360*IMG_SCALE)
+    maxheight = int(360*IMG_SCALE)
 
     f1 = maxwidth / image.shape[1]
     f2 = maxheight / image.shape[0]
@@ -98,8 +98,8 @@ def capture_screenshot():
                          cv2.COLOR_RGB2BGR)
 
     # Resize it accoring to max width/height
-    maxwidth = int(400*img_scale)
-    maxheight = int(400*img_scale)
+    maxwidth = int(400*IMG_SCALE)
+    maxheight = int(400*IMG_SCALE)
 
     f1 = maxwidth / image.shape[1]
     f2 = maxheight / image.shape[0]
