@@ -25,7 +25,45 @@ based_theme = gr.themes.Base(
 
 )
 
+# Button click handlers
+def shadowchats_button_click():
+    settings.speak_shadowchats = not settings.speak_shadowchats
+    voice.force_cut_voice()  # Cut any ongoing speech
+    return
 
+def speaking_choice_button_click():
+    settings.speak_only_spokento = not settings.speak_only_spokento
+    return
+
+def supress_rp_button_click():
+    settings.supress_rp = not settings.supress_rp
+    return
+
+def newline_cut_button_click():
+    settings.newline_cut = not settings.newline_cut
+    return
+
+def asterisk_ban_button_click():
+    settings.asterisk_ban = not settings.asterisk_ban
+    return
+
+def hotkey_button_click():
+    settings.hotkeys_locked = not settings.hotkeys_locked
+    return
+
+def change_max_tokens(tokens_count):
+    settings.max_tokens = tokens_count
+    return
+
+def alarm_button_click(input_time):
+    settings.alarm_time = input_time
+    print(f"\nAlarm time set as {settings.alarm_time}\n")
+    return
+
+def model_preset_button_click(input_text):
+    settings.model_preset = input_text
+    print(f"\nChanged model preset to {settings.model_preset}\n")
+    return
 
 with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
@@ -45,45 +83,38 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             msg = gr.Textbox(scale=3)
 
             def respond(message, chat_history):
-
-                # No send blank: use button for that!
+                """Handle chat messages from the web UI"""
+                # Handle blank messages through the blank button
                 if message == "":
                     return ""
 
+                # Send the message
                 main.main_web_ui_chat(message)
-
-                # Retrieve the result now
-                # message_reply = API.api_controller.receive_via_oogabooga()
-                #
-                # chat_history.append((message, message_reply))
-
-                return ""   # Note: Removed the update to the chatbot here, as it is done anyway in the update_chat()!
+                return ""
 
             def update_chat():
-                # Return whole chat, plus the one I have just sent
-                if API.api_controller.currently_sending_message != "":
-
-                    # Prep for viewing without metadata
-                    chat_combine = API.api_controller.ooga_history[-30:]
-                    i = 0
-                    while i < len(chat_combine):
-                        chat_combine[i] = chat_combine[i][:2]
-                        i += 1
-                    chat_combine.append([API.api_controller.currently_sending_message, API.api_controller.currently_streaming_message])
-
-                    return chat_combine[-30:]
-
-
-                # Return whole chat, last 30
-                else:
-                    chat_combine = API.api_controller.ooga_history[-30:]
-                    i = 0
-                    while i < len(chat_combine):
-                        chat_combine[i] = chat_combine[i][:2]
-                        i += 1
-
-                    return chat_combine
-
+                """Update the chat display"""
+                try:
+                    # Return whole chat, plus the one currently being sent
+                    if API.api_controller.currently_sending_message != "":
+                        # Prep for viewing without metadata
+                        chat_combine = API.api_controller.ooga_history[-30:]
+                        chat_combine = [chat[:2] for chat in chat_combine]  # Take only first two elements
+                        
+                        # Add current message if it exists
+                        current_msg = API.api_controller.currently_sending_message
+                        current_response = API.api_controller.currently_streaming_message
+                        if current_msg or current_response:
+                            chat_combine.append([current_msg, current_response])
+                        
+                        return chat_combine[-30:]
+                    else:
+                        # Return last 30 messages of chat history
+                        chat_combine = API.api_controller.ooga_history[-30:]
+                        return [chat[:2] for chat in chat_combine]  # Take only first two elements
+                except Exception as e:
+                    zw_logging.log_error(f"Error updating chat: {str(e)}")
+                    return []
 
             msg.submit(respond, [msg, chatbot], [msg])
 
@@ -120,14 +151,13 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         with gradio.Row():
 
             def regenerate():
+                """Regenerate the last response"""
                 main.main_web_ui_next()
                 return
 
             def send_blank():
-                # Give us some feedback
+                """Send a blank message through the web UI"""
                 print("\nSending blank message...\n")
-
-                # Send the blank
                 main.main_web_ui_chat("")
                 return
 
@@ -223,12 +253,39 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             hangout_mode_checkbox_view = gr.Checkbox(label="Hangout Mode Enabled")
 
 
+        # Define dummy/invisible components to avoid NameError
+        shadowchats_checkbox_view = gr.Checkbox(visible=False)
+        speaking_choice_checkbox_view = gr.Checkbox(visible=False)
+        supress_rp_checkbox_view = gr.Checkbox(visible=False)
+        newline_cut_checkbox_view = gr.Checkbox(visible=False)
+        asterisk_ban_checkbox_view = gr.Checkbox(visible=False)
+        hotkey_checkbox_view = gr.Checkbox(visible=False)
+        max_tokens_slider = gr.Slider(visible=False)
+        alarm_time_box = gr.Textbox(visible=False)
+        model_preset_box = gr.Textbox(visible=False)
+
+
         def update_settings_view():
-            return hotkeys.get_speak_input(), hotkeys.get_autochat_toggle(), settings.semi_auto_chat, settings.hangout_mode
+            """Update all settings views with current values."""
+            return (
+                settings.is_recording,
+                settings.auto_chat,
+                settings.semi_auto_chat,
+                settings.hangout_mode,
+                settings.speak_shadowchats,
+                settings.speak_only_spokento,
+                settings.supress_rp,
+                settings.newline_cut,
+                settings.asterisk_ban,
+                settings.hotkeys_locked,
+                settings.max_tokens,
+                settings.alarm_time,
+                settings.model_preset
+            )
 
 
         demo.load(update_settings_view, every=0.06,
-                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view, hangout_mode_checkbox_view])
+                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view, hangout_mode_checkbox_view, shadowchats_checkbox_view, speaking_choice_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view, hotkey_checkbox_view, max_tokens_slider, alarm_time_box, model_preset_box])
 
 
 
@@ -300,8 +357,6 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             #     def cam_reply_after_button_click():
             #         settings.cam_reply_after = not settings.cam_reply_after
             #
-            #         return
-            #
             #
             #     with gr.Row():
             #         cam_reply_after_button = gr.Button(value="Check/Uncheck")
@@ -360,206 +415,66 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
     with gr.Tab("Settings"):
+        # Create settings tab
+        with gr.Row():
+            with gr.Column():
+                recording_checkbox_view = gr.Checkbox(label="Now Recording!", value=settings.is_recording)
+                autochat_checkbox_view = gr.Checkbox(label="Auto-Chat Enabled", value=settings.auto_chat)
+                semi_auto_chat_checkbox_view = gr.Checkbox(label="Semi-Auto Chat", value=settings.semi_auto_chat)
+                hangout_mode_checkbox_view = gr.Checkbox(label="Hangout Mode", value=settings.hangout_mode)
 
-        #
-        # Hotkeys
-        #
+            with gr.Column():
+                shadowchats_checkbox_view = gr.Checkbox(label="Shadow Chats", value=settings.speak_shadowchats)
+                speaking_choice_checkbox_view = gr.Checkbox(label="Only Speak When Spoken To", value=settings.speak_only_spokento)
+                supress_rp_checkbox_view = gr.Checkbox(label="Suppress RP", value=settings.supress_rp)
+                newline_cut_checkbox_view = gr.Checkbox(label="Newline Cut", value=settings.newline_cut)
 
-        def hotkey_button_click():
-            settings.hotkeys_locked = not settings.hotkeys_locked
-
-            return
-
+            with gr.Column():
+                asterisk_ban_checkbox_view = gr.Checkbox(label="Asterisk Ban", value=settings.asterisk_ban)
+                hotkey_checkbox_view = gr.Checkbox(label="Hotkeys Locked", value=settings.hotkeys_locked)
+                max_tokens_slider = gr.Slider(minimum=50, maximum=2000, value=settings.max_tokens, label="Max Tokens")
+                alarm_time_box = gr.Textbox(label="Alarm Time", value=settings.alarm_time)
+                model_preset_box = gr.Textbox(label="Model Preset", value=settings.model_preset)
 
         with gr.Row():
-            hotkey_button = gr.Button(value="Check/Uncheck")
-            hotkey_button.click(fn=hotkey_button_click)
-
-            hotkey_checkbox_view = gr.Checkbox(label="Disable Keyboard Shortcuts (Input Toggle Lock)")
-
-
-        #
-        # Shadowchats
-        #
-
-        with gr.Row():
-            def shadowchats_button_click():
-                settings.speak_shadowchats = not settings.speak_shadowchats
-
-                return
-
-
-            with gr.Row():
-                shadowchats_button = gr.Button(value="Check/Uncheck")
+            with gr.Column():
+                shadowchats_button = gr.Button(value="Toggle Shadow Chats")
                 shadowchats_button.click(fn=shadowchats_button_click)
 
-                shadowchats_checkbox_view = gr.Checkbox(label="Speak Typed Chats / Shadow Chats")
+                speaking_choice_button = gr.Button(value="Toggle Speak Only When Spoken To")
+                speaking_choice_button.click(fn=speaking_choice_button_click)
 
-
-        #
-        # Audible Talking Settings
-        #
-
-        with gr.Row():
-            def speaking_choice_button_click():
-                settings.speak_only_spokento = not settings.speak_only_spokento
-                return
-
-            speak_only_spokento_button = gr.Button(value="Check/Uncheck")   # <-- literally me
-            speak_only_spokento_button.click(fn=speaking_choice_button_click)
-
-            speak_only_spokento_checkbox_view = gr.Checkbox(label="Speak Only When Spoken To")
-
-
-
-        #
-        # Soft Reset
-        #
-
-        with gr.Row():
-            def soft_reset_button_click():
-                API.api_controller.soft_reset()
-
-                return
-
-            soft_reset_button = gr.Button(value="Chat Soft Reset")
-            soft_reset_button.click(fn=soft_reset_button_click)
-
-
-        #
-        # Random Memory
-        #
-
-        with gr.Row():
-            def random_memory_button_click():
-                main.main_memory_proc()
-
-                return
-
-            soft_reset_button = gr.Button(value="Proc a Random Memory")
-            soft_reset_button.click(fn=random_memory_button_click)
-
-
-        #
-        # RP Supression
-        #
-
-        with gr.Row():
-            def supress_rp_button_click():
-                settings.supress_rp = not settings.supress_rp
-
-                return
-
-
-            with gr.Row():
-                supress_rp_button = gr.Button(value="Check/Uncheck")
+            with gr.Column():
+                supress_rp_button = gr.Button(value="Toggle RP Suppression")
                 supress_rp_button.click(fn=supress_rp_button_click)
 
-                supress_rp_checkbox_view = gr.Checkbox(label="Supress RP (as others)")
-
-
-        #
-        # Newline Cut
-        #
-
-        with gr.Row():
-            def newline_cut_button_click():
-                settings.newline_cut = not settings.newline_cut
-
-                return
-
-
-            with gr.Row():
-                newline_cut_button = gr.Button(value="Check/Uncheck")
+                newline_cut_button = gr.Button(value="Toggle Newline Cut")
                 newline_cut_button.click(fn=newline_cut_button_click)
 
-                newline_cut_checkbox_view = gr.Checkbox(label="Cutoff at Newlines (Double Enter)")
-
-
-        #
-        # Asterisk Ban
-        #
-
-        with gr.Row():
-            def asterisk_ban_button_click():
-                settings.asterisk_ban = not settings.asterisk_ban
-
-                return
-
-
-            with gr.Row():
-                asterisk_ban_button = gr.Button(value="Check/Uncheck")
+            with gr.Column():
+                asterisk_ban_button = gr.Button(value="Toggle Asterisk Ban")
                 asterisk_ban_button.click(fn=asterisk_ban_button_click)
 
-                asterisk_ban_checkbox_view = gr.Checkbox(label="Ban Asterisks")
+                hotkey_button = gr.Button(value="Toggle Hotkeys Lock")
+                hotkey_button.click(fn=hotkey_button_click)
 
-
-        #
-        # Token Limit Slider
-        #
-
-        with gr.Row():
-
-            def change_max_tokens(tokens_count):
-
-                settings.max_tokens = tokens_count
-                return
-
-
-            token_slider = gr.Slider(minimum=20, maximum=2048, value=settings.max_tokens, label="Max Chat Tokens / Reply Length")
-            token_slider.change(fn=change_max_tokens, inputs=token_slider)
-
-
-
-        #
-        # Alarm Time
-        #
-
-        def alarm_button_click(input_time):
-
-            settings.alarm_time = input_time
-
-            print("\nAlarm time set as " + settings.alarm_time + "\n")
-
-            return
-
-
-        with gr.Row():
-            alarm_textbox = gr.Textbox(value=settings.alarm_time, label="Alarm Time")
-
-            alarm_button = gr.Button(value="Change Time")
-            alarm_button.click(fn=alarm_button_click, inputs=alarm_textbox)
-
-
-        #
-        # Language Model Preset
-        #
-
-        def model_preset_button_click(input_text):
-
-            settings.model_preset = input_text
-
-            print("\nChanged model preset to " + settings.model_preset + "\n")
-
-            return
-
-
-        with gr.Row():
-            model_preset_textbox = gr.Textbox(value=settings.model_preset, label="Model Preset Name")
-
-            model_preset_button = gr.Button(value="Change Model Preset")
-            model_preset_button.click(fn=model_preset_button_click, inputs=model_preset_textbox)
-
-
-
-
-        def update_settings_view():
-
-            return settings.hotkeys_locked, settings.speak_shadowchats, settings.speak_only_spokento, settings.supress_rp, settings.newline_cut, settings.asterisk_ban
-
-
-        demo.load(update_settings_view, every=0.1, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, speak_only_spokento_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view])
-
+        # Update settings view
+        demo.load(update_settings_view, every=0.06,
+            outputs=[
+                recording_checkbox_view,
+                autochat_checkbox_view,
+                semi_auto_chat_checkbox_view,
+                hangout_mode_checkbox_view,
+                shadowchats_checkbox_view,
+                speaking_choice_checkbox_view,
+                supress_rp_checkbox_view,
+                newline_cut_checkbox_view,
+                asterisk_ban_checkbox_view,
+                hotkey_checkbox_view,
+                max_tokens_slider,
+                alarm_time_box,
+                model_preset_box
+            ])
 
 
 
@@ -704,5 +619,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
 def launch_demo():
-    demo.launch(server_port=7864)
+    port = 7864
+    print(f"Web UI available at http://localhost:{port}")
+    demo.launch(server_port=port)
 

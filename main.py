@@ -190,96 +190,86 @@ def main_converse():
 
 
 def main_message_speak():
+    """Handle speaking messages (voice + plugin checks)"""
     global live_pipe_force_speak_on_response
 
-    #
-    #   Message is received Here
-    #
-
+    # Message is received here
     message = API.api_controller.receive_via_oogabooga()
 
-
-    # Stop this if the message was streamed- we have already read it!
+    # Stop if the message was streamed—we already spoke it, unless a force-speak was queued
     if API.api_controller.last_message_streamed and not live_pipe_force_speak_on_response:
         live_pipe_force_speak_on_response = False
         return
 
-    #
-    #   Speak the message now!
-    #
+    # Strip emojis for clearer TTS
+    s_message = emoji.replace_emoji(message or "", replace="")
 
-    s_message = emoji.replace_emoji(message, replace='')
+    if s_message.strip():
+        t = threading.Thread(target=voice.speak_line, args=(s_message,), kwargs={"refuse_pause": False})
+        t.daemon = True
+        t.start()
 
-    voice.set_speaking(True)
+        # Wait until speaking finishes to prevent overlap with next TTS
+        while voice.check_if_speaking():
+            time.sleep(0.01)
 
-    voice_speaker = threading.Thread(target=voice.speak_line(s_message, refuse_pause=False))
-    voice_speaker.daemon = True
-    voice_speaker.start()
+    # Process message checks even if nothing was spoken (so logs/plugins run)
+    if message and message.strip():
+        message_checks(message)
 
-    # Minirest for frame-piercing (race condition as most people call it) for the speaking
-    time.sleep(0.01)
-
-    while voice.check_if_speaking():
-        time.sleep(0.01)
+        # Force speak if specifically requested (e.g., hangout interrupt)
+        if live_pipe_force_speak_on_response:
+            voice.speak(message)
+            live_pipe_force_speak_on_response = False
 
 
 
 def message_checks(message):
+    """Run post-response tasks: logging, plugin hooks, prints, etc."""
 
-    #
-    # Runs message checks for plugins, such as VTube Studio and Minecraft
-    #
+    if not message or message.strip() == "":
+        return
 
-    #   Log our message (ONLY if the last chat was NOT streaming)
-
+    # Log message only if it was NOT streamed
     if not API.api_controller.last_message_streamed:
+        zw_logging.update_chat_log(message)
+
+    # Print banner + text only if not streamed (streamed path prints in real-time)
+    if not API.api_controller.last_message_streamed:
+        banner_name = char_name if char_name else 'Assistant'
         print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-              + "----" + char_name + "----"
+              + f"----{banner_name}----"
               + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
-        print(f"{message}")
-        print("\n")
+        print(message.strip())
+        print()
 
-    #
-    #   Vtube Studio Emoting
-    #
+    # Speak in shadow-chat configuration (non-streamed)
+    if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
+        voice.speak(message)
 
-    if settings.vtube_enabled and not API.api_controller.last_message_streamed:
-        # Feeds the message to our VTube Studio script
-        vtube_studio.set_emote_string(message)
-
-        # Check for any emotes on it's end
-        vtube_studio_thread = threading.Thread(target=vtube_studio.check_emote_string)
-        vtube_studio_thread.daemon = True
-        vtube_studio_thread.start()
-
-    #
-    # Minecraft API
-    #
-
+    # Plugin checks
     if settings.minecraft_enabled:
         minecraft.check_for_command(message)
+        minecraft.check_message(message)
 
-
-    #
-    # Gaming
-    #
+    if settings.vtube_enabled and not API.api_controller.last_message_streamed:
+        vtube_studio.set_emote_string(message)
+        vtube_thread = threading.Thread(target=vtube_studio.check_emote_string)
+        vtube_thread.daemon = True
+        vtube_thread.start()
 
     if settings.gaming_enabled:
         gaming_control.message_inputs(message)
 
-    #
-    # Check if we need to close the program (botside killword)
-    #
+    if settings.rag_enabled:
+        based_rag.check_message(message)
 
-    if message.lower().__contains__("/ripout/"):
+    # Handle kill-word
+    if "/ripout/" in message.lower():
         print("\n\nBot is knowingly closing the program! This is typically done as a last resort! Please re-evaluate your actions! :(\n\n")
-        sys.exit("Closing...")
-        exit()
+        sys.exit("Closing…")
 
-
-
-    # We can now undo the previous message
-
+    # Allow undo
     global undo_allowed
     undo_allowed = True
 
@@ -304,157 +294,139 @@ def main_next():
     main_message_speak()
 
 def main_minecraft_chat(message):
+    """Handle incoming Minecraft game chat (shadow chat)"""
 
-    # This is a shadow chat
+    # Flag that we are in a non-spoken shadow chat if shadow-speech is disabled while streaming
     global live_pipe_no_speak
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
 
-    # Limit the amount of tokens allowed to send (minecraft chat limits)
+    # Minecraft chat box can only hold so many characters – force the token count low
     API.api_controller.force_tokens_count(47)
 
-    # Actual sending of the message, waits for reply automatically
+    # Send the player's message to the LLM
     API.api_controller.send_via_oogabooga(message)
 
-    # Reply in the craft
+    # Push the assistant reply back into the game chat window
     minecraft.minecraft_chat()
 
-    # Run our message checks
+    # Standard post-processing (logging, plugin hooks, prints, etc.)
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    # If we're configured to speak shadow chats and we aren't streaming, speak the line aloud
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
-
 
 def main_discord_chat(message):
+    """Handle Discord chat messages (shadow chat)"""
 
-    # This is a shadow chat
+    # Shadow-chat voice suppression when streaming
     global live_pipe_no_speak
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
 
-    # Actual sending of the message, waits for reply automatically
+    # Send the Discord message to the LLM
     API.api_controller.send_via_oogabooga(message)
 
-    #
-    # CHATS WILL BE GRABBED AFTER THIS RUNS!
-    #
-
-    # Run our message checks
+    # Fetch and process the assistant reply
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+    # Speak it if configured
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
-
-
-
-
 
 def main_twitch_chat(message):
+    """Handle Twitch chat messages (shadow chat)"""
 
-    # This is a shadow chat
     global live_pipe_no_speak
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
 
-    # Actual sending of the message, waits for reply automatically
+    # Send Twitch message to LLM
     API.api_controller.send_via_oogabooga(message)
 
-    #
-    # CHATS WILL BE GRABBED AFTER THIS RUNS!
-    #
-
-    # Run our message checks
+    # Process reply
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
-
 def main_twitch_next():
+    """Handle Twitch chat regeneration command (shadow chat)"""
 
-    # This is a shadow chat
     global live_pipe_no_speak
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
 
     API.api_controller.next_message_oogabooga()
 
-    # Run our message checks
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
-
 def main_web_ui_chat(message):
-
-    # This is a shadow chat
+    """Handle chat messages from the web UI"""
+    # Shadow chat handling
     global live_pipe_no_speak
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
 
-    # Actual sending of the message, waits for reply automatically
+    # Send message to LLM
     API.api_controller.send_via_oogabooga(message)
 
-    #
-    # CHATS WILL BE GRABBED AFTER THIS RUNS!
-    #
-
-    # Cut voice if needed
-    voice.force_cut_voice()
-
-    # Run our message checks
+    # Process reply
     reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if reply_message and reply_message.strip():
+        message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+        # Speak if shadow-chat speaking is enabled
+        if settings.speak_shadowchats and not settings.stream_chats:
+            voice.speak(reply_message)
+
+    # Reset suppression flag and optionally run speech pipeline
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_web_ui_next():
-
-    # This is a shadow chat
+    """Handle regeneration requests from the web UI"""
+    # Shadow chat regeneration
     global live_pipe_no_speak
-    global live_pipe_is_webui_regen
     if (not settings.speak_shadowchats) and settings.stream_chats:
         live_pipe_no_speak = True
-
 
     # Cut voice if needed
     voice.force_cut_voice()
 
-    # Force end the existing stream (if there is one)
+    # If a generation is already running, request skip and exit early
     if API.api_controller.is_in_api_request:
         API.api_controller.set_force_skip_streaming(True)
         live_pipe_no_speak = False
         return
 
+    # Generate new response
     API.api_controller.next_message_oogabooga()
 
-    # Run our message checks
+    # Get and process the response
     reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if reply_message and reply_message.strip():
+        message_checks(reply_message)
 
-    # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
+        if settings.speak_shadowchats and not settings.stream_chats:
+            voice.speak(reply_message)
+
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
-
-
 
 def main_discord_next():
 
@@ -690,28 +662,20 @@ def view_image_after_chat(message):
 
 
 def main_send_blank():
-
+    """Handle sending blank messages"""
     # Give us some feedback
     print("\nSending blank message...\n")
 
-    transcript = ""
-
-    # Store the message, for cycling purposes
-    global stored_transcript
-    stored_transcript = transcript
-
-
-    # Actual sending of the message, waits for reply automatically
-
-    API.api_controller.send_via_oogabooga(transcript)
+    # Send a blank message
+    API.api_controller.send_via_oogabooga("")
 
     # Run our message checks
     reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
-
-
-    # Pipe us to the reply function
-    main_message_speak()
+    if reply_message and reply_message.strip():
+        message_checks(reply_message)
+        # Speak the response if shadow chats are enabled
+        if settings.speak_shadowchats:
+            voice.speak(reply_message)
 
 #
 # Defs for main hangout functions

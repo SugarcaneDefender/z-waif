@@ -28,6 +28,10 @@ from utils.ai_handler import AIHandler
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
 import traceback
+import re
+import json
+import logging
+from typing import Optional, Dict, Any
 # import main
 
 load_dotenv()
@@ -144,10 +148,10 @@ class TwitchBot(commands.Bot):
         """Update user data without generating a response"""
         try:
             # Update user context
-            update_user_context(user_id, {
-                "message_count": 1,
+            update_user_context(user_id, "twitch", {
+                "interaction_count": 1,
                 "username": username
-            }, "twitch")
+            })
             
             # Update relationship data
             update_relationship_status(user_id, "twitch", "neutral")
@@ -240,126 +244,98 @@ class TwitchBot(commands.Bot):
             api_controller.send_via_oogabooga(prompt)
             response = api_controller.receive_via_oogabooga()
             
-            if response:
+            # If the primary path returns nothing, fall back to a direct Oobabooga call (non-streaming)
+            if not response or len(str(response).strip()) == 0 or str(response).startswith("Error:"):
+                log_info("Primary AI request returned empty – falling back to direct API call…")
+
+                from API.oobaooga_api import api_standard
+
+                fallback_request = {
+                    "prompt": prompt,
+                    "max_tokens": settings.max_tokens,
+                    "truncation_length": api_controller.max_context,
+                    "stop": settings.stopping_strings,
+                    "character": api_controller.CHARACTER_CARD,
+                }
+
+                response = api_standard(fallback_request)
+
+            if response and not str(response).startswith("Error:"):
                 # Clean and format the response
                 response = clean_response(response)
                 response = add_personality_flavor(response, settings.twitch_personality)
-                
-                # Validate message safety
-                is_safe, safety_msg = validate_message_safety(response, "twitch")
+
+                # Validate for safety before sending
+                is_safe, reason = await validate_message_safety(response, "twitch")
                 if not is_safe:
-                    log_error(f"Unsafe message blocked: {safety_msg}")
+                    log_error(f"AI response blocked for safety reasons: {reason}")
                     return None
-                
+
                 return response
-            else:
-                log_error("No response received from Oobabooga API")
-                return None
+
+            log_error("Fallback AI request also failed or returned no usable content")
+            return None
                 
         except Exception as e:
             log_error(f"Error getting AI response: {str(e)}")
             return None
 
 async def run_twitch_bot():
-    """Run the Twitch bot"""
-    if not TWITCH_TOKEN or not TWITCH_CHANNEL:
-        log_error("Missing Twitch credentials. Bot not started.")
-        return
-        
+    """Initializes and runs the Twitch bot."""
+    bot = TwitchBot()
     try:
-        bot = TwitchBot()
-        log_info("Starting Twitch bot...")
         await bot.start()
+    except twitchio.errors.AuthenticationError as e:
+        log_error(f"Failed to start Twitch bot: {e}")
     except Exception as e:
-        log_error(f"Failed to start Twitch bot: {str(e)}")
-        raise
+        log_error(f"An unexpected error occurred in Twitch bot: {e}")
+
 
 def start_twitch_bot():
-    """Start the Twitch bot in a separate thread"""
-    try:
-        thread = threading.Thread(target=lambda: asyncio.run(run_twitch_bot()))
-        thread.daemon = True
-        thread.start()
-        log_info("Twitch bot thread started")
-    except Exception as e:
-        log_error(f"Failed to start Twitch bot thread: {str(e)}")
-        raise
+    asyncio.run(run_twitch_bot())
+
 
 def run_z_waif_twitch():
-    """Main entry point for the Twitch bot"""
-    try:
-        log_startup()
-        start_twitch_bot()
-    except Exception as e:
-        log_error(f"Failed to run Z-WAIF Twitch: {str(e)}")
-        raise
+    twitch_thread = threading.Thread(target=start_twitch_bot)
+    twitch_thread.daemon = True
+    twitch_thread.start()
+    log_info("Twitch bot thread started")
+
 
 def clean_response(response: str) -> str:
-    """Clean and format the AI response"""
-    # Remove any system notes or instructions
-    if "[System Note:" in response:
-        response = response[response.find("]") + 1:].strip()
-    
-    # Remove AI: prefix if present
-    if response.startswith("AI:"):
-        response = response[3:].strip()
-    
-    # Remove any leading/trailing quotes
-    response = response.strip('"')
-    
+    """Clean the AI response by removing unwanted artifacts"""
+    # Remove anything that looks like a Discord invite
+    response = re.sub(r'discord.gg/([a-zA-Z0-9]+)', '[link removed]', response)
+    # Remove any extra newlines or whitespace
+    response = ' '.join(response.split())
+    # Limit response length
+    if len(response) > settings.twitch_max_message_length:
+        response = response[:settings.twitch_max_message_length]
     return response
 
 def add_personality_flavor(response: str, personality: str) -> str:
-    """Add personality-specific flavor to the response"""
-    if not response:
-        return response
-        
-    personality = personality.lower()
-    
+    """Add personality to the response based on settings"""
     if personality == "friendly":
-        # Add friendly emotes occasionally
-        import random
-        friendly_emotes = ["<3", ":)", "^_^", "=)", ":D"]
-        if random.random() < 0.3:  # 30% chance
-            response += f" {random.choice(friendly_emotes)}"
-    
-    elif personality == "professional":
-        # Ensure proper punctuation and capitalization
-        if not response.endswith((".", "!", "?")):
-            response += "."
-        response = response[0].upper() + response[1:]
-    
-    elif personality == "casual":
-        # Add casual flair
-        import random
-        casual_phrases = [" btw", " haha", " tho", " ngl"]
-        if random.random() < 0.2:  # 20% chance
-            response += random.choice(casual_phrases)
-    
+        # Add a friendly emoji if one isn't already there
+        if not any(char in response for char in ["😊", "😄", "👋"]):
+            response += f" {random.choice(['😊', '😄', '👋'])}"
+    elif personality == "edgy":
+        # Add a more cynical or edgy flavor
+        if random.random() < 0.2:
+            response += f" ...or whatever."
+    # Can add more personalities here
     return response
 
-def validate_message_safety(message: str, platform: str) -> tuple[bool, str]:
+async def validate_message_safety(message: str, platform: str) -> tuple[bool, str]:
     """
-    Validate if a message is safe to send.
-    Returns (is_safe, reason_if_unsafe)
+    Validate the message for safety and appropriateness.
+    
+    Returns:
+        tuple[bool, str]: (is_safe, reason)
     """
-    if not message:
-        return False, "Empty message"
+    # Placeholder for safety validation logic
+    # Example: Check for banned words, spam, etc.
+    if "some_banned_word" in message:
+        return (False, "Contains banned content")
     
-    # Check message length
-    if platform == "twitch" and len(message) > 500:
-        return False, "Message too long for Twitch"
-    
-    # Basic safety checks
-    unsafe_patterns = [
-        "http://", "https://",  # No raw URLs
-        "[System", "[DEBUG",    # No system messages
-        "```", "'''",          # No code blocks
-        "{", "}"               # No JSON/code
-    ]
-    
-    for pattern in unsafe_patterns:
-        if pattern in message:
-            return False, f"Contains unsafe pattern: {pattern}"
-    
-    return True, ""
+    return (True, "")

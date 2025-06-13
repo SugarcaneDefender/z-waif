@@ -147,8 +147,12 @@ def run(user_input, temp_level):
             "character": CHARACTER_CARD
         }
         
-        received_message = API.oobaooga_api.api_standard(request)
-        
+        try:
+            received_message = API.oobaooga_api.api_standard(request)
+        except requests.exceptions.RequestException as e:
+            log_error(f"Oobabooga API request failed: {e}")
+            received_message = f"Error: {e}"
+
         # Add to history if successful
         if not received_message.startswith("Error:"):
             ooga_history.append([user_input, received_message])
@@ -181,6 +185,9 @@ def run_streaming(user_input, temp_level):
     # We are starting our API request!
     is_in_api_request = True
 
+    # Ensure the streamed_api_stringpuller variable exists even if the API request fails to initialize.
+    streamed_api_stringpuller = []
+
     # Clear possible streaming endflag
     global flag_end_streaming
     flag_end_streaming = False
@@ -210,10 +217,9 @@ def run_streaming(user_input, temp_level):
     # STREAMING TOOLING GOES HERE o7
     #
 
-    # Prep console with printing for message output
-    print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-          + "----" + settings.char_name + "----"
-          + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+    # We will print the header only when we receive the first chunk,
+    # avoiding an empty name banner if the request fails.
+    header_printed = False
 
     # Reset the ticker (starts counting at 1)
     streaming_sentences_ticker = 1
@@ -230,10 +236,14 @@ def run_streaming(user_input, temp_level):
         }
 
         # Actual streaming bit
-        stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-        client = sseclient.SSEClient(stream_response)
-
-        streamed_api_stringpuller = client.events()
+        try:
+            stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
+            stream_response.raise_for_status()  # Raise an exception for bad status codes
+            client = sseclient.SSEClient(stream_response)
+            streamed_api_stringpuller = client.events()
+        except requests.exceptions.RequestException as e:
+            log_error(f"Oobabooga API request failed: {e}")
+            streamed_api_stringpuller = []
 
     elif API_TYPE == "Ollama":
         streamed_api_stringpuller = API.ollama_api.api_stream(history=prompt, temp_level=temp_level, stop=settings.stopping_strings, max_tokens=settings.max_tokens)
@@ -254,6 +264,13 @@ def run_streaming(user_input, temp_level):
 
         elif API_TYPE == "Ollama":
             chunk = event['message']['content']
+
+        # On first chunk, print the speaker header so output isn't blank beforehand
+        if not header_printed:
+            print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                  + "----" + settings.char_name + "----"
+                  + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+            header_printed = True
 
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)
@@ -335,29 +352,30 @@ def run_streaming(user_input, temp_level):
     global regenerate_requests_count
 
     if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad message, redoing!\n")
-        zw_logging.update_debug_log("Bad message received; same as last attempted generation. Re-generating the reply...")
+        print("\nBad message, will retry via fallback!\n")
+        zw_logging.update_debug_log("Bad message received; same as last attempted generation. Delegating retry to caller...")
         regenerate_requests_count += 1
-        run_streaming(user_input, 2)
-        return
+        # We are ending our API request!
+        is_in_api_request = False
+        return ""
 
     stored_received_message = received_message
 
     # If her reply is the same as any in the past 20 chats, run another request
     if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad message, redoing!\n")
-        zw_logging.update_debug_log("Bad message received; same as a recent chat. Re-generating the reply...")
+        print("\nBad message matches recent chat, delegating retry to caller!\n")
+        zw_logging.update_debug_log("Bad message received; same as a recent chat. Delegating retry to caller...")
         regenerate_requests_count += 1
-        run_streaming(user_input, 1)
-        return
+        is_in_api_request = False
+        return ""
 
     # If her reply is blank, request another run, clearing the previous history add, and escape
     if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad message, redoing!\n")
-        zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Re-generating the reply...")
+        print("\nBad (blank) message, delegating retry to caller!\n")
+        zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Delegating retry to caller...")
         regenerate_requests_count += 1
-        run_streaming(user_input, 1)
-        return
+        is_in_api_request = False
+        return ""
 
     # Clear our regen requests count, we have hit our limit
     regenerate_requests_count = 0
@@ -439,31 +457,37 @@ def set_force_skip_streaming(tf_input):
 
 
 def send_via_oogabooga(user_input):
-    global is_in_api_request
-    is_in_api_request = True
-    
-    # Format the request
-    request = {
-        "prompt": user_input,
-        "max_tokens": settings.max_tokens,
-        "truncation_length": max_context,
-        "stop": settings.stopping_strings,
-        "character": CHARACTER_CARD
-    }
-    
-    # Send the request
-    received_message = API.oobaooga_api.api_standard(request)
-    
-    # Add to history if successful
-    if not received_message.startswith("Error:"):
-        ooga_history.append([user_input, received_message])
-        save_histories()
-    
-    is_in_api_request = False
+    """Send a message to the API"""
+    global received_message
+    global force_skip_streaming
+
+    # Handle blank messages
+    if not user_input or user_input.strip() == "":
+        user_input = "*listens attentively*"
+
+    # Check if we should stream or not
+    if settings.stream_chats and not force_skip_streaming:
+        # Attempt streaming first
+        local_stream_result = run_streaming(user_input, 0.7)
+
+        # `run_streaming` updates the module-level `received_message` variable but does
+        # not always return it.  Prefer the global value if the direct return is None.
+        received_message = local_stream_result if local_stream_result else received_message
+
+        # Fallback: if no message was produced at all, retry with a standard request
+        if not received_message or len(str(received_message).strip()) == 0:
+            zw_logging.update_debug_log("Streaming response was empty – retrying with standard (non-streaming) request…")
+            received_message = run(user_input, 0.7)
+    else:
+        received_message = run(user_input, 0.7)
+
+    force_skip_streaming = False
     return received_message
 
 def receive_via_oogabooga():
-    return received_message
+    """Get the last received message"""
+    global received_message
+    return received_message if received_message and received_message.strip() else ""
 
 def send_image_via_oobabooga(direct_talk_transcript):
 
@@ -1099,11 +1123,9 @@ def view_image_streaming(direct_talk_transcript):
 
     received_cam_message = ""
 
-    # Prep console with printing for message output
-
-    print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-          + "----" + settings.char_name + "----"
-          + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+    # We will print the header only when we receive the first chunk,
+    # avoiding an empty name banner if the request fails.
+    header_printed = False
 
     # Reset the ticker (starts counting at 1)
     streaming_sentences_ticker = 1
@@ -1138,10 +1160,14 @@ def view_image_streaming(direct_talk_transcript):
         }
 
         # Actual streaming bit
-        stream_response = requests.post(IMG_URI, headers=headers, json=request, verify=False, stream=True)
-        client = sseclient.SSEClient(stream_response)
-
-        streamed_api_stringpuller = client.events()
+        try:
+            stream_response = requests.post(IMG_URI, headers=headers, json=request, verify=False, stream=True)
+            stream_response.raise_for_status()  # Raise an exception for bad status codes
+            client = sseclient.SSEClient(stream_response)
+            streamed_api_stringpuller = client.events()
+        except requests.exceptions.RequestException as e:
+            log_error(f"Oobabooga API request failed: {e}")
+            streamed_api_stringpuller = []
 
 
     elif API_TYPE == "Ollama":
@@ -1169,6 +1195,13 @@ def view_image_streaming(direct_talk_transcript):
         elif API_TYPE == "Ollama":
             chunk = event['message']['content']
 
+
+        # On first chunk, print the speaker header so output isn't blank beforehand
+        if not header_printed:
+            print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                  + "----" + settings.char_name + "----"
+                  + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+            header_printed = True
 
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)

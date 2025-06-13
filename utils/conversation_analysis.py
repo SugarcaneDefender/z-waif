@@ -1,90 +1,62 @@
 import re
+import json
+import logging
 from collections import Counter
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from utils.user_relationships import get_relationship_data, add_personality_trait
 from utils.zw_logging import log_info
+from utils import settings
 
-def analyze_conversation_style(message: str, user_id: str, platform: str) -> str:
+def analyze_conversation_style(message: str, user_id: str, platform: str) -> Dict[str, Any]:
     """
-    Analyze the conversation style based on message content and patterns.
-    Returns a descriptive style tag.
-    """
-    # Convert to lowercase for analysis
-    text = message.lower()
+    Analyze the conversation style and context of a message.
     
-    # Initialize style markers
-    markers = {
-        "formal": 0,
-        "casual": 0,
-        "friendly": 0,
-        "technical": 0,
-        "emotional": 0
+    Args:
+        message (str): The message to analyze
+        user_id (str): The user's ID
+        platform (str): The platform the message is from (e.g., 'twitch', 'discord')
+        
+    Returns:
+        Dict[str, Any]: Analysis results including tone, context, etc.
+    """
+    analysis = {
+        'tone': 'neutral',
+        'formality': 'casual',
+        'emotion': 'neutral',
+        'context': 'general',
+        'requires_memory': False
     }
     
-    # Formal markers
-    formal_patterns = [
-        r'\b(please|thank you|regards|sincerely|would you|could you)\b',
-        r'\b(furthermore|moreover|however|therefore|thus)\b',
-        r'[.;:]'  # Proper punctuation
-    ]
-    
-    # Casual markers
-    casual_patterns = [
-        r'\b(hey|hi|hello|sup|yo|thanks)\b',
-        r'[!?]{2,}',  # Multiple punctuation
-        r'lol|omg|wow'  # Casual expressions
-    ]
-    
-    # Friendly markers
-    friendly_patterns = [
-        r'\b(friend|buddy|pal|mate)\b',
-        r'[:;]-?[)D]',  # Basic emoticons
-        r'❤|😊|🙂|👋'  # Emojis
-    ]
-    
-    # Technical markers
-    technical_patterns = [
-        r'\b(code|program|error|bug|function|api|data)\b',
-        r'\b(html|css|js|python|java|c\+\+)\b',
-        r'[<>{}[\]()]'  # Code-like characters
-    ]
-    
-    # Emotional markers
-    emotional_patterns = [
-        r'\b(love|hate|happy|sad|angry|excited)\b',
-        r'[!]{3,}',  # Multiple exclamation marks
-        r'😢|😭|😡|🥰|😍'  # Emotional emojis
-    ]
-    
-    # Check each pattern type
-    for pattern in formal_patterns:
-        if re.search(pattern, text):
-            markers["formal"] += 1
-            
-    for pattern in casual_patterns:
-        if re.search(pattern, text):
-            markers["casual"] += 1
-            
-    for pattern in friendly_patterns:
-        if re.search(pattern, text):
-            markers["friendly"] += 1
-            
-    for pattern in technical_patterns:
-        if re.search(pattern, text):
-            markers["technical"] += 1
-            
-    for pattern in emotional_patterns:
-        if re.search(pattern, text):
-            markers["emotional"] += 1
-    
-    # Get the dominant style
-    dominant_style = max(markers.items(), key=lambda x: x[1])[0]
-    
-    # If no clear style is detected, default to casual
-    if markers[dominant_style] == 0:
-        return "casual"
+    # Analyze tone
+    if any(word in message.lower() for word in ['thank', 'thanks', 'appreciate', 'grateful']):
+        analysis['tone'] = 'grateful'
+    elif any(word in message.lower() for word in ['help', 'please', 'could you', 'would you']):
+        analysis['tone'] = 'polite'
+    elif any(word in message.lower() for word in ['!', 'wow', 'omg', 'amazing']):
+        analysis['tone'] = 'excited'
         
-    return dominant_style
+    # Analyze formality
+    if re.search(r'[A-Z]{2,}|!!+|\?{2,}', message):
+        analysis['formality'] = 'very_casual'
+    elif re.search(r'(please|would you|could you|kindly)', message.lower()):
+        analysis['formality'] = 'formal'
+        
+    # Analyze emotion
+    if any(emoji in message for emoji in ['😊', '😃', '😄', ':)', ':D']):
+        analysis['emotion'] = 'happy'
+    elif any(emoji in message for emoji in ['😢', '😭', '😔', ':(', ':(']):
+        analysis['emotion'] = 'sad'
+        
+    # Analyze context
+    if re.search(r'(remember|earlier|before|last time|yesterday)', message.lower()):
+        analysis['requires_memory'] = True
+        analysis['context'] = 'memory_recall'
+    elif re.search(r'(help|how to|what is|explain)', message.lower()):
+        analysis['context'] = 'help_request'
+    elif re.search(r'(hi|hello|hey|greetings)', message.lower()):
+        analysis['context'] = 'greeting'
+        
+    return analysis
 
 def extract_topics(message: str) -> list:
     """Extract main topics from the message."""

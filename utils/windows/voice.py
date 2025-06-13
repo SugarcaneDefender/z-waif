@@ -106,49 +106,41 @@ def speak_line_rvc(s_message, refuse_pause=False):
     set_speaking(False)
     return
 
+# Legacy SAPI-based TTS
+def _speak_line_sapi(pure_chunk):
+    speaker = win32com.client.Dispatch("SAPI.SpVoice")
+    speaker.Speak(pure_chunk)
+
+
 def speak_line(s_message, refuse_pause):
-    """Original speak_line function using Windows SAPI"""
+    """Speak a line using RVC if enabled, else fallback to Windows SAPI"""
+    if settings.use_rvc:
+        speak_line_rvc(s_message, refuse_pause)
+        return
+
     global cut_voice
     cut_voice = False
 
-    chunky_message = voice_splitter.split_into_sentences(s_message)
-
-    for chunk in chunky_message:
+    for chunk in voice_splitter.split_into_sentences(s_message):
         try:
-            # Play soundbaord sounds, if any
             pure_chunk = soundboard.extract_soundboard(chunk)
 
-            # Cut out if we are not speaking unless spoken to!
             if settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
                 continue
 
-            # Remove any asterisks from being spoken
-            pure_chunk = pure_chunk.replace("*", "")
+            pure_chunk = pure_chunk.replace("*", "").replace("!!", "!").replace("!!!", "!").replace("!!!!", "!").replace("!!!!!", "!")
 
-            # Change any !!! or other multi-exclamations to single use
-            pure_chunk = pure_chunk.replace("!!", "!")
-            pure_chunk = pure_chunk.replace("!!!", "!")
-            pure_chunk = pure_chunk.replace("!!!!", "!")
-            pure_chunk = pure_chunk.replace("!!!!!", "!")
+            _speak_line_sapi(pure_chunk)
 
-            # Speak
-            speaker = win32com.client.Dispatch("SAPI.SpVoice")
-            speaker.Speak(pure_chunk)
+            time.sleep(0.001 if refuse_pause else 0.05)
 
-            if not refuse_pause:
-                time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
-            else:
-                time.sleep(0.001)   # Still have a mini-mini rest, even with pauses
-
-            # Break free if we undo/redo, and stop reading
             if hotkeys.NEXT_PRESSED or hotkeys.REDO_PRESSED or cut_voice:
                 cut_voice = False
                 break
 
-        except:
-            zw_logging.update_debug_log("Error with voice!")
+        except Exception as e:
+            zw_logging.update_debug_log(f"Error with voice! {e}")
 
-    # Reset the volume cooldown so she don't pickup on herself
     hotkeys.cooldown_listener_timer()
     set_speaking(False)
     return
