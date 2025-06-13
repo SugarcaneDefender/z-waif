@@ -23,7 +23,7 @@ from utils.user_relationships import (
     set_relationship_history
 )
 from utils.conversation_analysis import analyze_conversation_style, get_message_metadata
-from memory_manager import MemoryManager, MultiprocessRAG
+from utils.memory_manager import MemoryManager, MultiprocessRAG
 from utils.ai_handler import AIHandler
 from sentence_transformers import SentenceTransformer
 from datetime import datetime

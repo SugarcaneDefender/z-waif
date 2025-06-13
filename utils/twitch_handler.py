@@ -1,5 +1,5 @@
 from utils.ai_handler import AIHandler
-from memory_manager import MemoryManager, MultiprocessRAG
+from utils.memory_manager import MemoryManager, MultiprocessRAG
 from sentence_transformers import SentenceTransformer
 import logging
 from utils.zw_logging import log_info, log_error
