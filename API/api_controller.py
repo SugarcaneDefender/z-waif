@@ -40,9 +40,14 @@ from API.character_card import character_card
 
 load_dotenv()
 
-HOST = os.environ.get("HOST_PORT")
-URI = f'http://{HOST}/v1/chat/completions'
-URL_MODEL = f'http://{HOST}/v1/engines/'
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:7860")
+# Handle both URL and host:port formats
+if HOST.startswith("http://"):
+    URI = f'{HOST}/v1/chat/completions'
+    URL_MODEL = f'{HOST}/v1/engines/'
+else:
+    URI = f'http://{HOST}/v1/chat/completions'
+    URL_MODEL = f'http://{HOST}/v1/engines/'
 
 IMG_PORT = os.environ.get("IMG_PORT")
 IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
@@ -126,145 +131,36 @@ def run(user_input, temp_level):
     check_for_name_in_message(user_input)
 
     # Load the history from JSON, to clean up the quotation marks
-    #
     with open("LiveLog.json", 'r') as openfile:
         ooga_history = json.load(openfile)
 
-
-    # Determine what preset we want to load in with
-
-    preset = 'Z-Waif-ADEF-Standard'
-
-    if random.random() > 0.77:
-        preset = 'Z-Waif-ADEF-Tempered'
-
-    if random.random() > 0.994:
-        preset = 'Z-Waif-ADEF-Blazing'
-
-
-    # Higher forced temps for certain scenarios
-
-    if temp_level == 1:
-        preset = 'Z-Waif-ADEF-Tempered'
-
-        if random.random() > 0.7:
-            preset = 'Z-Waif-ADEF-Blazing'
-
-    if temp_level == 2:
-        preset = 'Z-Waif-ADEF-Blazing'
-
-    #
-    # NOTE: Random temperatures will be inactive if we set another model preset. Quirky!
-    #
-
-    if settings.model_preset != "Default":
-        preset = settings.model_preset
-
-    zw_logging.kelvin_log = preset
-
-    # Set what char/task we are sending to, defaulting to the character card if there is none
-    char_send = settings.cur_task_char
-    if char_send == "None":
-        char_send = CHARACTER_CARD
-
-
-    # Forced tokens check
-    cur_tokens_required = settings.max_tokens
-    if force_token_count:
-        cur_tokens_required = forced_token_level
-
-
-    # Set the stop right
-    stop = settings.stopping_strings
-    if settings.newline_cut:
-        stop.append("\n")
-    if settings.asterisk_ban:
-        stop.append("*")
-
-
     # Encode
-    messages_to_send = encode_new_api(user_input)
+    prompt = encode_new_api(user_input)
 
     # Send the actual API Request
     if API_TYPE == "Oobabooga":
         request = {
-            "messages": messages_to_send,
-            'max_tokens': cur_tokens_required,
-            'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': char_send,
-            'truncation_length': max_context,
-            'stop': stop,
-
-            'preset': preset
+            "prompt": prompt,
+            "max_tokens": settings.max_tokens,
+            "truncation_length": max_context,
+            "stop": settings.stopping_strings,
+            "character": CHARACTER_CARD
         }
-
+        
         received_message = API.oobaooga_api.api_standard(request)
+        
+        # Add to history if successful
+        if not received_message.startswith("Error:"):
+            ooga_history.append([user_input, received_message])
+            save_histories()
 
     elif API_TYPE == "Ollama":
-        received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
+        received_message = API.ollama_api.api_standard(history=prompt, temp_level=temp_level, stop=settings.stopping_strings, max_tokens=settings.max_tokens)
 
-
-
-    # Translate issues with the received message
-    received_message = html.unescape(received_message)
-
-
-    # If her reply contains RP-ing as other people, supress it form the message
-    if settings.supress_rp:
-        received_message = supress_rp_as_others(received_message)
-
-
-    # If her reply is the same as the last stored one, run another request
-    global stored_received_message
-    global regenerate_requests_count
-
-    if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
-        zw_logging.update_debug_log("Bad message received; same as last attempted generation. Re-generating the reply...")
-        regenerate_requests_count += 1
-        run(user_input, 2)
-        return
-
-    stored_received_message = received_message
-
-
-    # If her reply is the same as any in the past 20 chats, run another request
-    if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
-        zw_logging.update_debug_log("Bad message received; same as a recent chat. Re-generating the reply...")
-        regenerate_requests_count += 1
-        run(user_input, 1)
-        return
-
-    # If her reply is blank, request another run, clearing the previous history add, and escape
-    if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
-        zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Re-generating the reply...")
-        regenerate_requests_count += 1
-        run(user_input, 1)
-        return
-
-
-    # Clear our regen requests count, we have hit our limit
-    regenerate_requests_count = 0
-
-    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
-    log_user_input = "{0}".format(user_input)
-    log_received_message = "{0}".format(received_message)
-
-    ooga_history.append([log_user_input, log_received_message, tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
-
-    # Run a pruning of the deletables
-    prune_deletables()
-
-    # Clear the currently sending message variable
-    currently_sending_message = ""
-
-    # Clear any token forcing
-    force_token_count = False
-
-    # Save
-    save_histories()
-
-    # We are ending our API request!
+    # We are done with our API request!
     is_in_api_request = False
+
+    return received_message
 
 #
 # For the new streaming chats, runs it continually to grab data as it comes in from Oobabooga. Should run faster
@@ -300,64 +196,11 @@ def run_streaming(user_input, temp_level):
     check_for_name_in_message(user_input)
 
     # Load the history from JSON, to clean up the quotation marks
-    #
     with open("LiveLog.json", 'r') as openfile:
         ooga_history = json.load(openfile)
 
-
-    # Determine what preset we want to load in with
-
-    preset = 'Z-Waif-ADEF-Standard'
-
-    if random.random() > 0.7:
-        preset = 'Z-Waif-ADEF-Tempered'
-
-    if random.random() > 0.99:
-        preset = 'Z-Waif-ADEF-Blazing'
-
-
-    # Higher forced temps for certain scenarios
-
-    if temp_level == 1:
-        preset = 'Z-Waif-ADEF-Tempered'
-
-        if random.random() > 0.7:
-            preset = 'Z-Waif-ADEF-Blazing'
-
-    if temp_level == 2:
-        preset = 'Z-Waif-ADEF-Blazing'
-
-    #
-    # NOTE: Random temperatures will be inactive if we set another model preset. Quirky!
-    #
-
-    if settings.model_preset != "Default":
-        preset = settings.model_preset
-
-    zw_logging.kelvin_log = preset
-
-    # Set what char/task we are sending to, defaulting to the character card if there is none
-    char_send = settings.cur_task_char
-    if char_send == "None":
-        char_send = CHARACTER_CARD
-
-
-    # Forced tokens check
-    cur_tokens_required = settings.max_tokens
-    if force_token_count:
-        cur_tokens_required = forced_token_level
-
-
-    # Set the stop right
-    stop = settings.stopping_strings
-    if settings.newline_cut:
-        stop.append("\n")
-    if settings.asterisk_ban:
-        stop.append("*")
-
-
     # Encode
-    messages_to_send = encode_new_api(user_input)
+    prompt = encode_new_api(user_input)
 
     #
     # Send the actual API Request
@@ -368,7 +211,6 @@ def run_streaming(user_input, temp_level):
     #
 
     # Prep console with printing for message output
-
     print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
           + "----" + settings.char_name + "----"
           + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
@@ -379,15 +221,12 @@ def run_streaming(user_input, temp_level):
     # Send the actual API Request
     if API_TYPE == "Oobabooga":
         request = {
-            "messages": messages_to_send,
-            'max_tokens': cur_tokens_required,
-            'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': char_send,
-            'truncation_length': max_context,
-            'stop': stop,
-            'stream': True,
-
-            'preset': preset
+            "prompt": prompt,
+            "max_tokens": settings.max_tokens,
+            "truncation_length": max_context,
+            "stop": settings.stopping_strings,
+            "character": CHARACTER_CARD,
+            "stream": True
         }
 
         # Actual streaming bit
@@ -396,11 +235,8 @@ def run_streaming(user_input, temp_level):
 
         streamed_api_stringpuller = client.events()
 
-
     elif API_TYPE == "Ollama":
-        streamed_api_stringpuller = API.ollama_api.api_stream(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
-
-
+        streamed_api_stringpuller = API.ollama_api.api_stream(history=prompt, temp_level=temp_level, stop=settings.stopping_strings, max_tokens=settings.max_tokens)
 
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
@@ -418,7 +254,6 @@ def run_streaming(user_input, temp_level):
 
         elif API_TYPE == "Ollama":
             chunk = event['message']['content']
-
 
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)
@@ -462,7 +297,6 @@ def run_streaming(user_input, temp_level):
             supressed_rp = True
             break
 
-
     # Redo it and skip
     if force_skip_streaming:
         force_skip_streaming = False
@@ -496,7 +330,6 @@ def run_streaming(user_input, temp_level):
     # Translate issues with the received message
     received_message = html.unescape(received_message)
 
-
     # If her reply is the same as the last stored one, run another request
     global stored_received_message
     global regenerate_requests_count
@@ -509,7 +342,6 @@ def run_streaming(user_input, temp_level):
         return
 
     stored_received_message = received_message
-
 
     # If her reply is the same as any in the past 20 chats, run another request
     if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
@@ -526,7 +358,6 @@ def run_streaming(user_input, temp_level):
         regenerate_requests_count += 1
         run_streaming(user_input, 1)
         return
-
 
     # Clear our regen requests count, we have hit our limit
     regenerate_requests_count = 0
@@ -555,7 +386,6 @@ def run_streaming(user_input, temp_level):
 #
 # Handles all changes in the streamed updates
 def streamed_update_handler(chunk, assistant_message):
-
     global currently_streaming_message
     global streaming_sentences_ticker
 
@@ -568,24 +398,37 @@ def streamed_update_handler(chunk, assistant_message):
     # Check if the generated update has added a new sentence.
     # If a complete new sentence is found, read it aloud
     sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
-
-    if len(sentence_list) > streaming_sentences_ticker:
-        streaming_sentences_ticker += 1
-
-        # Emotes
+    if len(sentence_list) > streaming_sentences_ticker and not main.live_pipe_no_speak:
+        # Emotes for VTube Studio
         if settings.vtube_enabled:
-            vtube_studio.set_emote_string(s_assistant_message)
+            vtube_studio.set_emote_string(sentence_list[streaming_sentences_ticker - 1])
             vtube_studio.check_emote_string_streaming()
 
-        if not main.live_pipe_no_speak:
+        # Speaking with RVC support
+        if settings.use_rvc and not main.live_pipe_no_speak:
+            try:
+                # Use RVC for voice conversion
+                voice.set_speaking(True)
+                voice.speak_line_rvc(sentence_list[streaming_sentences_ticker - 1], refuse_pause=False)
+            except Exception as e:
+                zw_logging.update_debug_log(f"RVC error: {str(e)}, falling back to default voice")
+                # Fallback to default voice if RVC fails
+                voice.speak_line(sentence_list[streaming_sentences_ticker - 1], refuse_pause=False)
+        else:
+            # Use default voice
             voice.set_speaking(True)
-            voice.speak_line(sentence_list[-2], refuse_pause=True)
+            voice.speak_line(sentence_list[streaming_sentences_ticker - 1], refuse_pause=False)
 
-    if main.live_pipe_use_streamed_interrupt_watchdog and hotkeys.SPEAK_TOGGLED:
+        streaming_sentences_ticker += 1
+
+        # Check for hangout name
+        if settings.hangout_mode and hangout.check_for_name_in_message(sentence_list[streaming_sentences_ticker - 1]):
+            return "Hangout-Name-Cut"
+
+    # Check for next press
+    if hotkeys.pull_next_press_input():
+        voice.force_cut_voice()
         return "Cut"
-
-    if flag_end_streaming:
-        return "Hangout-Name-Cut"
 
     return "Continue"
 
@@ -596,23 +439,28 @@ def set_force_skip_streaming(tf_input):
 
 
 def send_via_oogabooga(user_input):
-
-    user_input = user_input
-
-    # Write last, non-system message to RAG
-    # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
-    # NOTE: Not safe for undo! Undo will double paste the message! We have a manual check to not add duplicates now, although, if it is supposed to be a dupe then get rekt XD
-    based_rag.add_message_to_database()
-
-    # RAG
-    if settings.rag_enabled:
-        based_rag.run_based_rag(user_input, ooga_history[len(ooga_history) - 1][1])
-
-    # Run
-    if not settings.stream_chats:
-        run(user_input, 0)
-    if settings.stream_chats:
-        run_streaming(user_input, 0)
+    global is_in_api_request
+    is_in_api_request = True
+    
+    # Format the request
+    request = {
+        "prompt": user_input,
+        "max_tokens": settings.max_tokens,
+        "truncation_length": max_context,
+        "stop": settings.stopping_strings,
+        "character": CHARACTER_CARD
+    }
+    
+    # Send the request
+    received_message = API.oobaooga_api.api_standard(request)
+    
+    # Add to history if successful
+    if not received_message.startswith("Error:"):
+        ooga_history.append([user_input, received_message])
+        save_histories()
+    
+    is_in_api_request = False
+    return received_message
 
 def receive_via_oogabooga():
     return received_message
@@ -1485,74 +1333,25 @@ def check_if_in_history(message):
 
 # Encodes from the old api's way of storing history (and ooba internal) to the new one
 def encode_new_api(user_input):
-
-    #
-    # Append 40 of the most recent history pairs (however long our marker length is)
-    #
-
-    global ooga_history
-
-    #
-    # Check for Ollama - if so, send it!
-    if API_TYPE == "Ollama":
-        return encode_new_api_ollama(user_input)
-
-    messages_to_send = []
-
-    message_marker = len(ooga_history) - marker_length
-    if message_marker < 0:          # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
-        message_marker = 0
-
-    messages_to_send.append({"role": "user", "content": ooga_history[message_marker][0]})
-    messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker][1]})
-
-    i = 1
-    while i < marker_length and i < len(ooga_history):
-        messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
-        messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
-
-        if len(ooga_history[-1]) > 3 and i == marker_length - 3 and ENCODE_TIME == "ON":
-
-            #
-            # Append a relative timestamp, 3 or so back (to make it not super important)
-            #
-
-            timestamp_string = "The current time now is "
-            current_time = datetime.datetime.now()
-            timestamp_string += current_time.strftime("%d %B, %Y at %I:%M %p")
-            timestamp_string += "."
-            messages_to_send.append({"role": "user", "content": timestamp_string})
-
-        if i == marker_length - 8:
-
-            #
-            # Append the lorebook in here, 8 or so back, it will include all lore in the given range
-            #
-
-            lore_gathered = lorebook.lorebook_gather(ooga_history[-3:], user_input)
-
-            if lore_gathered != lorebook.total_lore_default:
-                messages_to_send.append({"role": "user", "content": lore_gathered})
-        
-        if i == marker_length - 9:
-
-            #
-            # Append the RAG in here, 9 or so back, so it has no need to be saved & has good recall without upsetting spacing (only if RAG enabled)
-            #
-
-            if settings.rag_enabled:
-                messages_to_send.append({"role": "user", "content": based_rag.call_rag_message()})
-
-        i = i + 1
-
-
-    #
-    # Append our most recent message
-    #
-
-    messages_to_send.append({"role": "user", "content": user_input})
-
-    return messages_to_send
+    messages = []
+    
+    # Add character card
+    if CHARACTER_CARD:
+        messages.append(character_card)
+    
+    # Add history
+    history_start = max(0, len(ooga_history) - marker_length)
+    for i in range(history_start, len(ooga_history)):
+        messages.append(ooga_history[i][0])
+        messages.append(ooga_history[i][1])
+    
+    # Add current message
+    messages.append(user_input)
+    
+    # Join all messages with newlines
+    prompt = "\n".join(messages)
+    
+    return prompt
 
 
 def encode_new_api_ollama(user_input):

@@ -20,11 +20,14 @@ from utils.user_relationships import (
     get_relationship_history,
     set_relationship_level,
     set_relationship_status,
-    set_relationship_history,
+    set_relationship_history
 )
+from utils.conversation_analysis import analyze_conversation_style, get_message_metadata
 from memory_manager import MemoryManager, MultiprocessRAG
 from utils.ai_handler import AIHandler
 from sentence_transformers import SentenceTransformer
+from datetime import datetime
+import traceback
 # import main
 
 load_dotenv()
@@ -131,7 +134,7 @@ class TwitchBot(commands.Bot):
                 return
             
             # Process the message with full AI capabilities
-            await self._process_chat_message(message, user_id, username, user_message)
+            await self._process_chat_message(message)
             
         except Exception as e:
             log_error(f"Error processing Twitch message: {str(e)}")
@@ -148,7 +151,6 @@ class TwitchBot(commands.Bot):
             
             # Update relationship data
             update_relationship_status(user_id, "twitch", "neutral")
-            analyze_conversation_style(message, user_id, "twitch")
             
             # Add to memory without generating response
             await self.memory_manager.add_memory(
@@ -159,88 +161,104 @@ class TwitchBot(commands.Bot):
         except Exception as e:
             log_error(f"Error updating user data: {str(e)}")
 
-    async def _process_chat_message(self, message: twitchio.Message, user_id: str, username: str, user_message: str):
-        """Process chat message with full AI capabilities"""
+    async def _process_chat_message(self, message: twitchio.Message):
+        """Process an incoming chat message with enhanced context awareness"""
         try:
-            # Handle special regeneration commands
-            if user_message.lower() in ['!regen', '!reroll', '!redo']:
-                await self._handle_regeneration(message)
-                return
+            user_id = str(message.author.id)
+            platform = "twitch"
             
-            # Handle special AI commands
-            if user_message.lower().startswith('!'):
-                command_parts = user_message[1:].split()
-                command = command_parts[0].lower()
-                args = command_parts[1:] if len(command_parts) > 1 else []
-                
-                if command in ['help', 'about', 'status', 'joke', 'quote']:
-                    user_context = get_user_context(user_id, "twitch")
-                    user_context['username'] = username
-                    user_context['platform'] = 'twitch'
-                    
-                    response = await self.ai_handler.process_command(command, args, user_context)
-                    final_response = f"@{username} {response}"
-                    
-                    # Validate message safety
-                    is_safe, safety_msg = validate_message_safety(final_response, "twitch")
-                    if is_safe:
-                        await message.channel.send(final_response)
-                        record_ai_message(response, "twitch", str(message.channel))
-                    else:
-                        log_error(f"Unsafe message blocked: {safety_msg}")
-                    return
+            # Update user context with new interaction
+            update_user_context(user_id, platform, {
+                "last_interaction": datetime.now().isoformat(),
+                "interaction_count": 1,  # Will be incremented
+                "username": message.author.name
+            })
             
-            # Regular chat message processing
-            user_context = get_user_context(user_id, "twitch")
-            user_context['username'] = username
-            user_context['platform'] = 'twitch'
+            # Analyze message content
+            msg_metadata = get_message_metadata(message.content, user_id, platform)
             
-            # Update user context and relationship data
-            update_user_context(user_id, {
-                "message_count": 1,
-                "username": username
-            }, "twitch")
-            update_relationship_status(user_id, "twitch", "neutral")
-            analyze_conversation_style(user_message, user_id, "twitch")
+            # Update user context with analysis results
+            update_user_context(user_id, platform, {
+                "conversation_style": msg_metadata["style"],
+                "topics": msg_metadata["topics"],
+                "sentiment": msg_metadata["sentiment"]
+            })
             
-            # Get relevant memories
-            relevant_memories = await self.memory_manager.retrieve_relevant_memories(user_message)
-            user_specific_memories = await self.memory_manager.get_user_specific_memories(user_id, "twitch")
+            # Get enhanced context for AI response
+            user_context = get_user_context(user_id, platform)
+            relationship = get_relationship_status(user_id, platform)
             
-            # Combine memories and generate response
-            all_memories = relevant_memories + user_specific_memories
-            ai_response = await self.ai_handler.generate_contextual_response(
-                user_message,
+            # Prepare enhanced prompt with context
+            enhanced_prompt = self._build_enhanced_prompt(
+                message.content,
                 user_context,
-                all_memories
+                relationship,
+                msg_metadata
             )
             
-            # Process and send response
-            if ai_response:
-                final_response = clean_response(ai_response)
-                final_response = add_personality_flavor(final_response, settings.twitch_personality)
-                final_response = add_relationship_context_to_response(final_response, user_id, "twitch")
-                final_response = f"@{username} {final_response}"
-                
-                # Validate and send
-                is_safe, safety_msg = validate_message_safety(final_response, "twitch")
-                if is_safe:
-                    await message.channel.send(final_response) # type: ignore
-                    record_ai_message(ai_response, "twitch", str(message.channel)) # type: ignore
-                else:
-                    log_error(f"Unsafe message blocked: {safety_msg}")
+            # Get AI response
+            response = await self._get_ai_response(enhanced_prompt)
             
+            if response:
+                # Format response with username mention
+                final_response = f"@{message.author.name} {response}"
+                await message.channel.send(final_response)
+            else:
+                log_error("No response received from AI system")
+                
         except Exception as e:
-            log_error(f"Error processing chat message: {str(e)}")
+            log_error(f"Error processing chat message: {e}")
+            log_error(traceback.format_exc())
+            
+    def _build_enhanced_prompt(self, message: str, user_context: dict, relationship: str, metadata: dict) -> str:
+        """Build an enhanced prompt with user context and conversation analysis"""
+        context_parts = []
+        
+        # Add user context
+        username = user_context.get("username", "User")
+        context_parts.append(f"[User: {username}, Relationship: {relationship}]")
+        
+        if user_context.get("interests"):
+            interests = ", ".join(user_context["interests"][-3:])
+            context_parts.append(f"[Interests: {interests}]")
+        
+        # Add conversation style
+        context_parts.append(f"[Style: {metadata['style']}]")
+        
+        # Add sentiment
+        context_parts.append(f"[Mood: {metadata['sentiment']}]")
+        
+        # Combine context with message
+        context_string = " ".join(context_parts)
+        return f"{context_string}\n\nUser: {message}"
 
-    async def _handle_regeneration(self, message):
-        """Handle regeneration requests"""
+    async def _get_ai_response(self, prompt: str):
+        """Get a response from the AI system"""
         try:
-            # Implementation of regeneration logic
-            pass
+            # Send to Oobabooga API
+            import API.api_controller as api_controller
+            api_controller.send_via_oogabooga(prompt)
+            response = api_controller.receive_via_oogabooga()
+            
+            if response:
+                # Clean and format the response
+                response = clean_response(response)
+                response = add_personality_flavor(response, settings.twitch_personality)
+                
+                # Validate message safety
+                is_safe, safety_msg = validate_message_safety(response, "twitch")
+                if not is_safe:
+                    log_error(f"Unsafe message blocked: {safety_msg}")
+                    return None
+                
+                return response
+            else:
+                log_error("No response received from Oobabooga API")
+                return None
+                
         except Exception as e:
-            log_error(f"Error processing regeneration: {str(e)}")
-            await message.channel.send(f"@{message.author.name} ❌ Error processing regeneration") # type: ignore
+            log_error(f"Error getting AI response: {str(e)}")
+            return None
 
 async def run_twitch_bot():
     """Run the Twitch bot"""
@@ -275,3 +293,73 @@ def run_z_waif_twitch():
     except Exception as e:
         log_error(f"Failed to run Z-WAIF Twitch: {str(e)}")
         raise
+
+def clean_response(response: str) -> str:
+    """Clean and format the AI response"""
+    # Remove any system notes or instructions
+    if "[System Note:" in response:
+        response = response[response.find("]") + 1:].strip()
+    
+    # Remove AI: prefix if present
+    if response.startswith("AI:"):
+        response = response[3:].strip()
+    
+    # Remove any leading/trailing quotes
+    response = response.strip('"')
+    
+    return response
+
+def add_personality_flavor(response: str, personality: str) -> str:
+    """Add personality-specific flavor to the response"""
+    if not response:
+        return response
+        
+    personality = personality.lower()
+    
+    if personality == "friendly":
+        # Add friendly emotes occasionally
+        import random
+        friendly_emotes = ["<3", ":)", "^_^", "=)", ":D"]
+        if random.random() < 0.3:  # 30% chance
+            response += f" {random.choice(friendly_emotes)}"
+    
+    elif personality == "professional":
+        # Ensure proper punctuation and capitalization
+        if not response.endswith((".", "!", "?")):
+            response += "."
+        response = response[0].upper() + response[1:]
+    
+    elif personality == "casual":
+        # Add casual flair
+        import random
+        casual_phrases = [" btw", " haha", " tho", " ngl"]
+        if random.random() < 0.2:  # 20% chance
+            response += random.choice(casual_phrases)
+    
+    return response
+
+def validate_message_safety(message: str, platform: str) -> tuple[bool, str]:
+    """
+    Validate if a message is safe to send.
+    Returns (is_safe, reason_if_unsafe)
+    """
+    if not message:
+        return False, "Empty message"
+    
+    # Check message length
+    if platform == "twitch" and len(message) > 500:
+        return False, "Message too long for Twitch"
+    
+    # Basic safety checks
+    unsafe_patterns = [
+        "http://", "https://",  # No raw URLs
+        "[System", "[DEBUG",    # No system messages
+        "```", "'''",          # No code blocks
+        "{", "}"               # No JSON/code
+    ]
+    
+    for pattern in unsafe_patterns:
+        if pattern in message:
+            return False, f"Contains unsafe pattern: {pattern}"
+    
+    return True, ""

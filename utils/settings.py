@@ -4,6 +4,10 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# API settings
+API_TYPE = os.getenv("API_TYPE", "Oobabooga")  # Default to Oobabooga if not set
+HOST_PORT = os.getenv("HOST_PORT", "127.0.0.1:50534")  # Default to the running server port
+
 # Character settings
 char_name = os.getenv("CHAR_NAME", "")
 
@@ -64,3 +68,10 @@ twitch_auto_respond = os.getenv("TWITCH_AUTO_RESPOND", "ON").upper() == "ON"
 twitch_response_chance = float(os.getenv("TWITCH_RESPONSE_CHANCE", "0.8"))
 twitch_cooldown_seconds = int(os.getenv("TWITCH_COOLDOWN_SECONDS", "3"))
 twitch_max_message_length = int(os.getenv("TWITCH_MAX_MESSAGE_LENGTH", "450"))
+
+# Add RVC settings
+use_rvc = os.environ.get("USE_RVC", "false").lower() == "true"
+rvc_model = os.environ.get("RVC_MODEL", "default")
+rvc_speaker = os.environ.get("RVC_SPEAKER", "0")
+rvc_pitch = float(os.environ.get("RVC_PITCH", "0.0"))
+rvc_speed = float(os.environ.get("RVC_SPEED", "1.0"))

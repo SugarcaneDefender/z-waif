@@ -222,42 +222,7 @@ def add_relationship_context_to_response(response: str, username: str, platform:
     
     return response
 
-def analyze_conversation_style(message_content: str, user_id: str, platform: str):
-    """Analyze and update user's conversation style"""
-    rel_data = get_relationship_data(user_id, platform)
-    
-    # Simple style analysis
-    message_lower = message_content.lower()
-    
-    # Detect conversation style patterns
-    if any(word in message_lower for word in ['lol', 'haha', 'funny', '😂', '🤣']):
-        add_personality_trait(user_id, platform, "humorous")
-    
-    if any(word in message_lower for word in ['?', 'how', 'what', 'why', 'when', 'where']):
-        add_personality_trait(user_id, platform, "curious")
-    
-    if any(word in message_lower for word in ['thanks', 'thank you', 'appreciate', 'grateful']):
-        add_personality_trait(user_id, platform, "polite")
-    
-    if len(message_content) > 100:
-        add_personality_trait(user_id, platform, "verbose")
-    elif len(message_content) < 20:
-        add_personality_trait(user_id, platform, "concise")
-    
-    # Update conversation style
-    styles = ["casual", "formal", "enthusiastic", "analytical", "humorous"]
-    # This is a simplified implementation - could be enhanced with NLP
-    if "?" in message_content:
-        rel_data["conversation_style"] = "analytical"
-    elif any(word in message_lower for word in ['awesome', 'cool', 'nice', '!!']):
-        rel_data["conversation_style"] = "enthusiastic"
-    elif len(message_content.split()) > 15:
-        rel_data["conversation_style"] = "formal"
-    else:
-        rel_data["conversation_style"] = "casual"
-    
-    relationships_data[f"{platform}_{user_id}"] = rel_data
-    save_relationships()
+
 
 def add_personality_trait(user_id: str, platform: str, trait: str):
     """Add a personality trait to user's profile"""
