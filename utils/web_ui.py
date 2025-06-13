@@ -4,15 +4,15 @@ import gradio
 import gradio as gr
 import main
 import API.api_controller
-import utils.zw_logging
-import utils.settings
-import utils.hotkeys
-import utils.tag_task_controller
-import utils.voice
+from utils import zw_logging
+from utils import settings
+from utils import hotkeys
+from utils import tag_task_controller
+from utils import voice
 import json
 
 #from API.api_controller import soft_reset
-#from utils.settings import speak_only_spokento
+#from settings import speak_only_spokento
 
 # Import the gradio theme color
 with open("Configurables/GradioThemeColor.json", 'r') as openfile:
@@ -98,7 +98,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def recording_button_click():
 
-            utils.hotkeys.speak_input_toggle_from_ui()
+            hotkeys.speak_input_toggle_from_ui()
 
             return
 
@@ -151,10 +151,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         def autochat_button_click():
 
             # No toggle in hangout mode
-            if utils.settings.hangout_mode:
+            if settings.hangout_mode:
                 return
 
-            utils.hotkeys.input_toggle_autochat_from_ui()
+            hotkeys.input_toggle_autochat_from_ui()
 
             return
 
@@ -164,7 +164,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             if not isinstance(autochat_sens, int): #band-aid fix, but it just works TM
                 autochat_sens = 4
             
-            utils.hotkeys.input_change_listener_sensitivity_from_ui(autochat_sens)
+            hotkeys.input_change_listener_sensitivity_from_ui(autochat_sens)
             return
 
 
@@ -186,14 +186,14 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         def semi_auto_chat_button_click():
 
             # No toggle in hangout mode
-            if utils.settings.hangout_mode:
+            if settings.hangout_mode:
                 return
 
             # Toggle
-            utils.settings.semi_auto_chat = not utils.settings.semi_auto_chat
+            settings.semi_auto_chat = not settings.semi_auto_chat
 
             # Disable
-            utils.hotkeys.disable_autochat()
+            hotkeys.disable_autochat()
 
             return
 
@@ -212,7 +212,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         def hangout_mode_button_click():
 
             # Toggle (Handled in the hotkey script)
-            utils.hotkeys.web_ui_toggle_hangout_mode()
+            hotkeys.web_ui_toggle_hangout_mode()
 
             return
 
@@ -224,7 +224,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
         def update_settings_view():
-            return utils.hotkeys.get_speak_input(), utils.hotkeys.get_autochat_toggle(), utils.settings.semi_auto_chat, utils.settings.hangout_mode
+            return hotkeys.get_speak_input(), hotkeys.get_autochat_toggle(), settings.semi_auto_chat, settings.hangout_mode
 
 
         demo.load(update_settings_view, every=0.06,
@@ -239,7 +239,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
     # VISUAL
     #
 
-    if utils.settings.vision_enabled:
+    if settings.vision_enabled:
         with gr.Tab("Visual"):
 
             #
@@ -248,7 +248,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             with gr.Row():
                 def take_image_button_click():
-                    utils.hotkeys.view_image_from_ui()
+                    hotkeys.view_image_from_ui()
 
                     return
 
@@ -262,7 +262,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             with gr.Row():
                 def cam_use_image_feed_button_click():
-                    utils.settings.cam_use_image_feed = not utils.settings.cam_use_image_feed
+                    settings.cam_use_image_feed = not settings.cam_use_image_feed
 
                     return
 
@@ -280,7 +280,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             with gr.Row():
                 def cam_direct_talk_button_click():
-                    utils.settings.cam_direct_talk = not utils.settings.cam_direct_talk
+                    settings.cam_direct_talk = not settings.cam_direct_talk
 
                     return
 
@@ -298,7 +298,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             # with gr.Row():
             #     def cam_reply_after_button_click():
-            #         utils.settings.cam_reply_after = not utils.settings.cam_reply_after
+            #         settings.cam_reply_after = not settings.cam_reply_after
             #
             #         return
             #
@@ -317,7 +317,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             with gr.Row():
                 def cam_image_preview_button_click():
-                    utils.settings.cam_image_preview = not utils.settings.cam_image_preview
+                    settings.cam_image_preview = not settings.cam_image_preview
 
                     return
 
@@ -334,7 +334,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             with gr.Row():
                 def cam_capture_screenshot_button_click():
-                    utils.settings.cam_use_screenshot = not utils.settings.cam_use_screenshot
+                    settings.cam_use_screenshot = not settings.cam_use_screenshot
 
                     return
 
@@ -346,7 +346,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     cam_capture_screenshot_checkbox_view = gr.Checkbox(label="Capture Screenshot")
 
             def update_visual_view():
-                return utils.settings.cam_use_image_feed, utils.settings.cam_direct_talk, utils.settings.cam_image_preview, utils.settings.cam_use_screenshot
+                return settings.cam_use_image_feed, settings.cam_direct_talk, settings.cam_image_preview, settings.cam_use_screenshot
 
 
             demo.load(update_visual_view, every=0.1,
@@ -366,7 +366,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         #
 
         def hotkey_button_click():
-            utils.settings.hotkeys_locked = not utils.settings.hotkeys_locked
+            settings.hotkeys_locked = not settings.hotkeys_locked
 
             return
 
@@ -384,7 +384,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def shadowchats_button_click():
-                utils.settings.speak_shadowchats = not utils.settings.speak_shadowchats
+                settings.speak_shadowchats = not settings.speak_shadowchats
 
                 return
 
@@ -402,7 +402,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def speaking_choice_button_click():
-                utils.settings.speak_only_spokento = not utils.settings.speak_only_spokento
+                settings.speak_only_spokento = not settings.speak_only_spokento
                 return
 
             speak_only_spokento_button = gr.Button(value="Check/Uncheck")   # <-- literally me
@@ -446,7 +446,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def supress_rp_button_click():
-                utils.settings.supress_rp = not utils.settings.supress_rp
+                settings.supress_rp = not settings.supress_rp
 
                 return
 
@@ -464,7 +464,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def newline_cut_button_click():
-                utils.settings.newline_cut = not utils.settings.newline_cut
+                settings.newline_cut = not settings.newline_cut
 
                 return
 
@@ -482,7 +482,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         with gr.Row():
             def asterisk_ban_button_click():
-                utils.settings.asterisk_ban = not utils.settings.asterisk_ban
+                settings.asterisk_ban = not settings.asterisk_ban
 
                 return
 
@@ -502,11 +502,11 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             def change_max_tokens(tokens_count):
 
-                utils.settings.max_tokens = tokens_count
+                settings.max_tokens = tokens_count
                 return
 
 
-            token_slider = gr.Slider(minimum=20, maximum=2048, value=utils.settings.max_tokens, label="Max Chat Tokens / Reply Length")
+            token_slider = gr.Slider(minimum=20, maximum=2048, value=settings.max_tokens, label="Max Chat Tokens / Reply Length")
             token_slider.change(fn=change_max_tokens, inputs=token_slider)
 
 
@@ -517,15 +517,15 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def alarm_button_click(input_time):
 
-            utils.settings.alarm_time = input_time
+            settings.alarm_time = input_time
 
-            print("\nAlarm time set as " + utils.settings.alarm_time + "\n")
+            print("\nAlarm time set as " + settings.alarm_time + "\n")
 
             return
 
 
         with gr.Row():
-            alarm_textbox = gr.Textbox(value=utils.settings.alarm_time, label="Alarm Time")
+            alarm_textbox = gr.Textbox(value=settings.alarm_time, label="Alarm Time")
 
             alarm_button = gr.Button(value="Change Time")
             alarm_button.click(fn=alarm_button_click, inputs=alarm_textbox)
@@ -537,15 +537,15 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def model_preset_button_click(input_text):
 
-            utils.settings.model_preset = input_text
+            settings.model_preset = input_text
 
-            print("\nChanged model preset to " + utils.settings.model_preset + "\n")
+            print("\nChanged model preset to " + settings.model_preset + "\n")
 
             return
 
 
         with gr.Row():
-            model_preset_textbox = gr.Textbox(value=utils.settings.model_preset, label="Model Preset Name")
+            model_preset_textbox = gr.Textbox(value=settings.model_preset, label="Model Preset Name")
 
             model_preset_button = gr.Button(value="Change Model Preset")
             model_preset_button.click(fn=model_preset_button_click, inputs=model_preset_textbox)
@@ -555,7 +555,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def update_settings_view():
 
-            return utils.settings.hotkeys_locked, utils.settings.speak_shadowchats, utils.settings.speak_only_spokento, utils.settings.supress_rp, utils.settings.newline_cut, utils.settings.asterisk_ban
+            return settings.hotkeys_locked, settings.speak_shadowchats, settings.speak_only_spokento, settings.supress_rp, settings.newline_cut, settings.asterisk_ban
 
 
         demo.load(update_settings_view, every=0.1, outputs=[hotkey_checkbox_view, shadowchats_checkbox_view, speak_only_spokento_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view])
@@ -577,10 +577,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         def update_task_button_click(input_text):
 
             # Change the task-tag first
-            utils.tag_task_controller.change_tag_via_task("Task-" + input_text)
+            tag_task_controller.change_tag_via_task("Task-" + input_text)
 
             # Now swap the task
-            utils.tag_task_controller.set_task(input_text)
+            tag_task_controller.set_task(input_text)
 
 
 
@@ -596,9 +596,9 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         # Gaming Loop
 
         def update_gaming_loop():
-            utils.settings.is_gaming_loop = not utils.settings.is_gaming_loop
+            settings.is_gaming_loop = not settings.is_gaming_loop
 
-        if utils.settings.gaming_enabled:
+        if settings.gaming_enabled:
 
             with gr.Row():
                 gaming_loop_button = gr.Button(value="Check/Uncheck")
@@ -617,7 +617,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             new_tags_list = new_tags.split(",")
             print(new_tags_list)
 
-            utils.tag_task_controller.set_tags(new_tags_list)
+            tag_task_controller.set_tags(new_tags_list)
 
 
         with gr.Row():
@@ -629,23 +629,23 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def update_tag_task_view():
             cantonese_task_list = ""
-            for task in utils.settings.all_task_char_list:
+            for task in settings.all_task_char_list:
                 cantonese_task_list += task + "\n"
 
             cantonese_cur_tags_list = ""
-            for tag in utils.settings.cur_tags:
+            for tag in settings.cur_tags:
                 cantonese_cur_tags_list += tag + "\n"
 
             cantonese_all_tags_list = ""
-            for tag in utils.settings.all_tag_list:
+            for tag in settings.all_tag_list:
                 cantonese_all_tags_list += tag + "\n"
 
-            return utils.settings.cur_task_char, cantonese_task_list, cantonese_cur_tags_list, cantonese_all_tags_list
+            return settings.cur_task_char, cantonese_task_list, cantonese_cur_tags_list, cantonese_all_tags_list
 
         def update_autogaming_check():
-            return utils.settings.is_gaming_loop
+            return settings.is_gaming_loop
 
-        if utils.settings.gaming_enabled:
+        if settings.gaming_enabled:
             demo.load(update_autogaming_check, every=0.05,
                       outputs=[gaming_loop_checkbox_view])
 
@@ -660,12 +660,12 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
     #
 
     with gr.Tab("Debug"):
-        debug_log = gr.Textbox(utils.zw_logging.debug_log, lines=10, label="General Debug", autoscroll=True)
-        rag_log = gr.Textbox(utils.zw_logging.rag_log, lines=10, label="RAG Debug", autoscroll=True)
-        kelvin_log = gr.Textbox(utils.zw_logging.kelvin_log, lines=1, label="Random Temperature Readout")
+        debug_log = gr.Textbox(zw_logging.debug_log, lines=10, label="General Debug", autoscroll=True)
+        rag_log = gr.Textbox(zw_logging.rag_log, lines=10, label="RAG Debug", autoscroll=True)
+        kelvin_log = gr.Textbox(zw_logging.kelvin_log, lines=1, label="Random Temperature Readout")
 
         def update_logs():
-            return utils.zw_logging.debug_log, utils.zw_logging.rag_log, utils.zw_logging.kelvin_log
+            return zw_logging.debug_log, zw_logging.rag_log, zw_logging.kelvin_log
 
         demo.load(update_logs, every=0.1, outputs=[debug_log, rag_log, kelvin_log])
 

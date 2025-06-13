@@ -3,8 +3,8 @@ import os
 import random
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from utils.logging import log_info, log_error
-from utils.user_context import get_user_context, update_user_context
+from logging import log_info, log_error
+from user_context import get_user_context, update_user_context
 
 # File to store relationship data
 RELATIONSHIPS_FILE = "Configurables/user_relationships.json"

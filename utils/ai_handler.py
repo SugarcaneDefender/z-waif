@@ -11,7 +11,7 @@ class AIHandler:
         self.max_cache_size = 100
 
     async def generate_response(
-        self, prompt: str, personality: str = None, context: Dict[str, Any] = None
+        self, prompt: str, personality: Optional[str] = None, context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Generate AI response using the main API controller"""
         try:
@@ -96,7 +96,7 @@ class AIHandler:
 
         return " ".join(enhanced_parts)
 
-    def _add_to_cache(self, key: str, response: str):
+    def _add_to_cache(self, key: str|int, response: str):
         """Add response to cache with size management"""
         if len(self.response_cache) >= self.max_cache_size:
             # Remove oldest entry (simple FIFO)

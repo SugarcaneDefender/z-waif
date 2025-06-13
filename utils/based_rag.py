@@ -4,13 +4,13 @@ from typing import NoReturn
 import API.api_controller
 import string
 import threading
-import utils.lorebook
+from utils import lorebook
 import random
 import json
 import os
 import time
-import utils.zw_logging
-import utils.settings
+from utils import zw_logging
+from utils import settings
 from tqdm import tqdm
 
 # Words and their data
@@ -52,7 +52,7 @@ char_name = os.environ.get("CHAR_NAME")
 def setup_based_rag():
 
     if show_rag_debug:
-        utils.zw_logging.update_rag_log("Running BASED RAG")
+        zw_logging.update_rag_log("Running BASED RAG")
         print("Running BASED RAG")
 
     # Create a word-value database(d)
@@ -116,8 +116,8 @@ def setup_based_rag():
 
     # Print out so we can see if the word database is working
     if show_rag_debug_deep:
-        utils.zw_logging.update_rag_log(word_database)
-        utils.zw_logging.update_rag_log(histories_word_id_database)
+        zw_logging.update_rag_log(word_database)
+        zw_logging.update_rag_log(histories_word_id_database)
 
 
 def run_based_rag(message, her_previous):
@@ -125,11 +125,11 @@ def run_based_rag(message, her_previous):
     global word_database
 
     # Blocking statement to stop if our RAG is not enabled
-    if not utils.settings.rag_enabled:
+    if not settings.rag_enabled:
         return
 
     # Clear the log, a new operation is beginning
-    utils.zw_logging.clear_rag_log()
+    zw_logging.clear_rag_log()
 
     #
     # EVALUATE OUR SENT ONES FIRST
@@ -154,7 +154,7 @@ def run_based_rag(message, her_previous):
         score = word_database["value"][history_word_ids[i]]
 
         # Boost lore word score (only single word)
-        if utils.lorebook.rag_word_check(word_database["word"][history_word_ids[i]]):
+        if lorebook.rag_word_check(word_database["word"][history_word_ids[i]]):
             score = (score + 1) / 2
 
         history_word_scores.append(score)
@@ -179,7 +179,7 @@ def run_based_rag(message, her_previous):
         score = word_database["value"][hers_history_word_ids[i]]
 
         # Boost lore word score (only single word)
-        if utils.lorebook.rag_word_check(
+        if lorebook.rag_word_check(
             word_database["word"][hers_history_word_ids[i]]
         ):
             score = (score + 1) / 2
@@ -237,7 +237,7 @@ def run_based_rag(message, her_previous):
             log_output_text += str(word_database["word"][highest_score_ids[x]]) + "\n"
             x = x + 1
 
-        utils.zw_logging.update_rag_log(log_output_text)
+        zw_logging.update_rag_log(log_output_text)
 
     #
     # NOW EVALUATE ALL MESSAGE PAIRS AND SCORE THEM
@@ -294,7 +294,7 @@ def run_based_rag(message, her_previous):
     current_rag_message += "[System M]; This is the end of the memory!"
 
     if show_rag_debug:
-        utils.zw_logging.update_rag_log(current_rag_message)
+        zw_logging.update_rag_log(current_rag_message)
 
 
 # Bit to actually receive what the RAG has to offer
@@ -323,7 +323,7 @@ def parse_words_to_database(message, flag):
     refined_message = refined_message.replace("\n", " ")
 
     if show_rag_debug_deep:
-        utils.zw_logging.update_rag_log(refined_message)
+        zw_logging.update_rag_log(refined_message)
 
     while i < len(refined_message):
 
@@ -473,7 +473,7 @@ def evaluate_message(valued_word_ids, hist_word_ids):
 def add_message_to_database():
 
     # Blocking statement to stop if our RAG is not enabled
-    if not utils.settings.rag_enabled:
+    if not settings.rag_enabled:
         return
 
     # Import History
@@ -491,7 +491,7 @@ def add_message_to_database():
     if (history[new_msg][0] + history[new_msg][1]) == (
         history_database[-1][0] + history_database[-1][1]
     ):
-        utils.zw_logging.update_debug_log("Preventing dupe in RAG!")
+        zw_logging.update_debug_log("Preventing dupe in RAG!")
         return
 
     # Ignore any system deletable messages, and just fall back until before it
@@ -512,7 +512,7 @@ def add_message_to_database():
 def remove_latest_database_message():
 
     # Blocking statement to stop if our RAG is not enabled
-    if not utils.settings.rag_enabled:
+    if not settings.rag_enabled:
         return
 
     #
@@ -529,7 +529,7 @@ def remove_latest_database_message():
 def store_rag_history():
 
     # Blocking statement to stop if our RAG is not enabled
-    if not utils.settings.rag_enabled:
+    if not settings.rag_enabled:
         return
 
     # Save, Export to JSON
@@ -546,7 +546,7 @@ def store_rag_history():
 def load_rag_history():
 
     # Blocking statement to stop if our RAG is not enabled
-    if not utils.settings.rag_enabled:
+    if not settings.rag_enabled:
         return
 
     global word_database, histories_word_id_database, history_database, is_setting_up
@@ -566,7 +566,7 @@ def load_rag_history():
         # File found, load
 
         if show_rag_debug:
-            utils.zw_logging.update_rag_log("\nLoading RAG from pervious session!\n")
+            zw_logging.update_rag_log("\nLoading RAG from pervious session!\n")
 
         with open(path, "r") as openfile:
             word_database = json.load(openfile)
@@ -592,7 +592,7 @@ def manual_recalculate_database():
     # All in one
 
     print("\nManually re-calculating the RAG database. Give me some time...\n")
-    utils.zw_logging.update_rag_log(
+    zw_logging.update_rag_log(
         "\nManually re-calculating the RAG database. Give me some time...\n"
     )
     setup_based_rag()

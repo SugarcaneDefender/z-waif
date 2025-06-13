@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from utils.logging import log_info, log_error
+from logging import log_info, log_error
 
 class MemoryManager:
     def __init__(self, rag_processor=None):

@@ -1,6 +1,6 @@
 import time
 import datetime
-import utils.settings
+from utils import settings
 import os
 import json
 
@@ -33,7 +33,7 @@ def alarm_loop():
             ALARM_TRIGGERED = False
 
         # Run our alarm here if we are at the specified time
-        if cur_time_string == utils.settings.alarm_time and ALARM_TRIGGERED == False:
+        if cur_time_string == settings.alarm_time and ALARM_TRIGGERED == False:
 
             # Flag
             ALARM_TRIGGERED = True

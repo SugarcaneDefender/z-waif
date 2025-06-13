@@ -6,9 +6,9 @@ from tkinter import filedialog
 import os
 import pyautogui
 
-import utils.settings
-import utils.vtube_studio
-import utils.hotkeys
+from utils import settings
+from utils import vtube_studio
+from utils import hotkeys
 import random
 
 # initialize the camera
@@ -18,11 +18,11 @@ import random
 
 vision_enabled_string = os.environ.get("MODULE_VISUAL")
 if vision_enabled_string == "ON":
-    utils.settings.vision_enabled = True
+    settings.vision_enabled = True
 else:
-    utils.settings.vision_enabled = False
+    settings.vision_enabled = False
 
-if utils.settings.vision_enabled:
+if settings.vision_enabled:
     cam_port = 0
     cam = cv2.VideoCapture(cam_port)
 
@@ -46,10 +46,10 @@ def capture_pic():
         cv2.imwrite("LiveImage.png", image)
 
         # Show it to us, if we are previewing! (not during hangout mode, though, never preview there)
-        if utils.settings.cam_image_preview and not utils.settings.hangout_mode:
+        if settings.cam_image_preview and not settings.hangout_mode:
 
             # Loop to wait for image preview
-            while (utils.hotkeys.VIEW_IMAGE_PRESSED is not True) and (utils.hotkeys.CANCEL_IMAGE_PRESSED is not True):
+            while (hotkeys.VIEW_IMAGE_PRESSED is not True) and (hotkeys.CANCEL_IMAGE_PRESSED is not True):
                 cv2.imshow("Z-Waif Image Preview", image)
                 cv2.waitKey(6000)
                 cv2.destroyAllWindows()
@@ -122,7 +122,7 @@ def loop_random_look():
 
         rand_look_value = random.uniform(-0.47, 0.47) + random.uniform(-0.47, 0.47)
 
-        utils.vtube_studio.change_look_level(rand_look_value)
+        vtube_studio.change_look_level(rand_look_value)
 
 def loop_follow_look():
 
@@ -167,7 +167,7 @@ def capture_follow_pic():
                 face_spot = x + (w/2)
 
         face_span = (face_spot - 290) / -300
-        utils.vtube_studio.change_look_level(face_span)
+        vtube_studio.change_look_level(face_span)
 
 
 

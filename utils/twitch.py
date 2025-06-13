@@ -5,22 +5,22 @@ import random
 from dotenv import load_dotenv
 from utils import settings
 import logging
-from utils.logging import log_info, log_error
+from logging import log_info, log_error
 import threading
 import time
 import API.api_controller as api_controller
-from utils.user_context import get_user_context, update_user_context
-from utils.chat_history import get_chat_history, update_chat_history, add_message_to_history
-from utils.message_processing import clean_response, validate_message_safety, add_personality_flavor
-from utils.ai_message_tracker import should_ai_respond, record_ai_message
-from utils.user_relationships import (
+from user_context import get_user_context, update_user_context
+from chat_history import get_chat_history, update_chat_history, add_message_to_history
+from message_processing import clean_response, validate_message_safety, add_personality_flavor
+from ai_message_tracker import should_ai_respond, record_ai_message
+from user_relationships import (
     format_message_with_relationship, 
     add_relationship_context_to_response,
     update_relationship,
     analyze_conversation_style
 )
-from utils.memory_manager import MemoryManager, MultiprocessRAG
-from utils.ai_handler import AIHandler
+from memory_manager import MemoryManager, MultiprocessRAG
+from ai_handler import AIHandler
 from sentence_transformers import SentenceTransformer
 import main
 

@@ -3,7 +3,7 @@ rag_log = "RAG log will go here!"
 kelvin_log = "Live temperature randomness will go here!"
 
 from typing import Any
-from utils.zw_logging import log_info as zw_log_info, log_error as zw_log_error
+from zw_logging import log_info as zw_log_info, log_error as zw_log_error
 
 def update_debug_log(text: Any):
     global debug_log

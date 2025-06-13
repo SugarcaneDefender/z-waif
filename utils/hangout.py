@@ -14,8 +14,8 @@
 import random
 
 import main
-import utils.cane_lib
-import utils.settings
+from utils import cane_lib
+from utils import settings
 import json
 
 
@@ -108,12 +108,12 @@ def reply_decide(input_text: str):
         reply_speed *= 1 + (replies_skipped_stacking * 0.1)
 
     # Reply will have boosted depth and speed value if waifu detects their name in it.
-    if utils.cane_lib.keyword_check(input_text, keywords=[main.char_name]):
+    if cane_lib.keyword_check(input_text, keywords=[main.char_name]):
         reply_depth += 20
         reply_speed += 70
 
     # Reply will have massive depth value if told to "think", "remember", "consider". Use keyword list.
-    if utils.cane_lib.keyword_check(input_text, keywords=configurable_thinking_keywords):
+    if cane_lib.keyword_check(input_text, keywords=configurable_thinking_keywords):
         reply_depth += 60
 
     # Reply will have more camera-ness if we haven't used the camera in a while
@@ -130,7 +130,7 @@ def reply_decide(input_text: str):
         reply_cam *= 0.0
 
     # Reply will have more camera-ness if we say "look at this", "see this". Use keyword list.
-    if utils.cane_lib.keyword_check(input_text, keywords=configurable_camera_keywords):
+    if cane_lib.keyword_check(input_text, keywords=configurable_camera_keywords):
         reply_cam += 120
 
     # Reply will have less value if we are in "Low" engagement mode
@@ -158,7 +158,7 @@ def reply_decide(input_text: str):
     reply_cam *= random.uniform(1 - (randomness_value / 2), 1 + (randomness_value / 2))
 
     # Remove the ability to use the camera if we have no vision
-    if not utils.settings.vision_enabled:
+    if not settings.vision_enabled:
         reply_cam = 0
 
     #

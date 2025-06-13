@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
-from utils.logging import log_info, log_error
+from logging import log_info, log_error
 
 # Store chat histories in memory and persist to file
 CHAT_HISTORIES_FILE = "Configurables/chat_histories.json"

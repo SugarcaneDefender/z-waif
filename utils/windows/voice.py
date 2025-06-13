@@ -4,11 +4,11 @@ import os
 assert os.name == 'nt' # type: ignore
 
 import win32com.client
-import utils.hotkeys
-import utils.voice_splitter
-import utils.zw_logging
-import utils.soundboard
-import utils.settings
+from utils import hotkeys
+from utils import voice_splitter
+from utils import zw_logging
+from utils import soundboard
+from utils import settings
 import API.api_controller
 
 is_speaking = False
@@ -19,15 +19,15 @@ def speak_line(s_message, refuse_pause):
     global cut_voice #, is_speaking
     cut_voice = False
 
-    chunky_message = utils.voice_splitter.split_into_sentences(s_message)
+    chunky_message = voice_splitter.split_into_sentences(s_message)
 
     for chunk in chunky_message:
         try:
             # Play soundbaord sounds, if any
-            pure_chunk = utils.soundboard.extract_soundboard(chunk)
+            pure_chunk = soundboard.extract_soundboard(chunk)
 
             # Cut out if we are not speaking unless spoken to!
-            if utils.settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
+            if settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
                 continue
 
             # Remove any asterisks from being spoken
@@ -49,18 +49,18 @@ def speak_line(s_message, refuse_pause):
                 time.sleep(0.001)   # Still have a mini-mini rest, even with pauses
 
             # Break free if we undo/redo, and stop reading
-            if utils.hotkeys.NEXT_PRESSED or utils.hotkeys.REDO_PRESSED or cut_voice:
+            if hotkeys.NEXT_PRESSED or hotkeys.REDO_PRESSED or cut_voice:
                 cut_voice = False
                 break
 
         except:
-            utils.zw_logging.update_debug_log("Error with voice!")
+            zw_logging.update_debug_log("Error with voice!")
 
 
 
 
     # Reset the volume cooldown so she don't pickup on herself
-    utils.hotkeys.cooldown_listener_timer()
+    hotkeys.cooldown_listener_timer()
 
     set_speaking(False)
 

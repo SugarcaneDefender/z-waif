@@ -10,22 +10,22 @@ import requests
 import sseclient
 
 import main
-import utils.cane_lib
-import utils.based_rag
-import utils.zw_logging
+from utils import cane_lib
+from utils import based_rag
+from utils import zw_logging
 from dotenv import load_dotenv
-import utils.settings
-import utils.retrospect
-import utils.lorebook
-import utils.tag_task_controller
+from utils import settings
+from utils import retrospect
+from utils import lorebook
+from utils import tag_task_controller
 import colorama
-import utils.voice_splitter
-import utils.voice
+from utils import voice_splitter
+from utils import voice
 import emoji
 import threading
-import utils.hotkeys
-import utils.vtube_studio
-import utils.hangout
+from utils import hotkeys
+from utils import vtube_studio
+from utils import hangout
 
 
 load_dotenv()
@@ -76,7 +76,7 @@ with open("Configurables/SoftReset.json", "r") as openfile:
 
 # Load in the stopping strings
 with open("Configurables/StoppingStrings.json", "r") as openfile:
-    utils.settings.stopping_strings = json.load(openfile)
+    settings.stopping_strings = json.load(openfile)
 
 
 def run(user_input, temp_level):
@@ -129,26 +129,26 @@ def run(user_input, temp_level):
     # NOTE: Random temperatures will be inactive if we set another model preset. Quirky!
     #
 
-    if utils.settings.model_preset != "Default":
-        preset = utils.settings.model_preset
+    if settings.model_preset != "Default":
+        preset = settings.model_preset
 
-    utils.logging.kelvin_log = preset
+    logging.kelvin_log = preset
 
     # Set what char/task we are sending to, defaulting to the character card if there is none
-    char_send = utils.settings.cur_task_char
+    char_send = settings.cur_task_char
     if char_send == "None":
         char_send = CHARACTER_CARD
 
     # Forced tokens check
-    cur_tokens_required = utils.settings.max_tokens
+    cur_tokens_required = settings.max_tokens
     if force_token_count:
         cur_tokens_required = forced_token_level
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
-    if utils.settings.newline_cut:
+    stop = settings.stopping_strings
+    if settings.newline_cut:
         stop.append("\n")
-    if utils.settings.asterisk_ban:
+    if settings.asterisk_ban:
         stop.append("*")
 
     # Encode
@@ -175,14 +175,14 @@ def run(user_input, temp_level):
         received_message = html.unescape(received_message)
 
         # If her reply contains RP-ing as other people, supress it form the message
-        if utils.settings.supress_rp:
+        if settings.supress_rp:
             received_message = supress_rp_as_others(received_message)
 
         # If her reply is the same as the last stored one, run another request
         global stored_received_message
 
         if received_message == stored_received_message:
-            utils.logging.update_debug_log(
+            logging.update_debug_log(
                 "Bad message received; same as last attempted generation. Re-generating the reply..."
             )
             run(user_input, 2)
@@ -192,7 +192,7 @@ def run(user_input, temp_level):
 
         # If her reply is the same as any in the past 20 chats, run another request
         if check_if_in_history(received_message):
-            utils.logging.update_debug_log(
+            logging.update_debug_log(
                 "Bad message received; same as a recent chat. Re-generating the reply..."
             )
             run(user_input, 1)
@@ -200,7 +200,7 @@ def run(user_input, temp_level):
 
         # If her reply is blank, request another run, clearing the previous history add, and escape
         if len(received_message) < 3:
-            utils.logging.update_debug_log(
+            logging.update_debug_log(
                 "Bad message received; chat is a runt or blank entirely. Re-generating the reply..."
             )
             run(user_input, 1)
@@ -214,7 +214,7 @@ def run(user_input, temp_level):
             [
                 log_user_input,
                 log_received_message,
-                utils.tag_task_controller.apply_tags(),
+                tag_task_controller.apply_tags(),
                 "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
             ]
         )
@@ -295,26 +295,26 @@ def run_streaming(user_input, temp_level):
     # NOTE: Random temperatures will be inactive if we set another model preset. Quirky!
     #
 
-    if utils.settings.model_preset != "Default":
-        preset = utils.settings.model_preset
+    if settings.model_preset != "Default":
+        preset = settings.model_preset
 
-    utils.logging.kelvin_log = preset
+    logging.kelvin_log = preset
 
     # Set what char/task we are sending to, defaulting to the character card if there is none
-    char_send = utils.settings.cur_task_char
+    char_send = settings.cur_task_char
     if char_send == "None":
         char_send = CHARACTER_CARD
 
     # Forced tokens check
-    cur_tokens_required = utils.settings.max_tokens
+    cur_tokens_required = settings.max_tokens
     if force_token_count:
         cur_tokens_required = forced_token_level
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
-    if utils.settings.newline_cut:
+    stop = settings.stopping_strings
+    if settings.newline_cut:
         stop.append("\n")
-    if utils.settings.asterisk_ban:
+    if settings.asterisk_ban:
         stop.append("*")
 
     # Encode
@@ -347,7 +347,7 @@ def run_streaming(user_input, temp_level):
         + "--"
         + colorama.Fore.RESET
         + "----"
-        + utils.settings.char_name
+        + settings.char_name
         + "----"
         + colorama.Fore.MAGENTA
         + colorama.Style.BRIGHT
@@ -366,7 +366,7 @@ def run_streaming(user_input, temp_level):
     client = sseclient.SSEClient(stream_response)
 
     # Clear streamed emote list
-    utils.vtube_studio.clear_streaming_emote_list()
+    vtube_studio.clear_streaming_emote_list()
 
     assistant_message = ""
     supressed_rp = False
@@ -391,7 +391,7 @@ def run_streaming(user_input, temp_level):
         # Cut for the hangout name being said
         if (
             streamed_response_check == "Hangout-Name-Cut"
-            and utils.settings.hangout_mode
+            and settings.hangout_mode
         ):
 
             # Add any existing stuff to our actual chat history
@@ -399,7 +399,7 @@ def run_streaming(user_input, temp_level):
                 [
                     user_input,
                     assistant_message,
-                    utils.settings.cur_tags,
+                    settings.cur_tags,
                     "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
                 ]
             )
@@ -417,12 +417,12 @@ def run_streaming(user_input, temp_level):
             return
 
         # Check if we need to force skip the stream (hotkey or manually)
-        if utils.hotkeys.pull_next_press_input() or force_skip_streaming:
+        if hotkeys.pull_next_press_input() or force_skip_streaming:
             force_skip_streaming = True
             break
 
         # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
-        if utils.settings.supress_rp and (
+        if settings.supress_rp and (
             supress_rp_as_others(assistant_message) != assistant_message
         ):
             assistant_message = supress_rp_as_others(assistant_message)
@@ -433,7 +433,7 @@ def run_streaming(user_input, temp_level):
     if force_skip_streaming:
         force_skip_streaming = False
         print("\nSkipping message, redoing!\n")
-        utils.logging.update_debug_log(
+        logging.update_debug_log(
             "Got an input to regenerate! Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -442,17 +442,17 @@ def run_streaming(user_input, temp_level):
     # Read the final sentence aloud (if it wasn't suppressed because of anti-RP rules)
     if not supressed_rp:
         s_assistant_message = emoji.replace_emoji(assistant_message, replace="")
-        sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
+        sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
 
         # Emotes
-        if utils.settings.vtube_enabled:
-            utils.vtube_studio.set_emote_string(s_assistant_message)
-            utils.vtube_studio.check_emote_string_streaming()
+        if settings.vtube_enabled:
+            vtube_studio.set_emote_string(s_assistant_message)
+            vtube_studio.check_emote_string_streaming()
 
         # Speaking
         if not main.live_pipe_no_speak:
-            utils.voice.set_speaking(True)
-            utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
+            voice.set_speaking(True)
+            voice.speak_line(sentence_list[-1], refuse_pause=True)
 
     # Print Newline
     print("\n")
@@ -469,7 +469,7 @@ def run_streaming(user_input, temp_level):
 
     if received_message == stored_received_message:
         print("\nBad message, redoing!\n")
-        utils.logging.update_debug_log(
+        logging.update_debug_log(
             "Bad message received; same as last attempted generation. Re-generating the reply..."
         )
         run_streaming(user_input, 2)
@@ -480,7 +480,7 @@ def run_streaming(user_input, temp_level):
     # If her reply is the same as any in the past 20 chats, run another request
     if check_if_in_history(received_message):
         print("\nBad message, redoing!\n")
-        utils.logging.update_debug_log(
+        logging.update_debug_log(
             "Bad message received; same as a recent chat. Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -489,7 +489,7 @@ def run_streaming(user_input, temp_level):
     # If her reply is blank, request another run, clearing the previous history add, and escape
     if len(received_message) < 3:
         print("\nBad message, redoing!\n")
-        utils.logging.update_debug_log(
+        logging.update_debug_log(
             "Bad message received; chat is a runt or blank entirely. Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -503,7 +503,7 @@ def run_streaming(user_input, temp_level):
         [
             log_user_input,
             log_received_message,
-            utils.tag_task_controller.apply_tags(),
+            tag_task_controller.apply_tags(),
             "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
         ]
     )
@@ -539,21 +539,21 @@ def streamed_update_handler(chunk, assistant_message):
 
     # Check if the generated update has added a new sentence.
     # If a complete new sentence is found, read it aloud
-    sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
+    sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
 
     if len(sentence_list) > streaming_sentences_ticker:
         streaming_sentences_ticker += 1
 
         # Emotes
-        if utils.settings.vtube_enabled:
-            utils.vtube_studio.set_emote_string(s_assistant_message)
-            utils.vtube_studio.check_emote_string_streaming()
+        if settings.vtube_enabled:
+            vtube_studio.set_emote_string(s_assistant_message)
+            vtube_studio.check_emote_string_streaming()
 
         if not main.live_pipe_no_speak:
-            utils.voice.set_speaking(True)
-            utils.voice.speak_line(sentence_list[-2], refuse_pause=True)
+            voice.set_speaking(True)
+            voice.speak_line(sentence_list[-2], refuse_pause=True)
 
-    if main.live_pipe_use_streamed_interrupt_watchdog and utils.hotkeys.SPEAK_TOGGLED:
+    if main.live_pipe_use_streamed_interrupt_watchdog and hotkeys.SPEAK_TOGGLED:
         return "Cut"
 
     if flag_end_streaming:
@@ -574,18 +574,18 @@ def send_via_oogabooga(user_input):
     # Write last, non-system message to RAG
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
     # NOTE: Not safe for undo! Undo will double paste the message! We have a manual check to not add duplicates now, although, if it is supposed to be a dupe then get rekt XD
-    utils.based_rag.add_message_to_database()
+    based_rag.add_message_to_database()
 
     # RAG
-    if utils.settings.rag_enabled:
-        utils.based_rag.run_based_rag(
+    if settings.rag_enabled:
+        based_rag.run_based_rag(
             user_input, ooga_history[len(ooga_history) - 1][1]
         )
 
     # Run
-    if not utils.settings.stream_chats:
+    if not settings.stream_chats:
         run(user_input, 0)
-    if utils.settings.stream_chats:
+    if settings.stream_chats:
         run_streaming(user_input, 0)
 
 
@@ -596,9 +596,9 @@ def receive_via_oogabooga():
 def send_image_via_oobabooga(direct_talk_transcript):
 
     received_cam_message = ""
-    if not utils.settings.stream_chats:
+    if not settings.stream_chats:
         received_cam_message = view_image(direct_talk_transcript)
-    if utils.settings.stream_chats:
+    if settings.stream_chats:
         received_cam_message = view_image_streaming(direct_talk_transcript)
 
     return received_cam_message
@@ -632,18 +632,18 @@ def next_message_oogabooga():
         print("\nRerolling for visual\n")
 
         # Re-send the new message (visual)
-        if not utils.settings.stream_chats:
+        if not settings.stream_chats:
             view_image(cycle_message)
-        if utils.settings.stream_chats:
+        if settings.stream_chats:
             view_image_streaming(cycle_message)
 
         # 'scape from it
         return
 
     # Re-send the new message
-    if not utils.settings.stream_chats:
+    if not settings.stream_chats:
         run(cycle_message, 0)
-    if utils.settings.stream_chats:
+    if settings.stream_chats:
         run_streaming(cycle_message, 0)
 
 
@@ -653,7 +653,7 @@ def undo_message():
     ooga_history.pop()
 
     # Fix the RAG database
-    utils.based_rag.remove_latest_database_message()
+    based_rag.remove_latest_database_message()
 
     # Save
     save_histories()
@@ -673,7 +673,7 @@ def check_load_past_chat():
         history_loaded = True
 
         # Load in our Based RAG as well
-        utils.based_rag.load_rag_history()
+        based_rag.load_rag_history()
 
         # Make a quick backup of our file (if big enough, that way it won't clear if they happen to load again after it errors to 0 somehow)
         if len(ooga_history) > 30:
@@ -689,7 +689,7 @@ def save_histories():
         json.dump(ooga_history, outfile, indent=4)
 
     # Save RAG database too
-    utils.based_rag.store_rag_history()
+    based_rag.store_rag_history()
 
 
 #
@@ -713,7 +713,7 @@ def save_histories():
 def soft_reset():
 
     # Saftey breaker for if the previous message was also a Soft Reset / System D
-    if utils.cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):
+    if cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):
         print("\nStopping potential additional soft reset!\n")
         return
 
@@ -729,7 +729,7 @@ def soft_reset():
                 message_pair[0],
                 message_pair[1],
                 message_pair[1],
-                utils.settings.cur_tags,
+                settings.cur_tags,
                 "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
             ]
         )
@@ -750,7 +750,7 @@ def prune_deletables():
         i = 0
 
     while i < len(ooga_history) - 8:
-        if utils.cane_lib.keyword_check(ooga_history[i][0], ["[System D]"]):
+        if cane_lib.keyword_check(ooga_history[i][0], ["[System D]"]):
             del ooga_history[i]
             i = len(ooga_history) - 27
             if i < 0:
@@ -795,18 +795,18 @@ def summary_memory_run(messages_input, user_sent_message):
 
     preset = "Z-Waif-ADEF-Standard"
 
-    if utils.settings.model_preset != "Default":
-        preset = utils.settings.model_preset
+    if settings.model_preset != "Default":
+        preset = settings.model_preset
 
-    utils.logging.kelvin_log = preset
-    cur_tokens_required = utils.retrospect.summary_tokens_count
+    logging.kelvin_log = preset
+    cur_tokens_required = retrospect.summary_tokens_count
 
     #
     # NOTE: Does not use the character-task at the moment, be aware.
     #
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = settings.stopping_strings
 
     # Encode
     messages_to_send = messages_input
@@ -832,7 +832,7 @@ def summary_memory_run(messages_input, user_sent_message):
         received_message = html.unescape(received_message)
 
         # If her reply contains RP-ing as other people, supress it form the message
-        if utils.settings.supress_rp:
+        if settings.supress_rp:
             received_message = supress_rp_as_others(received_message)
 
         # If her reply is the same as the last stored one, run another request
@@ -862,7 +862,7 @@ def summary_memory_run(messages_input, user_sent_message):
             [
                 log_user_input,
                 log_received_message,
-                utils.settings.cur_tags,
+                settings.cur_tags,
                 "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
             ]
         )
@@ -961,7 +961,7 @@ def view_image(direct_talk_transcript):
 
     # Write last, non-system message to RAG (Since this is going in addition)
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
-    utils.based_rag.add_message_to_database()
+    based_rag.add_message_to_database()
 
     #
     # Prepare The Context
@@ -1002,7 +1002,7 @@ def view_image(direct_talk_transcript):
         YOUR_NAME
         + ", please view and describe this image in detail, for your main system: \n"
     )
-    if utils.settings.cam_direct_talk:
+    if settings.cam_direct_talk:
         base_prompt = direct_talk_transcript
 
     with open("LiveImage.png", "rb") as f:
@@ -1013,7 +1013,7 @@ def view_image(direct_talk_transcript):
     # Stopping Strings (real important, early vicuna is godlike but also starts to get derailed.
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = settings.stopping_strings
 
     # Send it in for viewing!
 
@@ -1041,7 +1041,7 @@ def view_image(direct_talk_transcript):
         received_cam_message = html.unescape(received_cam_message)
 
     # If her reply contains RP-ing as other people, supress it form the message
-    if utils.settings.supress_rp:
+    if settings.supress_rp:
         received_cam_message = supress_rp_as_others(received_message)
 
     # Add Header
@@ -1049,15 +1049,15 @@ def view_image(direct_talk_transcript):
 
     # Write last, non-system message to RAG
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
-    utils.based_rag.add_message_to_database()
+    based_rag.add_message_to_database()
 
     # Add to hist & such
     base_send = "[System C] Sending an image..."
-    if utils.settings.cam_direct_talk:
+    if settings.cam_direct_talk:
         base_send = direct_talk_transcript
 
     # Prep with visual tag
-    these_tags = utils.settings.cur_tags.copy()
+    these_tags = settings.cur_tags.copy()
     these_tags.append("ZW-Visual")
 
     ooga_history.append(
@@ -1109,7 +1109,7 @@ def view_image_streaming(direct_talk_transcript):
 
     # Write last, non-system message to RAG (Since this is going in addition)
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
-    utils.based_rag.add_message_to_database()
+    based_rag.add_message_to_database()
 
     #
     # Prepare The Context
@@ -1146,7 +1146,7 @@ def view_image_streaming(direct_talk_transcript):
         YOUR_NAME
         + ", please view and describe this image in detail, for your main system: \n"
     )
-    if utils.settings.cam_direct_talk:
+    if settings.cam_direct_talk:
         base_prompt = direct_talk_transcript
 
     with open("LiveImage.png", "rb") as f:
@@ -1157,7 +1157,7 @@ def view_image_streaming(direct_talk_transcript):
     # Stopping Strings (real important, early vicuna is godlike but also starts to get derailed.
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = settings.stopping_strings
 
     supressed_rp = False
 
@@ -1189,7 +1189,7 @@ def view_image_streaming(direct_talk_transcript):
             + "--"
             + colorama.Fore.RESET
             + "----"
-            + utils.settings.char_name
+            + settings.char_name
             + "----"
             + colorama.Fore.MAGENTA
             + colorama.Style.BRIGHT
@@ -1208,7 +1208,7 @@ def view_image_streaming(direct_talk_transcript):
         client = sseclient.SSEClient(stream_response)
 
         # Clear streamed emote list
-        utils.vtube_studio.clear_streaming_emote_list()
+        vtube_studio.clear_streaming_emote_list()
 
         assistant_message = ""
         force_skip_streaming = False
@@ -1231,14 +1231,14 @@ def view_image_streaming(direct_talk_transcript):
             # Cut for the hangout name being said
             if (
                 streamed_response_check == "Hangout-Name-Cut"
-                and utils.settings.hangout_mode
+                and settings.hangout_mode
             ):
                 # Add any existing stuff to our actual chat history
                 ooga_history.append(
                     [
                         direct_talk_transcript,
                         assistant_message,
-                        utils.settings.cur_tags,
+                        settings.cur_tags,
                         "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now()),
                     ]
                 )
@@ -1262,12 +1262,12 @@ def view_image_streaming(direct_talk_transcript):
             # and reveal them as needed. Yes! One day... this isn't particularly important at the moment
 
             # Check if we need to force skip the stream (hotkey or manually)
-            if utils.hotkeys.pull_next_press_input() or force_skip_streaming:
+            if hotkeys.pull_next_press_input() or force_skip_streaming:
                 force_skip_streaming = True
                 break
 
             # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
-            if utils.settings.supress_rp and (
+            if settings.supress_rp and (
                 supress_rp_as_others(assistant_message) != assistant_message
             ):
                 assistant_message = supress_rp_as_others(assistant_message)
@@ -1278,7 +1278,7 @@ def view_image_streaming(direct_talk_transcript):
         if force_skip_streaming:
             force_skip_streaming = False
             print("\nSkipping message, redoing!\n")
-            utils.logging.update_debug_log(
+            logging.update_debug_log(
                 "Got an input to regenerate! Re-generating the reply..."
             )
             # Just set the message to be small, as this will force a re-run due to our while loop rules
@@ -1287,17 +1287,17 @@ def view_image_streaming(direct_talk_transcript):
     # Read the final sentence aloud (if not stopped by RP supr)
     if not supressed_rp:
         s_assistant_message = emoji.replace_emoji(assistant_message, replace="")
-        sentence_list = utils.voice_splitter.split_into_sentences(s_assistant_message)
+        sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
 
         # Emotes
-        if utils.settings.vtube_enabled:
-            utils.vtube_studio.set_emote_string(s_assistant_message)
-            utils.vtube_studio.check_emote_string_streaming()
+        if settings.vtube_enabled:
+            vtube_studio.set_emote_string(s_assistant_message)
+            vtube_studio.check_emote_string_streaming()
 
         # Speaking
         if not main.live_pipe_no_speak:
-            utils.voice.set_speaking(True)
-            utils.voice.speak_line(sentence_list[-1], refuse_pause=True)
+            voice.set_speaking(True)
+            voice.speak_line(sentence_list[-1], refuse_pause=True)
 
     # Print Newline
     print("\n")
@@ -1314,15 +1314,15 @@ def view_image_streaming(direct_talk_transcript):
 
     # Write last, non-system message to RAG
     # NOTE: On re-opening, it will still add the latest message. This is fine! We are just always in debt 1 depth (except from when recalced)
-    utils.based_rag.add_message_to_database()
+    based_rag.add_message_to_database()
 
     # Add to hist & such
     base_send = "[System C] Sending an image..."
-    if utils.settings.cam_direct_talk:
+    if settings.cam_direct_talk:
         base_send = direct_talk_transcript
 
     # Prep with visual tag
-    these_tags = utils.settings.cur_tags.copy()
+    these_tags = settings.cur_tags.copy()
     these_tags.append("ZW-Visual")
 
     ooga_history.append(
@@ -1432,11 +1432,11 @@ def encode_new_api(user_input):
             # Append the lorebook in here, 8 or so back, it will include all lore in the given range
             #
 
-            lore_gathered = utils.lorebook.lorebook_gather(
+            lore_gathered = lorebook.lorebook_gather(
                 ooga_history[-3:], user_input
             )
 
-            if lore_gathered != utils.lorebook.total_lore_default:
+            if lore_gathered != lorebook.total_lore_default:
                 messages_to_send.append({"role": "user", "content": lore_gathered})
 
         if i == marker_length - 9:
@@ -1445,9 +1445,9 @@ def encode_new_api(user_input):
             # Append the RAG in here, 9 or so back, so it has no need to be saved & has good recall without upsetting spacing (only if RAG enabled)
             #
 
-            if utils.settings.rag_enabled:
+            if settings.rag_enabled:
                 messages_to_send.append(
-                    {"role": "user", "content": utils.based_rag.call_rag_message()}
+                    {"role": "user", "content": based_rag.call_rag_message()}
                 )
 
         i = i + 1

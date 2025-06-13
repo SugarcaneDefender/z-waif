@@ -2,14 +2,14 @@
 
 from pythmc import ChatLink
 import pygetwindow
-import utils.cane_lib
+from utils import cane_lib
 import time
 import main
 import API.api_controller
-import utils.settings
+from utils import settings
 import json
 
-from utils.settings import minecraft_enabled
+from settings import minecraft_enabled
 
 if minecraft_enabled:
     chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
@@ -74,7 +74,7 @@ def chat_check_loop():
         time.sleep(0.1)
 
         # Check
-        if utils.settings.minecraft_enabled:
+        if settings.minecraft_enabled:
             check_mc_chat()
 
 
@@ -101,7 +101,7 @@ def check_mc_chat():
         add_message = True
 
         # do not add our own messages, as those are already tracked
-        if utils.cane_lib.keyword_check(message.content, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
+        if cane_lib.keyword_check(message.content, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
             add_message = False
 
         # do not add in remembered messages, as those are already tracked
@@ -128,7 +128,7 @@ def check_mc_chat():
     else:
         last_chat = last_sent
 
-        if utils.cane_lib.keyword_check(last_sent, mc_names) and not utils.cane_lib.keyword_check(last_sent, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
+        if cane_lib.keyword_check(last_sent, mc_names) and not cane_lib.keyword_check(last_sent, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
 
             # Send a MC specific message
             main.main_minecraft_chat(combined_message)

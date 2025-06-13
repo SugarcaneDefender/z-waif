@@ -1,6 +1,6 @@
 import json
 import yaml
-import utils.zw_logging
+from utils import zw_logging
 
 character_card = "No character card loaded!"
 visual_character_card = "No character card loaded!"
@@ -21,4 +21,4 @@ def load_char_card():
             visual_character_card = visual_character_card_loder["Character Card Visual"]
 
     except:
-        utils.zw_logging.update_debug_log("No visual character card found!")
+        zw_logging.update_debug_log("No visual character card found!")

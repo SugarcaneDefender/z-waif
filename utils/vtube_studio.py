@@ -1,6 +1,6 @@
 import time
 
-import utils.cane_lib
+from utils import cane_lib
 import asyncio,os,threading
 import pyvts
 import json
@@ -82,7 +82,7 @@ def check_emote_string():
     # Run through emotes, using OOP to only run one at a time (last = most prominent)
 
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]):
+        if cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]):
             EMOTE_ID = emote_page[1]
             emote_list.append(emote_page[1])
 
@@ -109,7 +109,7 @@ def check_emote_string_streaming():
 
     # Check if there is an emote that we DON'T have in the streaming one!
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]):
+        if cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]):
             emote_list.append(emote_page[1])
             streaming_emote_list.append(emote_page[1])
 

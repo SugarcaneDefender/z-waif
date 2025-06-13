@@ -4,12 +4,12 @@ import keyboard
 # import mouse
 import time
 import threading
-import utils.alarm
-import utils.volume_listener
-import utils.settings
+from utils import alarm
+from utils import volume_listener
+from utils import settings
 import json
-import utils.zw_logging
-import utils.audio
+from utils import zw_logging
+from utils import audio
 
 
 RATE_PRESSED = False
@@ -68,11 +68,11 @@ def load_hotkey_bootstate():
     HOTKEYS_BOOT = os.environ.get("HOTKEYS_BOOT")
 
     if HOTKEYS_BOOT == "ON":
-        utils.settings.hotkeys_locked = False
+        settings.hotkeys_locked = False
 
     if HOTKEYS_BOOT == "OFF":
-        utils.settings.hotkeys_locked = True
-        print("\nInput System Lock Set To " + str(utils.settings.hotkeys_locked) + " !")
+        settings.hotkeys_locked = True
+        print("\nInput System Lock Set To " + str(settings.hotkeys_locked) + " !")
 
     # Also bind all of our needed hotkeys at this point
     bind_all_hotkeys()
@@ -112,12 +112,12 @@ def bind_hotkey(binding, input_action):
         keyboard.on_press_key(binding, lambda _: input_action())
     except:
         print("Issue binding to hotkey " + binding + "!")
-        utils.zw_logging.update_debug_log("Issue binding to hotkey " + binding + "!")
+        zw_logging.update_debug_log("Issue binding to hotkey " + binding + "!")
 
 
 def rate_input(rating):
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     global RATE_PRESSED
@@ -127,7 +127,7 @@ def rate_input(rating):
     RATE_LEVEL = rating
 
 def next_input():
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     global NEXT_PRESSED
@@ -136,7 +136,7 @@ def next_input():
 
 def redo_input():
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     global REDO_PRESSED
@@ -152,7 +152,7 @@ def get_speak_input():
     return SPEAK_TOGGLED
 
 def speak_input_toggle():
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     global SPEAK_TOGGLED
@@ -188,8 +188,8 @@ def run_lock_inputs():
     time.sleep(0.9)
 
     if BACKSLASH_PRESSED:
-        utils.settings.hotkeys_locked = not utils.settings.hotkeys_locked
-        print("\nInput System Lock Set To " + str(utils.settings.hotkeys_locked) + " !")
+        settings.hotkeys_locked = not settings.hotkeys_locked
+        print("\nInput System Lock Set To " + str(settings.hotkeys_locked) + " !")
 
 
 def input_lock_backslash():
@@ -202,7 +202,7 @@ def input_view_image():
     global VIEW_IMAGE_PRESSED
 
     # additional lockout for if the vision system is offline
-    if utils.settings.hotkeys_locked or utils.settings.vision_enabled == False:
+    if settings.hotkeys_locked or settings.vision_enabled == False:
         return
 
     VIEW_IMAGE_PRESSED = True
@@ -211,7 +211,7 @@ def input_cancel_image():
     global CANCEL_IMAGE_PRESSED
 
     # additional lockout for if the vision system is offline
-    if utils.settings.hotkeys_locked or utils.settings.vision_enabled == False:
+    if settings.hotkeys_locked or settings.vision_enabled == False:
         return
 
     CANCEL_IMAGE_PRESSED = True
@@ -237,7 +237,7 @@ def clear_camera_inputs():
 def input_send_blank():
     global BLANK_MESSAGE_PRESSED
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     BLANK_MESSAGE_PRESSED = True
@@ -249,17 +249,17 @@ def get_autochat_toggle():
 def input_toggle_autochat():
     global FULL_AUTO_TOGGLED
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
-    if utils.settings.hangout_mode:
+    if settings.hangout_mode:
         return
 
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
     print("\nFull Auto Set To " + str(FULL_AUTO_TOGGLED) + " !")
 
     # Disable semi-auto
-    utils.settings.semi_auto_chat = False
+    settings.semi_auto_chat = False
 
 
 
@@ -275,48 +275,48 @@ def input_toggle_autochat_from_ui():
     print("\nFull Auto Set To " + str(FULL_AUTO_TOGGLED) + " !")
 
     # Disable semi-auto
-    utils.settings.semi_auto_chat = False
+    settings.semi_auto_chat = False
 
 
 # From keyboard
 def input_toggle_semi_autochat():
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
-    if utils.settings.hangout_mode:
+    if settings.hangout_mode:
         return
 
     # Mutually exclusive
     disable_autochat()
 
-    utils.settings.semi_auto_chat = not utils.settings.semi_auto_chat
+    settings.semi_auto_chat = not settings.semi_auto_chat
 
-    print("\nSemi-Auto Chat set to " + str(utils.settings.semi_auto_chat) + " !")
+    print("\nSemi-Auto Chat set to " + str(settings.semi_auto_chat) + " !")
 
 def input_toggle_hangout_mode():
     global FULL_AUTO_TOGGLED
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
-    if utils.settings.stream_chats is False:
+    if settings.stream_chats is False:
         return  # Not allowed if our chats are not streamed
 
     # It's on rn, disable
-    if utils.settings.hangout_mode is True:
-        utils.settings.hangout_mode = False
-        utils.settings.semi_auto_chat = False
+    if settings.hangout_mode is True:
+        settings.hangout_mode = False
+        settings.semi_auto_chat = False
         FULL_AUTO_TOGGLED = False
 
     # It's off rn, enable
-    elif utils.settings.hangout_mode is False:
-        utils.settings.hangout_mode = True
-        utils.settings.semi_auto_chat = False
+    elif settings.hangout_mode is False:
+        settings.hangout_mode = True
+        settings.semi_auto_chat = False
         FULL_AUTO_TOGGLED = True
 
-    print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
-    utils.zw_logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    print("Hangout mode toggled to " + str(settings.hangout_mode))
+    zw_logging.update_debug_log("Hangout mode toggled to " + str(settings.hangout_mode))
 
 # From webui.
 # Note: Yes, this code is getting a bit jungle like and excessive. But, I want to grow first, and this isn't too bad
@@ -332,23 +332,23 @@ def input_toggle_hangout_mode():
 def web_ui_toggle_hangout_mode():
     global FULL_AUTO_TOGGLED
 
-    if utils.settings.stream_chats is False:
+    if settings.stream_chats is False:
         return  # Not allowed if our chats are not streamed
 
     # It's on rn, disable
-    if utils.settings.hangout_mode is True:
-        utils.settings.hangout_mode = False
-        utils.settings.semi_auto_chat = False
+    if settings.hangout_mode is True:
+        settings.hangout_mode = False
+        settings.semi_auto_chat = False
         FULL_AUTO_TOGGLED = False
 
     # It's off rn, enable
-    elif utils.settings.hangout_mode is False:
-        utils.settings.hangout_mode = True
-        utils.settings.semi_auto_chat = False
+    elif settings.hangout_mode is False:
+        settings.hangout_mode = True
+        settings.semi_auto_chat = False
         FULL_AUTO_TOGGLED = True
 
-    print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
-    utils.zw_logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
+    print("Hangout mode toggled to " + str(settings.hangout_mode))
+    zw_logging.update_debug_log("Hangout mode toggled to " + str(settings.hangout_mode))
 
 def listener_timer():
     global SPEAK_TOGGLED
@@ -361,8 +361,8 @@ def listener_timer():
 
         #
         # Option for traditional volume listener
-        if not utils.settings.use_silero_vad:
-            vol_listener_level = utils.volume_listener.get_vol_level()
+        if not settings.use_silero_vad:
+            vol_listener_level = volume_listener.get_vol_level()
 
             # If we are speaking, add to counter, if not remove from it
             if (vol_listener_level > SPEAKING_VOLUME_SENSITIVITY) and (SPEAKING_TIMER_COOLDOWN == 0):
@@ -378,7 +378,7 @@ def listener_timer():
         #
         # Option for VAD listener
         else:
-            if utils.audio.vad_voice_detected and SPEAKING_TIMER_COOLDOWN == 0:
+            if audio.vad_voice_detected and SPEAKING_TIMER_COOLDOWN == 0:
                 SPEAKING_TIMER += 10
                 if SPEAKING_TIMER > 87:
                     SPEAKING_TIMER = 87
@@ -429,7 +429,7 @@ def cooldown_listener_timer():
 def input_change_listener_sensitivity():
     global SPEAKING_VOLUME_SENSITIVITY
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     if SPEAKING_VOLUME_SENSITIVITY <= 9:
@@ -457,7 +457,7 @@ def input_change_listener_sensitivity_from_ui(value):
 def input_soft_reset():
     global SOFT_RESET_PRESSED
 
-    if utils.settings.hotkeys_locked:
+    if settings.hotkeys_locked:
         return
 
     SOFT_RESET_PRESSED = True
@@ -496,11 +496,11 @@ def chat_input_await():
         global RATE_PRESSED, NEXT_PRESSED, REDO_PRESSED, SOFT_RESET_PRESSED, VIEW_IMAGE_PRESSED, BLANK_MESSAGE_PRESSED
 
         # Breakout if gaming started
-        if utils.settings.is_gaming_loop:
+        if settings.is_gaming_loop:
             break
 
         # Most important is the hangout loop: run that first
-        if utils.settings.hangout_mode:
+        if settings.hangout_mode:
             return "Hangout"
 
         if get_speak_input():
@@ -526,7 +526,7 @@ def chat_input_await():
             return "SOFT_RESET"
 
         # NOTE: Well want to have a central awaiting system later, but right now I'm just adding to here
-        elif utils.alarm.alarm_check():
+        elif alarm.alarm_check():
             return "ALARM"
 
 

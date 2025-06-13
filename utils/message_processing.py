@@ -1,6 +1,6 @@
 import re
 import html
-from utils.logging import log_info
+from logging import log_info
 
 def clean_response(response: str, platform: str) -> str:
     """Clean and format AI response for specific platform"""

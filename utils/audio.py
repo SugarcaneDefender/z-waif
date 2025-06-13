@@ -4,15 +4,15 @@ import pyaudio
 import wave
 
 from pydub import AudioSegment
-import utils.hotkeys
+from utils import hotkeys
 import os, audioop
 
 import sounddevice as sd
 
-import utils.volume_listener
-import utils.transcriber_translate
-import utils.settings
-import utils.voice
+from utils import volume_listener
+from utils import transcriber_translate
+from utils import settings
+from utils import voice
 
 from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
 
@@ -105,7 +105,7 @@ def play_wav(path, audio_level_callback=None):
 
 def record():
     # Breaker for if we are doing chunky transcription, go do that instead!
-    if utils.transcriber_translate.CHUNKY_TRANSCRIPTION == "ON":
+    if transcriber_translate.CHUNKY_TRANSCRIPTION == "ON":
         return record_chunky()
 
     #
@@ -119,7 +119,7 @@ def record():
     if len(chat_buffer_frames) > 1:
         frames = chat_buffer_frames.copy()
 
-    while utils.hotkeys.get_speak_input():
+    while hotkeys.get_speak_input():
         data = stream.read(CHUNK)
         frames.append(data)
 
@@ -188,7 +188,7 @@ def record_ordus():
 def record_chunky():
     frames = []
     all_frames = []
-    utils.transcriber_translate.clear_transcription_chunks()    # Clear old chunks
+    transcriber_translate.clear_transcription_chunks()    # Clear old chunks
 
     # Check for if we want to add our audio buffer
     global chat_buffer_frames
@@ -196,18 +196,18 @@ def record_chunky():
         frames = chat_buffer_frames.copy()
 
     # Loop through until done recording, and limit it to X frames
-    while utils.hotkeys.get_speak_input() and (1 + len(utils.transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
+    while hotkeys.get_speak_input() and (1 + len(transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
         p = pyaudio.PyAudio()
         stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
-        while len(frames) < int(CHUNKY_TRANSCRIPTION_RATE) and utils.hotkeys.get_speak_input():
+        while len(frames) < int(CHUNKY_TRANSCRIPTION_RATE) and hotkeys.get_speak_input():
             data = stream.read(CHUNK)
             frames.append(data)
             all_frames.append(data)
 
         # Wait for another opening to transcribe, we are still transcribing the last chunk!
         # NOTE: If this happens to you, that is bad! It can't even keep up to realtime!
-        while utils.transcriber_translate.chunky_request != None:
+        while transcriber_translate.chunky_request != None:
             time.sleep(0.01)
 
         stream.stop_stream()
@@ -224,7 +224,7 @@ def record_chunky():
         wf.close()
 
         # Transcribe this chunk in another thread!
-        utils.transcriber_translate.give_chunky_request(SAVE_PATH)
+        transcriber_translate.give_chunky_request(SAVE_PATH)
 
         # Clear frames for next loop (keep latest one for quality)
         frames = [frames[-1]]
@@ -241,7 +241,7 @@ def record_chunky():
 def autochat_audio_buffer_record():
 
     # Make sure we have an actual audio device, return otherwise
-    if utils.volume_listener.no_mic:
+    if volume_listener.no_mic:
         return
 
     global chat_buffer_frames
@@ -253,13 +253,13 @@ def autochat_audio_buffer_record():
     while True:
 
         # If there is no autochat, or we are actively in the middle of a chat, clear it
-        if utils.hotkeys.get_autochat_toggle() == False:
+        if hotkeys.get_autochat_toggle() == False:
             time.sleep(0.002)     # Rest here a bit, no need to hotloop it
             chat_buffer_frames = []
 
 
         # If there is autochat, and no active chat, record it
-        elif utils.hotkeys.get_autochat_toggle() == True:
+        elif hotkeys.get_autochat_toggle() == True:
 
             # Record
             data = stream.read(CHUNK)
@@ -274,7 +274,7 @@ def record_vad_loop():
     time.sleep(7)   # 7 second rest to ensure there is time to boot up
 
     # Close out if we are to not use Silero VAD
-    if utils.settings.use_silero_vad == False:
+    if settings.use_silero_vad == False:
         return
 
     #
@@ -282,7 +282,7 @@ def record_vad_loop():
     while True:
 
         # Breaker here to sleep if our VAD/Autochat/Whatever is not running
-        while utils.hotkeys.get_autochat_toggle() == False or utils.hotkeys.SPEAKING_TIMER_COOLDOWN > 0:
+        while hotkeys.get_autochat_toggle() == False or hotkeys.SPEAKING_TIMER_COOLDOWN > 0:
             vad_voice_detected = False
             time.sleep(0.01)
 
