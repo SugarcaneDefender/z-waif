@@ -22,14 +22,29 @@ if not exist "venv" (
 REM Activate virtual environment
 call venv\Scripts\activate.bat
 
-REM Install requirements if needed
-echo Checking and installing requirements...
-pip install -r requirements.txt
+REM Install requirements if they have not been
+if not exist "installed_sentinel.txt" (
+    echo Checking and installing requirements...
+    pip install -r requirements.txt
+    echo "installed" > installed_sentinel.txt
+)
 
 REM Execute the Python script with the correct Python path
 set PYTHONPATH=%SCRIPT_DIR%
-echo Starting Z-Waif...
-python main.py 2> "%LOG_FILE%"
+
+REM Check if any command line arguments were provided
+if "%~1"=="" (
+    echo Starting Z-Waif...
+    echo:
+    echo You can also start Z-Waif with a message by running:
+    echo startup.bat "Your message here"
+    echo:
+    python main.py
+) else (
+    echo Starting Z-Waif with message: %*
+    echo:
+    python main.py %*
+)
 
 echo:
 echo Z-Waif has stopped running! Likely from an error causing a crash...

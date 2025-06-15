@@ -13,7 +13,7 @@ from utils.settings import char_name, MODEL_NAME
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:50534")
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
 # Handle both URL and host:port formats
 if HOST.startswith("http://"):
     BASE_URI = HOST
@@ -140,7 +140,8 @@ def format_prompt_vicuna(user_input, user_context, relationship, conversation_st
 
 def get_model_type():
     """Determine the model type from environment or settings"""
-    model_type = os.environ.get("MODEL_TYPE", "alpaca").lower()
+    # Default to chatml for modern models that support ChatML format
+    model_type = os.environ.get("MODEL_TYPE", "chatml").lower()
     return model_type
 
 def format_request(prompt, model_type, request_params):
@@ -158,7 +159,14 @@ def format_request(prompt, model_type, request_params):
         "relationships with anyone else."
     )
     
-    character_context = os.environ.get("CHARACTER_CONTEXT", "") or base_context
+    # Force personal conversation context (override environment variable)
+    personal_context = (
+        f"You are {character_name}, a caring AI companion having a personal conversation. "
+        "You are warm, friendly, and supportive. Focus on having meaningful one-on-one conversations. "
+        "Never call yourself a bot, chatbot, assistant or AI. You are not streaming or talking to viewers - "
+        "this is a private conversation. Never mention streaming, viewers, chat, or gameplay."
+    )
+    character_context = personal_context
     
     if model_type == "chatml":
         base_req = {
@@ -204,15 +212,20 @@ def extract_response(result, model_type):
         return ""
         
     choice = result["choices"][0]
-    if model_type == "chatml":
-        content = choice.get("message", {}).get("content", "") or choice.get("text", "")
-        # Use character name from settings
-        char = char_name if char_name else "Assistant"
-        if not content.startswith(f"{char}:"):
-            content = f"{char}: {content}"
-        return content
+    
+    # Handle chat completions format (has message.content)
+    if "message" in choice and "content" in choice["message"]:
+        content = choice["message"]["content"]
+    # Handle completions format (has text)
+    elif "text" in choice:
+        content = choice["text"]
     else:
-        return choice.get("text", "") or choice.get("message", {}).get("content", "")
+        return ""
+    
+    if not content or not content.strip():
+        return ""
+        
+    return content.strip()
 
 def api_standard(request):
     try:
@@ -237,12 +250,15 @@ def api_standard(request):
         # Format the request
         formatted_request = format_request(prompt, model_type, request)
 
-        logger.info(f"Sending request to {BASE_URI}/v1/completions")
+        # Determine the correct endpoint based on the request format
+        endpoint = "/v1/chat/completions" if "messages" in formatted_request else "/v1/completions"
+        
+        logger.info(f"Sending request to {BASE_URI}{endpoint}")
         logger.debug(f"Request payload: {json.dumps(formatted_request, indent=2)}")
 
         # Make the API call
         response = requests.post(
-            f"{BASE_URI}/v1/completions",
+            f"{BASE_URI}{endpoint}",
             headers=headers,
             json=formatted_request,
             verify=False,

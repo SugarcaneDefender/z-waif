@@ -28,40 +28,52 @@ based_theme = gr.themes.Base(
 # Button click handlers
 def shadowchats_button_click():
     settings.speak_shadowchats = not settings.speak_shadowchats
+    print(f"[Web-UI] Shadow Chats toggled -> {settings.speak_shadowchats}")
     voice.force_cut_voice()  # Cut any ongoing speech
     return
 
 def speaking_choice_button_click():
     settings.speak_only_spokento = not settings.speak_only_spokento
+    print(f"[Web-UI] Speak-only-when-spoken-to toggled -> {settings.speak_only_spokento}")
     return
 
 def supress_rp_button_click():
     settings.supress_rp = not settings.supress_rp
+    print(f"[Web-UI] Suppress RP toggled -> {settings.supress_rp}")
     return
 
 def newline_cut_button_click():
     settings.newline_cut = not settings.newline_cut
+    print(f"[Web-UI] Newline cut toggled -> {settings.newline_cut}")
     return
 
 def asterisk_ban_button_click():
     settings.asterisk_ban = not settings.asterisk_ban
+    print(f"[Web-UI] Asterisk ban toggled -> {settings.asterisk_ban}")
     return
 
 def hotkey_button_click():
     settings.hotkeys_locked = not settings.hotkeys_locked
+    print(f"[Web-UI] Hotkeys locked toggled -> {settings.hotkeys_locked}")
     return
 
 def change_max_tokens(tokens_count):
-    settings.max_tokens = tokens_count
+    try:
+        settings.max_tokens = int(tokens_count)
+    except ValueError:
+        settings.max_tokens = int(float(tokens_count))
+    print(f"[Web-UI] Max tokens set -> {settings.max_tokens}")
     return
 
 def alarm_button_click(input_time):
     settings.alarm_time = input_time
+    print(f"[Web-UI] Alarm time set -> {settings.alarm_time}")
     print(f"\nAlarm time set as {settings.alarm_time}\n")
     return
 
 def model_preset_button_click(input_text):
     settings.model_preset = input_text
+    print(f"[Web-UI] Model preset set -> {settings.model_preset}")
     print(f"\nChanged model preset to {settings.model_preset}\n")
     return
 
@@ -83,20 +95,19 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             msg = gr.Textbox(scale=3)
 
             def respond(message, chat_history):
-                """Handle chat messages from the web UI"""
-                # Handle blank messages through the blank button
-                if message == "":
-                    return ""
-
-                # Send the message
+                """Handle chat messages from the web UI (blank allowed)"""
+                # Always pass along; API layer converts blank to *listens attentively*
                 main.main_web_ui_chat(message)
                 return ""
 
             def update_chat():
                 """Update the chat display"""
                 try:
+                    # Check the current state of the sending message variable
+                    current_sending = API.api_controller.currently_sending_message
+                    
                     # Return whole chat, plus the one currently being sent
-                    if API.api_controller.currently_sending_message != "":
+                    if current_sending != "":
                         # Prep for viewing without metadata
                         chat_combine = API.api_controller.ooga_history[-30:]
                         chat_combine = [chat[:2] for chat in chat_combine]  # Take only first two elements
@@ -111,7 +122,8 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     else:
                         # Return last 30 messages of chat history
                         chat_combine = API.api_controller.ooga_history[-30:]
-                        return [chat[:2] for chat in chat_combine]  # Take only first two elements
+                        result = [chat[:2] for chat in chat_combine]  # Take only first two elements
+                        return result
                 except Exception as e:
                     zw_logging.log_error(f"Error updating chat: {str(e)}")
                     return []
@@ -157,7 +169,6 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             def send_blank():
                 """Send a blank message through the web UI"""
-                print("\nSending blank message...\n")
                 main.main_web_ui_chat("")
                 return
 
@@ -191,10 +202,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         def change_autochat_sensitivity(autochat_sens):
             
-            if not isinstance(autochat_sens, int): #band-aid fix, but it just works TM
-                autochat_sens = 4
+            if not isinstance(autochat_sens, (int, float)):
+                autochat_sens = 16 # Default value
             
-            hotkeys.input_change_listener_sensitivity_from_ui(autochat_sens)
+            hotkeys.input_change_listener_sensitivity_from_ui(int(autochat_sens))
             return
 
 
@@ -246,10 +257,9 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             return
 
-        with gradio.Row():
+        with gr.Row():
             hangout_mode_button = gr.Button(value="Toggle Hangout Mode")
             hangout_mode_button.click(fn=hangout_mode_button_click)
-
             hangout_mode_checkbox_view = gr.Checkbox(label="Hangout Mode Enabled")
 
 
@@ -350,23 +360,6 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
             #
-            # Reply After
-            #
-
-            # with gr.Row():
-            #     def cam_reply_after_button_click():
-            #         settings.cam_reply_after = not settings.cam_reply_after
-            #
-            #
-            #     with gr.Row():
-            #         cam_reply_after_button = gr.Button(value="Check/Uncheck")
-            #         cam_reply_after_button.click(fn=cam_reply_after_button_click)
-            #
-            #         cam_reply_after_checkbox_view = gr.Checkbox(label="Post Reply / Reply After Image")
-
-
-
-            #
             # Image Preview
             #
 
@@ -415,158 +408,77 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
 
     with gr.Tab("Settings"):
-        # Create settings tab
         with gr.Row():
-            with gr.Column():
-                recording_checkbox_view = gr.Checkbox(label="Now Recording!", value=settings.is_recording)
-                autochat_checkbox_view = gr.Checkbox(label="Auto-Chat Enabled", value=settings.auto_chat)
-                semi_auto_chat_checkbox_view = gr.Checkbox(label="Semi-Auto Chat", value=settings.semi_auto_chat)
-                hangout_mode_checkbox_view = gr.Checkbox(label="Hangout Mode", value=settings.hangout_mode)
-
-            with gr.Column():
-                shadowchats_checkbox_view = gr.Checkbox(label="Shadow Chats", value=settings.speak_shadowchats)
-                speaking_choice_checkbox_view = gr.Checkbox(label="Only Speak When Spoken To", value=settings.speak_only_spokento)
-                supress_rp_checkbox_view = gr.Checkbox(label="Suppress RP", value=settings.supress_rp)
-                newline_cut_checkbox_view = gr.Checkbox(label="Newline Cut", value=settings.newline_cut)
-
-            with gr.Column():
-                asterisk_ban_checkbox_view = gr.Checkbox(label="Asterisk Ban", value=settings.asterisk_ban)
-                hotkey_checkbox_view = gr.Checkbox(label="Hotkeys Locked", value=settings.hotkeys_locked)
-                max_tokens_slider = gr.Slider(minimum=50, maximum=2000, value=settings.max_tokens, label="Max Tokens")
-                alarm_time_box = gr.Textbox(label="Alarm Time", value=settings.alarm_time)
-                model_preset_box = gr.Textbox(label="Model Preset", value=settings.model_preset)
+            shadowchats_button = gr.Button(value="Toggle Shadow-Chat Speaking")
+            shadowchats_button.click(fn=shadowchats_button_click)
+            shadowchats_checkbox_view = gr.Checkbox(label="Shadow-Chats Can Be Spoken", interactive=False)
 
         with gr.Row():
-            with gr.Column():
-                shadowchats_button = gr.Button(value="Toggle Shadow Chats")
-                shadowchats_button.click(fn=shadowchats_button_click)
+            hotkeys_button = gr.Button(value="Toggle Hotkey Lock")
+            hotkeys_button.click(fn=hotkey_button_click)
+            hotkeys_checkbox_view = gr.Checkbox(label="Hotkeys Locked", interactive=False)
 
-                speaking_choice_button = gr.Button(value="Toggle Speak Only When Spoken To")
-                speaking_choice_button.click(fn=speaking_choice_button_click)
+        with gr.Row():
+            rp_sup_button = gr.Button(value="Toggle RP Suppression")
+            rp_sup_button.click(fn=supress_rp_button_click)
+            rp_sup_checkbox_view = gr.Checkbox(label="Suppress RP", interactive=False)
+            
+        with gr.Row():
+            newline_cut_button = gr.Button(value="Toggle Newline Cut")
+            newline_cut_button.click(fn=newline_cut_button_click)
+            newline_cut_checkbox_view = gr.Checkbox(label="Cut on Newline", interactive=False)
+        
+        with gr.Row():
+            asterisk_ban_button = gr.Button(value="Toggle Asterisk Ban")
+            asterisk_ban_button.click(fn=asterisk_ban_button_click)
+            asterisk_ban_checkbox_view = gr.Checkbox(label="Ban Asterisks", interactive=False)
 
-            with gr.Column():
-                supress_rp_button = gr.Button(value="Toggle RP Suppression")
-                supress_rp_button.click(fn=supress_rp_button_click)
-
-                newline_cut_button = gr.Button(value="Toggle Newline Cut")
-                newline_cut_button.click(fn=newline_cut_button_click)
-
-            with gr.Column():
-                asterisk_ban_button = gr.Button(value="Toggle Asterisk Ban")
-                asterisk_ban_button.click(fn=asterisk_ban_button_click)
-
-                hotkey_button = gr.Button(value="Toggle Hotkeys Lock")
-                hotkey_button.click(fn=hotkey_button_click)
-
-        # Update settings view
-        demo.load(update_settings_view, every=0.06,
-            outputs=[
-                recording_checkbox_view,
-                autochat_checkbox_view,
-                semi_auto_chat_checkbox_view,
-                hangout_mode_checkbox_view,
-                shadowchats_checkbox_view,
-                speaking_choice_checkbox_view,
-                supress_rp_checkbox_view,
-                newline_cut_checkbox_view,
-                asterisk_ban_checkbox_view,
-                hotkey_checkbox_view,
-                max_tokens_slider,
-                alarm_time_box,
-                model_preset_box
-            ])
-
-
+        with gr.Row():
+            max_tokens_slider = gr.Slider(minimum=20, maximum=500, value=300, label="Max Tokens", interactive=True)
+            max_tokens_slider.change(fn=change_max_tokens, inputs=max_tokens_slider)
+        
+        with gr.Row():
+            alarm_textbox = gr.Textbox(label="Set Alarm (ex: 12:00)", scale=3, interactive=True)
+            alarm_button = gr.Button(value="Set Alarm")
+            alarm_button.click(fn=alarm_button_click, inputs=alarm_textbox)
+        
+        with gr.Row():
+            model_preset_textbox = gr.Textbox(label="Set Model Preset", scale=3, interactive=True)
+            model_preset_button = gr.Button(value="Set Preset")
+            model_preset_button.click(fn=model_preset_button_click, inputs=model_preset_textbox)
 
     #
-    # Tags / Tasks
+    # TAGS & TASKS
     #
-
     with gr.Tab("Tags & Tasks"):
+        def get_current_tags():
+            return ", ".join(settings.cur_tags) if settings.cur_tags else "None"
 
-        #
-        # Tasks
-
-        cur_task_box = gr.Textbox(label="Current Task")
-
-        def update_task_button_click(input_text):
-
-            # Change the task-tag first
-            tag_task_controller.change_tag_via_task("Task-" + input_text)
-
-            # Now swap the task
-            tag_task_controller.set_task(input_text)
-
-
+        def get_current_task():
+            return settings.cur_task_char
 
         with gr.Row():
-            cur_task_update_box = gr.Textbox(label="Set New Task")
-            cur_task_update_button = gr.Button(value="Update Task")
-            cur_task_update_button.click(fn=update_task_button_click, inputs=cur_task_update_box)
-
-        previous_tasks_box = gr.Textbox(label="Previous Tasks", lines=7)
-
-
-        #
-        # Gaming Loop
-
-        def update_gaming_loop():
-            settings.is_gaming_loop = not settings.is_gaming_loop
-
-        if settings.gaming_enabled:
-
-            with gr.Row():
-                gaming_loop_button = gr.Button(value="Check/Uncheck")
-                gaming_loop_button.click(fn=update_gaming_loop)
-
-                gaming_loop_checkbox_view = gr.Checkbox(label="Gaming Loop")
-
-
-        #
-        # Tags
-
-        cur_tags_box = gr.Textbox(label="Current Tags")
-
-        def update_tags_button_click(new_tags):
-            new_tags = new_tags.replace(" ", "")
-            new_tags_list = new_tags.split(",")
-            print(new_tags_list)
-
-            tag_task_controller.set_tags(new_tags_list)
-
+            current_tags_view = gr.Textbox(label="Current Tags", interactive=False)
+            current_task_view = gr.Textbox(label="Current Task", interactive=False)
+        
+        demo.load(get_current_tags, outputs=current_tags_view, every=0.5)
+        demo.load(get_current_task, outputs=current_task_view, every=0.5)
 
         with gr.Row():
-            cur_tags_update_box = gr.Textbox(label="Set New Tags")
-            cur_tags_update_button = gr.Button(value="Update Tags")
-            cur_tags_update_button.click(fn=update_tags_button_click, inputs=cur_tags_update_box)
+            tag_input = gr.Textbox(label="Add/Remove Tag")
+            add_tag_button = gr.Button("Add Tag")
+            remove_tag_button = gr.Button("Remove Tag")
 
-        previous_tags_box = gr.Textbox(label="Previous Tags", lines=7)
+            add_tag_button.click(lambda x: tag_task_controller.add_tag(x), inputs=tag_input)
+            remove_tag_button.click(lambda x: tag_task_controller.remove_tag(x), inputs=tag_input)
 
-        def update_tag_task_view():
-            cantonese_task_list = ""
-            for task in settings.all_task_char_list:
-                cantonese_task_list += task + "\n"
+        with gr.Row():
+            task_dropdown = gr.Dropdown(choices=settings.all_task_char_list, label="Select Task", interactive=True)
+            set_task_button = gr.Button("Set Task")
+            clear_task_button = gr.Button("Clear Task")
 
-            cantonese_cur_tags_list = ""
-            for tag in settings.cur_tags:
-                cantonese_cur_tags_list += tag + "\n"
-
-            cantonese_all_tags_list = ""
-            for tag in settings.all_tag_list:
-                cantonese_all_tags_list += tag + "\n"
-
-            return settings.cur_task_char, cantonese_task_list, cantonese_cur_tags_list, cantonese_all_tags_list
-
-        def update_autogaming_check():
-            return settings.is_gaming_loop
-
-        if settings.gaming_enabled:
-            demo.load(update_autogaming_check, every=0.05,
-                      outputs=[gaming_loop_checkbox_view])
-
-        demo.load(update_tag_task_view, every=0.1, outputs=[cur_task_box, previous_tasks_box, cur_tags_box, previous_tags_box])
-
-
+            set_task_button.click(lambda x: tag_task_controller.set_task(x), inputs=task_dropdown)
+            clear_task_button.click(lambda: tag_task_controller.set_task("None"))
 
 
 
@@ -610,16 +522,44 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         rag_log = gr.Textbox(links_text, lines=14, label="Links")
 
+    # Universal update function for all dynamic UI elements
+    def update_all_views():
+        return (
+            hotkeys.get_speak_input(),
+            hotkeys.get_autochat_toggle(),
+            settings.semi_auto_chat,
+            settings.hangout_mode,
+            settings.speak_shadowchats,
+            settings.hotkeys_locked,
+            settings.supress_rp,
+            settings.newline_cut,
+            settings.asterisk_ban
+        )
 
-
-
-
-
-
-
+    # A single demo.load call to update all checkboxes simultaneously
+    demo.load(
+        fn=update_all_views,
+        every=0.1,
+        outputs=[
+            recording_checkbox_view,
+            autochat_checkbox_view,
+            semi_auto_chat_checkbox_view,
+            hangout_mode_checkbox_view,
+            shadowchats_checkbox_view,
+            hotkeys_checkbox_view,
+            rp_sup_checkbox_view,
+            newline_cut_checkbox_view,
+            asterisk_ban_checkbox_view
+        ]
+    )
 
 def launch_demo():
-    port = 7864
-    print(f"Web UI available at http://localhost:{port}")
-    demo.launch(server_port=port)
+    # Launch Gradio with error handling and optional shareability
+    try:
+        demo.launch(inbrowser=True, share=False)
+    except Exception as e:
+        if "conflict" in str(e).lower():
+            print("Gradio server is already running. Please close the other instance.")
+        else:
+            print(f"Gradio launch failed: {e}")
 

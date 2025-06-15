@@ -32,11 +32,6 @@ file_handler = RotatingFileHandler(
 file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 app_logger.addHandler(file_handler)
 
-# Add console handler for immediate feedback
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-app_logger.addHandler(console_handler)
-
 # Global log variables for UI display
 debug_log = "General Debug log will go here!\n\nAnd here!"
 rag_log = "RAG log will go here!"
