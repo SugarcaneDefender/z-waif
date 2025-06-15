@@ -1,46 +1,48 @@
+# Standard library imports
+import base64
 import datetime
-import os
 import html
 import json
-import base64
-import time
+import os
 import random
-
-import requests
-import sseclient
-
-import main
-from utils import cane_lib
-from utils import based_rag
-from utils import zw_logging
-from dotenv import load_dotenv
-from utils import settings
-from utils import retrospect
-from utils import lorebook
-from utils import tag_task_controller
-import colorama
-from utils import voice_splitter
-from utils import voice
-import emoji
 import threading
-from utils import hotkeys
-from utils import vtube_studio
-from utils import hangout
-
-import API.oobaooga_api
-import API.ollama_api
-import API.character_card
-
-from ollama import chat
-from ollama import ChatResponse
-
+import time
 from pathlib import Path
 
+# Third-party imports
+import colorama
+import emoji
+import requests
+import sseclient
+from dotenv import load_dotenv
+from ollama import chat, ChatResponse
+
+# Local imports - API modules
+import API.character_card
+import API.oobaooga_api
+import API.ollama_api
 from API.character_card import character_card
+
+# Local imports - Main module
+import main
+
+# Local imports - Utils modules
+from utils import based_rag
+from utils import cane_lib
+from utils import hangout
+from utils import hotkeys
+from utils import lorebook
+from utils import retrospect
+from utils import settings
+from utils import tag_task_controller
+from utils import voice
+from utils import voice_splitter
+from utils import vtube_studio
+from utils import zw_logging
 
 load_dotenv()
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:7860")
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
 # Handle both URL and host:port formats
 if HOST.startswith("http://"):
     URI = f'{HOST}/v1/chat/completions'
@@ -647,8 +649,8 @@ def check_load_past_chat():
         try:
             with open("LiveLogBackup.bak", 'r') as twopenfile:
                 ooga_history_old = json.load(twopenfile)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error loading LiveLogBackup.bak: {e}")
 
         if len(ooga_history) > len(ooga_history_old):
             # Export to JSON

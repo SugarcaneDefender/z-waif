@@ -30,7 +30,7 @@ from utils import hangout
 
 load_dotenv()
 
-HOST = "127.0.0.1:5000"
+HOST = os.environ.get("OOGABOOGA_SUPPORT_HOST", "127.0.0.1:5000")
 URI = f"http://{HOST}/v1/chat/completions"
 URL_MODEL = f"http://{HOST}/v1/engines/"
 

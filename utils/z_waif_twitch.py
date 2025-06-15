@@ -1,10 +1,17 @@
-import twitchio
-from twitchio.ext import commands
-import os
+# Standard library imports
 import asyncio
+import os
 import random
+
+# Third-party imports
+import twitchio
+from twitchio.ext import commands  # type: ignore
 from dotenv import load_dotenv
 
+# Local imports - Main module
+import main
+
+# Local imports - Utils modules
 from utils import uni_pipes
 
 load_dotenv()
@@ -36,7 +43,7 @@ class TwitchBot(commands.Bot):
         print(f'Logged in as | {self.nick}')
         print(f'User id is | {self.user_id}')
 
-    async def event_message(self, message):
+    async def event_message(self, message: twitchio.Message):  # type: ignore
         if message.echo:
             return
 
@@ -53,8 +60,7 @@ class TwitchBot(commands.Bot):
             formatted_message = f"{message.author.name}: {message.content}"
             print(f"[Twitch] Processing message: {formatted_message}")
             
-            # Import main module and call Twitch chat handler
-            import main
+            # Call Twitch chat handler
             reply = main.main_twitch_chat(formatted_message)
             
             print(f"[Twitch] AI replied with: {reply}")
@@ -73,8 +79,8 @@ class TwitchBot(commands.Bot):
                     # Try to send a fallback message
                     try:
                         await message.channel.send("Sorry, I'm having trouble responding right now.")
-                    except:
-                        pass
+                    except Exception as fallback_error:
+                        print(f"[Twitch] Failed to send fallback message: {fallback_error}")
             else:
                 print("[Twitch] No reply generated or reply was empty")
                 
@@ -82,8 +88,8 @@ class TwitchBot(commands.Bot):
             print(f"[Twitch] Error processing message: {e}")
             try:
                 await message.channel.send("Sorry, I encountered an error processing your message.")
-            except:
-                pass
+            except Exception as send_error:
+                print(f"[Twitch] Failed to send error message to chat: {send_error}")
 
         await self.handle_commands(message)
 

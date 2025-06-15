@@ -1,10 +1,16 @@
+# Standard library imports
+import asyncio
+import json
+import os
+import threading
 import time
 
-from utils import cane_lib
-import asyncio,os,threading
+# Third-party imports
 import pyvts
-import json
 from dotenv import load_dotenv
+
+# Local imports - Utils modules
+from utils import cane_lib
 
 VTS = pyvts.vts(
     plugin_info={
@@ -144,8 +150,8 @@ def run_emote(inlist_emote):
 
     try:
         asyncio.run(emote(inlist_emote))
-
-    except:
+    except Exception as e:
+        print(f"Error running VTube Studio emote {inlist_emote}: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest
@@ -213,8 +219,8 @@ def run_clear_look():
 
     try:
         asyncio.run(clear_look())
-
-    except:
+    except Exception as e:
+        print(f"Error clearing VTube Studio look: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest
@@ -224,8 +230,8 @@ def run_set_look():
 
     try:
         asyncio.run(set_look())
-
-    except:
+    except Exception as e:
+        print(f"Error setting VTube Studio look: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest

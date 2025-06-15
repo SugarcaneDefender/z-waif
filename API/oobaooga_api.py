@@ -1,13 +1,18 @@
-import requests
-import os
+# Standard library imports
 import json
 import logging
+import os
 import re
+
+# Third-party imports
+import requests
 import yaml
-from utils.user_context import get_user_context
-from utils.user_relationships import get_relationship_status
+
+# Local imports - Utils modules
 from utils.conversation_analysis import analyze_conversation_style
 from utils.settings import char_name, MODEL_NAME
+from utils.user_context import get_user_context
+from utils.user_relationships import get_relationship_status
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -159,14 +164,12 @@ def format_request(prompt, model_type, request_params):
         "relationships with anyone else."
     )
     
-    # Force personal conversation context (override environment variable)
-    personal_context = (
-        f"You are {character_name}, a caring AI companion having a personal conversation. "
-        "You are warm, friendly, and supportive. Focus on having meaningful one-on-one conversations. "
-        "Never call yourself a bot, chatbot, assistant or AI. You are not streaming or talking to viewers - "
-        "this is a private conversation. Never mention streaming, viewers, chat, or gameplay."
-    )
-    character_context = personal_context
+    # Use API-specific context if available, otherwise fall back to CHARACTER_CONTEXT, then base_context
+    api_context = os.environ.get("API_CHARACTER_CONTEXT", "")
+    if api_context:
+        character_context = api_context
+    else:
+        character_context = os.environ.get("CHARACTER_CONTEXT", "") or base_context
     
     if model_type == "chatml":
         base_req = {
@@ -258,7 +261,7 @@ def api_standard(request):
 
         # Make the API call
         response = requests.post(
-            f"{BASE_URI}{endpoint}",
+            BASE_URI + endpoint,
             headers=headers,
             json=formatted_request,
             verify=False,

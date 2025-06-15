@@ -1,5 +1,10 @@
+# Standard library imports
 import json
+
+# Third-party imports
 import yaml
+
+# Local imports - Utils modules
 from utils import zw_logging
 
 character_card = "No character card loaded!"
@@ -19,6 +24,5 @@ def load_char_card():
         with open("Configurables/CharacterCardVisual.yaml", 'r') as infile:
             visual_character_card_loder = yaml.load(infile, Loader=yaml.FullLoader)
             visual_character_card = visual_character_card_loder["Character Card Visual"]
-
-    except:
-        zw_logging.update_debug_log("No visual character card found!")
+    except Exception as e:
+        zw_logging.update_debug_log(f"No visual character card found: {e}")

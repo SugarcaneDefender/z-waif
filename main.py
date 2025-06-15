@@ -1,46 +1,47 @@
+# Standard library imports
+import asyncio
+import os
 import sys
+import threading
 import time
 
+# Third-party imports
 import colorama
-import humanize, os, threading
 import emoji
-import asyncio
+import humanize
+from dotenv import load_dotenv
 
-from utils import audio
-from utils import hotkeys
-from utils import transcriber_translate
-from utils import voice
-from utils import vtube_studio
-from utils import alarm
-from utils import volume_listener
-from utils import minecraft
-from utils import log_conversion
-from utils import cane_lib
-
+# Local imports - API modules
 import API.api_controller
 import API.character_card
 import API.task_profiles
 
-from utils import lorebook
-from utils import camera
-
-from utils import z_waif_discord
-from utils import z_waif_twitch
-from utils import web_ui
-
-from utils import settings
-from utils import retrospect
+# Local imports - Utils modules
+from utils import alarm
+from utils import audio
 from utils import based_rag
-from utils import tag_task_controller
+from utils import camera
+from utils import cane_lib
+from utils import console_input
 from utils import gaming_control
 from utils import hangout
-
+from utils import hotkeys
+from utils import log_conversion
+from utils import lorebook
+from utils import minecraft
+from utils import retrospect
+from utils import settings
+from utils import tag_task_controller
+from utils import transcriber_translate
 from utils import uni_pipes
+from utils import voice
+from utils import volume_listener
+from utils import vtube_studio
+from utils import web_ui
+from utils import z_waif_discord
+from utils import z_waif_twitch
 from utils import zw_logging
 from utils.chat_history import add_message_to_history
-
-from dotenv import load_dotenv
-from utils import console_input
 
 load_dotenv()
 
@@ -211,7 +212,8 @@ def main_converse():
     size_string = ""
     try:
         size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
+        print(f"Error getting audio buffer size: {e}")
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -272,8 +274,8 @@ def main_converse():
     # After use, delete the recording.
     try:
         os.remove(audio_buffer)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting audio buffer file {audio_buffer}: {e}")
 
 
 def main_message_speak():
@@ -320,7 +322,7 @@ def message_checks(message):
     # Log message only if it was NOT streamed
     if not API.api_controller.last_message_streamed:
         # Use debug log since update_chat_log doesn't exist
-        zw_logging.update_debug_log(f"Message from {char_name if char_name else 'Assistant'}: {message[:100]}...")
+        zw_logging.update_debug_log(f"Message from {char_name if char_name else 'Assistant'}: {message}")
 
     # Print banner + text only if not streamed (streamed path prints in real-time)
     if not API.api_controller.last_message_streamed:
@@ -332,9 +334,9 @@ def message_checks(message):
         print()
 
     # Speak in shadow-chat configuration (non-streamed)
-    if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
-        # voice.speak(message)  # Function doesn't exist in this version
-        pass
+    # if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
+    #     # voice.speak(message)  # Function doesn't exist in this version
+    #     pass
 
     # Plugin checks
     if settings.minecraft_enabled:
@@ -350,9 +352,9 @@ def message_checks(message):
     if settings.gaming_enabled:
         gaming_control.message_inputs(message)
 
-    if settings.rag_enabled:
-        # based_rag.check_message(message)  # Function doesn't exist in this version
-        pass
+    # if settings.rag_enabled:
+    #     # based_rag.check_message(message)  # Function doesn't exist in this version
+    #     pass
 
     # Handle kill-word
     if "/ripout/" in message.lower():
@@ -642,7 +644,7 @@ def main_web_ui_chat_worker(message):
 
     # Send the message to the API
     API.api_controller.send_via_oogabooga(message)
-    
+
     # Get the raw response
     reply_message = API.api_controller.receive_via_oogabooga()
     
@@ -658,7 +660,7 @@ def main_web_ui_chat_worker(message):
             API.api_controller.save_histories()
         
         message_checks(clean_reply)
-    
+
     # Reset suppression flag and run speech pipeline like other shadow chats
     live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
@@ -882,7 +884,7 @@ def view_image_prompt_get():
     size_string = ""
     try:
          size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -958,7 +960,7 @@ def hangout_converse():
     size_string = ""
     try:
          size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -1007,8 +1009,8 @@ def hangout_converse():
     # After use, delete the recording.
     try:
         os.remove(audio_buffer)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting audio buffer file {audio_buffer}: {e}")
 
     return transcript
 
@@ -1179,17 +1181,17 @@ def main_text_chat():
     main_message_speak()
 
 def run_program():
-    # Set up logging first
-    try:
-        log_file = open('log.txt', 'a', encoding='utf-8')
-        sys.stderr = log_file
-        # No need to print startup messages here, they can go in the bat file or at the top of the main loop
-    except Exception as e:
-        # If logging fails, we have to print to the console.
-        print(f"FATAL: Could not open log.txt for writing: {e}")
-        # We can't log this to the file, so just print and exit.
-        input("Press Enter to exit...")
-        return
+    # Set up logging first - commented out since startup script already handles stdout logging
+    # try:
+    #     log_file = open('log.txt', 'a', encoding='utf-8')
+    #     sys.stderr = log_file
+    #     # No need to print startup messages here, they can go in the bat file or at the top of the main loop
+    # except Exception as e:
+    #     # If logging fails, we have to print to the console.
+    #     print(f"FATAL: Could not open log.txt for writing: {e}")
+    #     # We can't log this to the file, so just print and exit.
+    #     input("Press Enter to exit...")
+    #     return
 
     #
     # Startup Prep

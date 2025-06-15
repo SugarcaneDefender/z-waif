@@ -1,15 +1,19 @@
+# Standard library imports
+import json
 import os
+import threading
+import time
 
+# Third-party imports
 import keyboard
 # import mouse
-import time
-import threading
+
+# Local imports - Utils modules
 from utils import alarm
-from utils import volume_listener
-from utils import settings
-import json
-from utils import zw_logging
 from utils import audio
+from utils import settings
+from utils import volume_listener
+from utils import zw_logging
 
 
 RATE_PRESSED = False
@@ -110,9 +114,9 @@ def bind_hotkey(binding, input_action):
 
     try:
         keyboard.on_press_key(binding, lambda _: input_action())
-    except:
-        print("Issue binding to hotkey " + binding + "!")
-        zw_logging.update_debug_log("Issue binding to hotkey " + binding + "!")
+    except Exception as e:
+        print(f"Issue binding to hotkey {binding}: {e}")
+        zw_logging.update_debug_log(f"Issue binding to hotkey {binding}: {e}")
 
 
 def rate_input(rating):
@@ -448,9 +452,8 @@ def get_sensitivity_input():
 
     try:
         new_sens = int(new_sens)
-
-    except:
-        print("Not a valid value! Sensitivity must be a whole number!")
+    except Exception as e:
+        print(f"Not a valid value! Sensitivity must be a whole number! Error: {e}")
         return
 
     if new_sens < 1:

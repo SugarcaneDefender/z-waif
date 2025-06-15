@@ -24,8 +24,8 @@ call venv\Scripts\activate.bat
 
 REM Install requirements if they have not been
 if not exist "installed_sentinel.txt" (
-    echo Checking and installing requirements...
-    pip install -r requirements.txt
+    echo Checking and installing requirements... >> "%LOG_FILE%" 2>&1
+    pip install -r requirements.txt >> "%LOG_FILE%" 2>&1
     echo "installed" > installed_sentinel.txt
 )
 
@@ -39,11 +39,11 @@ if "%~1"=="" (
     echo You can also start Z-Waif with a message by running:
     echo startup.bat "Your message here"
     echo:
-    python main.py
+    python main.py >> "%LOG_FILE%" 2>&1
 ) else (
     echo Starting Z-Waif with message: %*
     echo:
-    python main.py %*
+    python main.py %* >> "%LOG_FILE%" 2>&1
 )
 
 echo:

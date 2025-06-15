@@ -17,8 +17,9 @@ def _reader() -> None:
                 break
             _input_queue.put(line.rstrip("\r\n"))
             _current_input = ""  # Reset on enter
-        except Exception:
-            # Silently ignore any unexpected stdin error to keep main app alive
+        except Exception as e:
+            # Log stdin error but keep main app alive
+            print(f"Console input error: {e}")
             break
 
 def print_safe(message: str) -> None:
