@@ -1181,17 +1181,23 @@ def main_text_chat():
     main_message_speak()
 
 def run_program():
-    # Set up logging first - commented out since startup script already handles stdout logging
-    # try:
-    #     log_file = open('log.txt', 'a', encoding='utf-8')
-    #     sys.stderr = log_file
-    #     # No need to print startup messages here, they can go in the bat file or at the top of the main loop
-    # except Exception as e:
-    #     # If logging fails, we have to print to the console.
-    #     print(f"FATAL: Could not open log.txt for writing: {e}")
-    #     # We can't log this to the file, so just print and exit.
-    #     input("Press Enter to exit...")
-    #     return
+    """Main program startup function with proper error handling"""
+    try:
+        # Initialize colorama for cross-platform colored output
+        colorama.init()
+        
+        print(f"{colorama.Fore.CYAN}Z-WAIF System Initializing...{colorama.Fore.RESET}")
+        
+        # Set up basic error logging (after colorama init)
+        try:
+            zw_logging.log_startup()
+        except Exception as log_error:
+            print(f"Warning: Logging initialization failed: {log_error}")
+        
+    except Exception as e:
+        print(f"FATAL: Failed to initialize basic systems: {e}")
+        input("Press Enter to exit...")
+        return
 
     #
     # Startup Prep
@@ -1391,32 +1397,55 @@ def run_program():
     console_input.start_console_reader()
 
     # Announce that the program is running
-    print("Welcome back! Loading chat interface...\n\n", end="", flush=True)
+    print(f"{colorama.Fore.GREEN}Welcome back! Loading chat interface...{colorama.Fore.RESET}\n")
     
     # Process startup message if provided (after all systems are ready)
     if startup_message:
-        process_startup_message()
+        try:
+            process_startup_message()
+        except Exception as e:
+            print(f"{colorama.Fore.RED}Error processing startup message: {e}{colorama.Fore.RESET}")
+            zw_logging.log_error(f"Startup message error: {e}")
 
-    # Run the primary loop
-    main()
+    # Run the primary loop with error handling
+    try:
+        print(f"{colorama.Fore.CYAN}Z-WAIF is ready! Type messages or use hotkeys...{colorama.Fore.RESET}\n")
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{colorama.Fore.YELLOW}Shutdown requested by user{colorama.Fore.RESET}")
+        sys.exit(0)
+    except Exception as e:
+        print(f"{colorama.Fore.RED}Critical error in main loop: {e}{colorama.Fore.RESET}")
+        zw_logging.log_error(f"Main loop critical error: {e}")
+        print("Check log.txt for details")
+        input("Press Enter to exit...")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
+    try:
+        current_directory = os.path.dirname(os.path.abspath(__file__))
 
-    current_directory = os.path.dirname(os.path.abspath(__file__))
+        # Create the resource directory path based on the current directory
+        resource_directory = os.path.join(current_directory, "utils","resource")
+        os.makedirs(resource_directory, exist_ok=True)
 
-    # Create the resource directory path based on the current directory
-    resource_directory = os.path.join(current_directory, "utils","resource")
-    os.makedirs(resource_directory, exist_ok=True)
+        # Create the voice_in and voice_out directory paths
+        voice_in_directory = os.path.join(resource_directory, "voice_in")
+        voice_out_directory = os.path.join(resource_directory, "voice_out")
 
-    # Create the voice_in and voice_out directory paths
-    voice_in_directory = os.path.join(resource_directory, "voice_in")
-    voice_out_directory = os.path.join(resource_directory, "voice_out")
+        # Create the voice_in and voice_out directories if they don't exist
+        os.makedirs(voice_in_directory, exist_ok=True)
+        os.makedirs(voice_out_directory, exist_ok=True)
 
-    # Create the voice_in and voice_out directories if they don't exist
-    os.makedirs(voice_in_directory, exist_ok=True)
-    os.makedirs(voice_out_directory, exist_ok=True)
-
-
-    run_program()
+        # Run the main program
+        run_program()
+        
+    except Exception as e:
+        # Final catch-all error handler
+        print(f"\nFATAL ERROR: {e}")
+        print("Z-WAIF failed to start properly.")
+        print("Please check your configuration and requirements.")
+        input("Press Enter to exit...")
+        sys.exit(1)
 
