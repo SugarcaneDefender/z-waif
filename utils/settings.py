@@ -9,7 +9,7 @@ load_dotenv()
 
 # API settings
 API_TYPE = os.getenv("API_TYPE", "Oobabooga")  # Default to Oobabooga if not set
-HOST_PORT = os.getenv("HOST_PORT", "127.0.0.1:49493")  # Default to the running server port
+HOST_PORT = os.getenv("HOST_PORT", "127.0.0.1:5000")  # Default to the running server port
 
 # Character settings
 char_name = os.getenv("CHAR_NAME", "")

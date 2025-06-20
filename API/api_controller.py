@@ -1526,11 +1526,16 @@ def encode_new_api_ollama(user_input):
     # Add recent history (last 10 exchanges like release version)
     recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
     
-    for user_msg, assistant_msg in recent_history:
-        if user_msg:
-            messages_to_send.append({"role": "user", "content": user_msg})
-        if assistant_msg:
-            messages_to_send.append({"role": "assistant", "content": assistant_msg})
+    for entry in recent_history:
+        # Handle both old format (2 elements) and new format (4+ elements)
+        if len(entry) >= 2:
+            user_msg = entry[0]
+            assistant_msg = entry[1]
+            
+            if user_msg:
+                messages_to_send.append({"role": "user", "content": user_msg})
+            if assistant_msg:
+                messages_to_send.append({"role": "assistant", "content": assistant_msg})
 
     # Add current user input
     messages_to_send.append({"role": "user", "content": user_input})
@@ -1551,11 +1556,16 @@ def encode_for_oobabooga_chat(user_input):
     # Add recent history (last 10 exchanges like release version)
     recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
     
-    for user_msg, assistant_msg in recent_history:
-        if user_msg:
-            messages.append({"role": "user", "content": str(user_msg)})
-        if assistant_msg:
-            messages.append({"role": "assistant", "content": str(assistant_msg)})
+    for entry in recent_history:
+        # Handle both old format (2 elements) and new format (4+ elements)
+        if len(entry) >= 2:
+            user_msg = entry[0]
+            assistant_msg = entry[1]
+            
+            if user_msg:
+                messages.append({"role": "user", "content": str(user_msg)})
+            if assistant_msg:
+                messages.append({"role": "assistant", "content": str(assistant_msg)})
             
     # Add the current user message
     messages.append({"role": "user", "content": user_input})
