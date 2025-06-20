@@ -176,13 +176,20 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 main.main_undo()
                 return
 
+            def soft_reset():
+                """Trigger a soft reset of the chat system"""
+                API.api_controller.soft_reset()
+                return
+
             button_regen = gr.Button(value="Reroll")
             button_blank = gr.Button(value="Send Blank")
             button_undo = gr.Button(value="Undo")
+            button_soft_reset = gr.Button(value="Chat Soft Reset")
 
             button_regen.click(fn=regenerate)
             button_blank.click(fn=send_blank)
             button_undo.click(fn=undo)
+            button_soft_reset.click(fn=soft_reset)
 
 
         #

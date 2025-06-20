@@ -56,8 +56,8 @@ IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
 IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
 
 received_message = ""
-# Override problematic environment character settings
-CHARACTER_CARD = "None"  # Force no backend character to use our character card
+# Use environment character card setting or None to use system messages
+CHARACTER_CARD = os.environ.get("CHARACTER_CARD", None)
 YOUR_NAME = os.environ.get("YOUR_NAME")
 
 API_TYPE = os.environ.get("API_TYPE", "Oobabooga")
