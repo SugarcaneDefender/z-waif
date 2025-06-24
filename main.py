@@ -55,7 +55,7 @@ is_live_pipe = False
 
 # Not for sure live pipe... atleast how it is counted now. Unipipes in a few updates will clear this up
 # Livepipe is only for the hotkeys actions, that is why... but these are for non-hotkey stuff!
-live_pipe_no_speak = False
+settings.live_pipe_no_speak = False
 live_pipe_force_speak_on_response = False
 live_pipe_use_streamed_interrupt_watchdog = False
 
@@ -389,9 +389,9 @@ def main_minecraft_chat(message):
     """Handle incoming Minecraft game chat (shadow chat)"""
 
     # Flag that we are in a non-spoken shadow chat if shadow-speech is disabled while streaming
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Minecraft chat box can only hold so many characters – force the token count low
     API.api_controller.force_tokens_count(47)
@@ -407,7 +407,7 @@ def main_minecraft_chat(message):
     message_checks(reply_message)
 
     # If we're configured to speak shadow chats and we aren't streaming, speak the line aloud
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -415,9 +415,9 @@ def main_discord_chat(message):
     """Handle Discord chat messages (shadow chat)"""
 
     # Shadow-chat voice suppression when streaming
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Send the Discord message to the LLM
     API.api_controller.send_via_oogabooga(message)
@@ -427,7 +427,7 @@ def main_discord_chat(message):
     message_checks(reply_message)
 
     # Speak it if configured
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -606,16 +606,16 @@ def clean_twitch_response(response):
 def main_twitch_next():
     """Handle Twitch chat regeneration command (shadow chat)"""
 
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     API.api_controller.next_message_oogabooga()
 
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -638,9 +638,9 @@ def main_web_ui_chat_worker(message):
         return
     
     # Web UI messages should use the same improved API as Twitch for consistent personality
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Send the message to the API
     API.api_controller.send_via_oogabooga(message)
@@ -662,16 +662,16 @@ def main_web_ui_chat_worker(message):
         message_checks(clean_reply)
 
     # Reset suppression flag and run speech pipeline like other shadow chats
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_web_ui_next():
     """Handle regeneration requests from the web UI"""
     # Shadow chat regeneration
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Cut voice if needed
     voice.force_cut_voice()
@@ -679,7 +679,7 @@ def main_web_ui_next():
     # If a generation is already running, request skip and exit early
     if API.api_controller.is_in_api_request:
         API.api_controller.set_force_skip_streaming(True)
-        live_pipe_no_speak = False
+        settings.live_pipe_no_speak = False
         return
 
     # Generate new response
@@ -693,16 +693,16 @@ def main_web_ui_next():
         if settings.speak_shadowchats and not settings.stream_chats:
             voice.speak(reply_message)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_discord_next():
 
     # This is a shadow chat
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     API.api_controller.next_message_oogabooga()
 
@@ -711,7 +711,7 @@ def main_discord_next():
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -768,9 +768,9 @@ def main_memory_proc():
         return
 
     # This is a shadow chat
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Retrospect and get a random memory
     retrospect.retrospect_random_mem_summary()
@@ -784,7 +784,7 @@ def main_memory_proc():
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
-    live_pipe_no_speak = False
+    # settings.live_pipe_no_speak moved to settings.py to avoid circular import
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -1037,14 +1037,15 @@ def hangout_reply(transcript):
 
 def hangout_wait_reply_waitportion(transcript):
     # Send our request, be sure to not read it aloud
-    global live_pipe_no_speak, live_pipe_use_streamed_interrupt_watchdog
-    live_pipe_no_speak = True
+    global live_pipe_use_streamed_interrupt_watchdog
+    # Note: settings.live_pipe_no_speak doesn't need global declaration
+    settings.live_pipe_no_speak = True
     live_pipe_use_streamed_interrupt_watchdog = True
 
     API.api_controller.send_via_oogabooga(transcript)
 
     live_pipe_use_streamed_interrupt_watchdog = False
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
 
 def hangout_wait_reply_replyportion():
 
@@ -1070,7 +1071,7 @@ def hangout_wait_reply_replyportion():
 
 
 def hangout_view_image_reply(transcript, dont_speak_aloud):
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
 
     # Give us some feedback
     print("\n\nViewing the camera! Please wait...\n")
@@ -1100,7 +1101,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     direct_talk_transcript = transcript
 
     # Set us speaking aloud or not (controls are in the API script for streamed update handler
-    live_pipe_no_speak = dont_speak_aloud
+    settings.live_pipe_no_speak = dont_speak_aloud
 
     # View and process the image, storing the result
     transcript = API.api_controller.send_image_via_oobabooga_hangout(direct_talk_transcript)
@@ -1109,7 +1110,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     # Run our required message checks
     message_checks(transcript)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
 
     # Clear our appendables (hangout)
     hangout.clear_appendables()
@@ -1262,7 +1263,7 @@ def run_program():
     # Other settings
 
     settings.eyes_follow = os.environ.get("EYES_FOLLOW")
-    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH"))
+    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH", "400"))
 
     silero_string = os.environ.get("SILERO_VAD")
     if silero_string == "ON":

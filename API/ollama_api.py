@@ -88,4 +88,45 @@ def get_temperature_options(temp_level, stop, max_tokens):
             "presence_penalty": model_configs[temp_level]['presence_penalty']
             }
 
+def api_call(user_input, temp_level, max_tokens=150, streaming=False, stop=None, preset=None, char_send=None):
+    """
+    Unified API call function for Ollama that handles both simple and streaming requests.
+    This consolidates the API logic that was previously scattered in api_controller.py.
+    Note: preset and char_send parameters are accepted for interface compatibility but not used by Ollama.
+    """
+    from API.api_controller import encode_new_api_ollama
+    from utils import zw_logging
+    
+    try:
+        # Encode messages for ollama
+        messages = encode_new_api_ollama(user_input)
+        
+        if streaming:
+            # Return streaming response
+            return api_stream(
+                history=messages, 
+                temp_level=temp_level, 
+                stop=stop, 
+                max_tokens=max_tokens
+            )
+        else:
+            # Return simple response
+            return api_standard(
+                history=messages, 
+                temp_level=temp_level, 
+                stop=stop, 
+                max_tokens=max_tokens
+            )
+            
+    except Exception as e:
+        zw_logging.log_error(f"Ollama API request failed: {e}")
+        return "Sorry, I'm having connection issues right now." if not streaming else []
+
+def extract_streaming_chunk(event):
+    """
+    Extract content chunk from Ollama streaming event.
+    This consolidates the API-specific parsing logic.
+    """
+    return event['message']['content']
+
 

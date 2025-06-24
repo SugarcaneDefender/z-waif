@@ -37,7 +37,7 @@ emote_request_list = []
 
 CUR_LOOK = 0
 LOOK_LEVEL_ID = 1
-look_start_id = int(os.environ.get("EYES_START_ID"))
+look_start_id = int(os.environ.get("EYES_START_ID", "0"))
 
 
 # Load in the EmoteLib from configurables

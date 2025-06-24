@@ -92,3 +92,6 @@ rvc_speed = float(os.environ.get("RVC_SPEED", "1.0"))
 MODEL_TYPE = os.environ.get("MODEL_TYPE", "chatml").lower()  # Options: alpaca, chatml, vicuna
 MODEL_NAME = os.environ.get("MODEL_NAME", "Noromaid-7B-0.4-DPO")
 MODEL_TEMPLATE = os.environ.get("MODEL_TEMPLATE", "chatml")  # Template to use for formatting prompts
+
+# Speech control
+live_pipe_no_speak = False

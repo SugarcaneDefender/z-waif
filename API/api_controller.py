@@ -19,9 +19,16 @@ from ollama import chat, ChatResponse
 
 # Local imports - API modules
 import API.character_card
-import API.oobaooga_api
-import API.ollama_api
 from API.character_card import character_card
+
+# Dynamic API import based on API_TYPE
+load_dotenv()  # Load environment variables first
+API_TYPE = os.environ.get("API_TYPE", "Oobabooga")
+
+if API_TYPE == "Ollama":
+    import API.ollama_api as API
+else:  # Default to Oobabooga
+    import API.oobaooga_api as API
 
 # Local imports - Main module
 import main
@@ -40,10 +47,8 @@ from utils import voice_splitter
 from utils import vtube_studio
 from utils import zw_logging
 
-load_dotenv()
-
 HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
-# Handle both URL and host:port formats
+# Handle both URL and host:port formats (http only, no https support yet)
 if HOST.startswith("http://"):
     URI = f'{HOST}/v1/chat/completions'
     URL_MODEL = f'{HOST}/v1/engines/'
@@ -51,16 +56,15 @@ else:
     URI = f'http://{HOST}/v1/chat/completions'
     URL_MODEL = f'http://{HOST}/v1/engines/'
 
-IMG_PORT = os.environ.get("IMG_PORT")
-IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
-IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
+IMG_HOST = os.environ.get("IMG_HOST", "127.0.0.1")
+IMG_PORT = os.environ.get("IMG_PORT", "5007")
+IMG_URI = f'http://{IMG_HOST}:{IMG_PORT}/v1/chat/completions'
+IMG_URL_MODEL = f'http://{IMG_HOST}:{IMG_PORT}/v1/engines/'
 
 received_message = ""
 # Use environment character card setting or None to use system messages
 CHARACTER_CARD = os.environ.get("CHARACTER_CARD", None)
 YOUR_NAME = os.environ.get("YOUR_NAME")
-
-API_TYPE = os.environ.get("API_TYPE", "Oobabooga")
 
 history_loaded = False
 
@@ -70,8 +74,8 @@ headers = {
     "Content-Type": "application/json"
 }
 
-max_context = int(os.environ.get("TOKEN_LIMIT"))
-marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT"))
+max_context = int(os.environ.get("TOKEN_LIMIT", "4096"))
+marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT", "30"))
 
 force_token_count = False
 forced_token_level = 120
@@ -135,30 +139,14 @@ def run(user_input, temp_level):
     # Check for name in message
     check_for_name_in_message(user_input)
     
-    # Simple API call - like release version
+    # Simple API call using unified interface
     try:
-        if API_TYPE == "Oobabooga":
-            # Simple request like release version
-            messages = encode_for_oobabooga_chat(user_input)
-            request = {
-                "messages": messages, 
-                'max_tokens': 150,  # Fixed like release version
-                'temperature': temp_level,
-                'mode': 'chat'
-            }
-            # Don't use character parameter - use system messages only
-            received_message = API.oobaooga_api.api_standard(request)
-            
-        elif API_TYPE == "Ollama":
-            messages = encode_new_api_ollama(user_input)
-            received_message = API.ollama_api.api_standard(
-                history=messages, 
-                temp_level=temp_level, 
-                max_tokens=150
-            )
-        else:
-            received_message = "Error: Unknown API type."
-            
+        received_message = API.api_call(
+            user_input=user_input,
+            temp_level=temp_level,
+            max_tokens=150,
+            streaming=False
+        )
     except Exception as e:
         zw_logging.log_error(f"API request failed: {e}")
         received_message = "Sorry, I'm having connection issues right now."
@@ -174,11 +162,11 @@ def run(user_input, temp_level):
     # Log it to our history - simplified format like release version
     ooga_history.append([user_input, received_message])
     
-    # We are done with our API request!
-    is_in_api_request = False
-    
     # Save history
     save_histories()
+    
+    # We are done with our API request!
+    is_in_api_request = False
 
     return received_message
 
@@ -226,7 +214,7 @@ def run_streaming(user_input, temp_level):
     preset = 'Z-Waif-ADEF-Standard'
     if random.random() > 0.77:
         preset = 'Z-Waif-ADEF-Tempered'
-    if random.random() > 0.994:
+    if random.random() > 0.99:
         preset = 'Z-Waif-ADEF-Blazing'
 
     if temp_level == 1:
@@ -265,46 +253,16 @@ def run_streaming(user_input, temp_level):
     # Reset the ticker (starts counting at 1)
     streaming_sentences_ticker = 1
 
-    # Send the actual API Request
-    if API_TYPE == "Oobabooga":
-        messages = encode_for_oobabooga_chat(user_input)
-        request = {
-            "messages": messages,
-            'max_tokens': cur_tokens_required,
-            'mode': 'chat',
-            'truncation_length': max_context,
-            'stop': stop,
-            'preset': preset,
-            'stream': True
-        }
-        # Only add character if we have one - otherwise use system messages
-        if char_send and char_send != "None":
-            request['character'] = char_send
-
-        # Actual streaming bit
-        try:
-            stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-            stream_response.raise_for_status()
-            client = sseclient.SSEClient(stream_response)
-            streamed_api_stringpuller = client.events()
-        except requests.exceptions.RequestException as e:
-            zw_logging.log_error(f"Oobabooga API request failed: {e}")
-            streamed_api_stringpuller = []
-        except Exception as e:
-            zw_logging.log_error(f"Unexpected error in Oobabooga streaming API: {e}")
-            streamed_api_stringpuller = []
-
-    elif API_TYPE == "Ollama":
-        try:
-            messages = encode_new_api_ollama(user_input)
-            streamed_api_stringpuller = API.ollama_api.api_stream(history=messages, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
-        except Exception as e:
-            zw_logging.log_error(f"Ollama streaming API request failed: {e}")
-            streamed_api_stringpuller = []
-    
-    else:
-        zw_logging.log_error(f"Unknown API_TYPE for streaming: {API_TYPE}")
-        streamed_api_stringpuller = []
+    # Send the actual API Request using unified interface
+    streamed_api_stringpuller = API.api_call(
+        user_input=user_input,
+        temp_level=temp_level,
+        max_tokens=cur_tokens_required,
+        streaming=True,
+        preset=preset,
+        char_send=char_send,
+        stop=stop
+    )
 
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
@@ -313,22 +271,8 @@ def run_streaming(user_input, temp_level):
     supressed_rp = False
     force_skip_streaming = False
     for event in streamed_api_stringpuller:
-        chunk = ""
-
-        # Split based on API type
-        if API_TYPE == "Oobabooga":
-            try:
-                # Handle chat-style SSE events
-                if event.data:
-                    payload = json.loads(event.data)
-                    if 'choices' in payload and payload['choices']:
-                        delta = payload['choices'][0].get('delta', {})
-                        chunk = delta.get('content', '')
-            except json.JSONDecodeError:
-                # Fallback for older/different formats, though less likely now
-                pass 
-        elif API_TYPE == "Ollama":
-            chunk = event['message']['content']
+        # Extract chunk using unified API interface
+        chunk = API.extract_streaming_chunk(event)
 
         # On first chunk, print the speaker header so output isn't blank beforehand
         if not header_printed:
@@ -398,7 +342,7 @@ def run_streaming(user_input, temp_level):
             vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak and len(sentence_list) > 0:
+        if not settings.live_pipe_no_speak and len(sentence_list) > 0:
             voice.set_speaking(True)
             voice.speak_line(sentence_list[-1], refuse_pause=True)
 
@@ -481,14 +425,14 @@ def streamed_update_handler(chunk, assistant_message):
     # Check if the generated update has added a new sentence.
     # If a complete new sentence is found, read it aloud
     sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
-    if len(sentence_list) > streaming_sentences_ticker and not main.live_pipe_no_speak:
+    if len(sentence_list) > streaming_sentences_ticker and not settings.live_pipe_no_speak:
         # Emotes for VTube Studio
         if settings.vtube_enabled:
             vtube_studio.set_emote_string(sentence_list[streaming_sentences_ticker - 1])
             vtube_studio.check_emote_string_streaming()
 
         # Speaking with RVC support
-        if settings.use_rvc and not main.live_pipe_no_speak:
+        if settings.use_rvc and not settings.live_pipe_no_speak:
             try:
                 # Use RVC for voice conversion
                 voice.set_speaking(True)
@@ -557,7 +501,7 @@ def send_via_oogabooga(user_input):
 def receive_via_oogabooga():
     """Get the last received message"""
     global received_message
-    return received_message if received_message and received_message.strip() else ""
+    return received_message or ""
 
 def send_image_via_oobabooga(direct_talk_transcript):
 
@@ -703,7 +647,7 @@ def soft_reset():
 
     for message_pair in soft_reset_message:
 
-        ooga_history.append([message_pair[0], message_pair[1],  message_pair[1], settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        ooga_history.append([message_pair[0], message_pair[1], message_pair[1], settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
 
@@ -1286,23 +1230,8 @@ def view_image_streaming(direct_talk_transcript):
     force_skip_streaming = False
     supressed_rp = False
     for event in streamed_api_stringpuller:
-        chunk = ""
-
-        # Split based on API type
-        if API_TYPE == "Oobabooga":
-            try:
-                # Handle chat-style SSE events
-                if event.data:
-                    payload = json.loads(event.data)
-                    if 'choices' in payload and payload['choices']:
-                        delta = payload['choices'][0].get('delta', {})
-                        chunk = delta.get('content', '')
-            except json.JSONDecodeError:
-                # Fallback for older/different formats, though less likely now
-                pass 
-        elif API_TYPE == "Ollama":
-            chunk = event['message']['content']
-
+        # Extract chunk using unified API interface
+        chunk = API.extract_streaming_chunk(event)
 
         # On first chunk, print the speaker header so output isn't blank beforehand
         if not header_printed:
@@ -1377,7 +1306,7 @@ def view_image_streaming(direct_talk_transcript):
             vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak and len(sentence_list) > 0:
+        if not settings.live_pipe_no_speak and len(sentence_list) > 0:
             voice.set_speaking(True)
             voice.speak_line(sentence_list[-1], refuse_pause=True)
 
@@ -1473,7 +1402,7 @@ def check_if_in_history(message):
 
 
 # Encodes from the old api's way of storing history (and ooba internal) to the new one
-def encode_new_api(user_input):
+def _encode_new_api_deprecated(user_input):
     """
     DEPRECATED: This function creates a flat string prompt.
     The new standard is to use a structured message list.

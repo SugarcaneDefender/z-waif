@@ -7,12 +7,14 @@ import re
 # Third-party imports
 import requests
 import yaml
+import sseclient
 
 # Local imports - Utils modules
 from utils.conversation_analysis import analyze_conversation_style
 from utils.settings import char_name, MODEL_NAME
 from utils.user_context import get_user_context
 from utils.user_relationships import get_relationship_status
+from utils import zw_logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -296,3 +298,79 @@ def api_standard(request):
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return "Error: An unexpected error occurred while processing the API response."
+
+def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=None, char_send=None, stop=None):
+    """
+    Unified API call function for Oobabooga that handles both simple and streaming requests.
+    This consolidates the API logic that was previously scattered in api_controller.py.
+    """
+    from API.api_controller import encode_for_oobabooga_chat, max_context, HOST, headers
+    import requests
+    import sseclient
+    from utils import zw_logging
+    
+    try:
+        # Encode messages for oobabooga chat format
+        messages = encode_for_oobabooga_chat(user_input)
+        
+        # Build the request
+        request = {
+            "messages": messages,
+            'max_tokens': max_tokens,
+            'temperature': temp_level,
+            'mode': 'chat'
+        }
+        
+        # Add streaming-specific parameters
+        if streaming:
+            request.update({
+                'truncation_length': max_context,
+                'stream': True
+            })
+            if stop:
+                request['stop'] = stop
+            if preset:
+                request['preset'] = preset
+            # Only add character if we have one - otherwise use system messages
+            if char_send and char_send != "None":
+                request['character'] = char_send
+        
+        # Handle both URL and host:port formats (http only, no https support yet)
+        if HOST.startswith("http://"):
+            uri = f'{HOST}/v1/chat/completions'
+        else:
+            uri = f'http://{HOST}/v1/chat/completions'
+        
+        if streaming:
+            # Return streaming response
+            stream_response = requests.post(uri, headers=headers, json=request, verify=False, stream=True)
+            stream_response.raise_for_status()
+            client = sseclient.SSEClient(stream_response)
+            return client.events()
+        else:
+            # Return simple response
+            return api_standard(request)
+            
+    except requests.exceptions.RequestException as e:
+        zw_logging.log_error(f"Oobabooga API request failed: {e}")
+        return "Sorry, I'm having connection issues right now." if not streaming else []
+    except Exception as e:
+        zw_logging.log_error(f"Unexpected error in Oobabooga API: {e}")
+        return "Sorry, I'm having trouble responding right now." if not streaming else []
+
+def extract_streaming_chunk(event):
+    """
+    Extract content chunk from Oobabooga streaming event.
+    This consolidates the API-specific parsing logic.
+    """
+    try:
+        # Handle chat-style SSE events
+        if event.data:
+            payload = json.loads(event.data)
+            if 'choices' in payload and payload['choices']:
+                delta = payload['choices'][0].get('delta', {})
+                return delta.get('content', '')
+    except json.JSONDecodeError:
+        # Fallback for older/different formats, though less likely now
+        pass
+    return ""
