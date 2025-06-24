@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 
@@ -966,6 +967,16 @@ def run_program():
     # Load the previous chat history, and make a backup of it
     API.api_controller.check_load_past_chat()
 
+    # Load in our chatpops
+    chatpops_enabled_string = os.environ.get("USE_CHATPOPS")
+    if chatpops_enabled_string == "ON":
+        utils.settings.use_chatpops = True
+    else:
+        utils.settings.use_chatpops = False
+
+    with open("Configurables/Chatpops.json", 'r') as openfile:
+        utils.settings.chatpop_phrases = json.load(openfile)
+
 
     # Start the VTube Studio interaction in a separate thread, we ALWAYS do this FYI
     if utils.settings.vtube_enabled:
@@ -1043,9 +1054,8 @@ def run_program():
     # calculated_test = 0 / 0
 
     # Load our character card and task files (for Ollama)
-    if API.api_controller.API_TYPE == "Ollama":
-        API.character_card.load_char_card()
-        API.task_profiles.load_task_profiles()
+    API.character_card.load_char_card()
+    API.task_profiles.load_task_profiles()
 
     # Run the primary loop
     main()

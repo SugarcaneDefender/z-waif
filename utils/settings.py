@@ -13,6 +13,8 @@ stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
 
 semi_auto_chat = False
 hangout_mode = False
+use_chatpops = True
+chatpop_phrases = []
 
 autochat_mininum_chat_frames = 149
 use_silero_vad = True

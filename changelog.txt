@@ -1,5 +1,25 @@
 Changelog
 
+v1.13
+
+- Added API_TYPE_VISUAL in the .env
+	- Allows you to use a different API for your visual requests.
+	- Mostly so you can use Oobabooga as the main, and Ollama as a visual assistant.
+
+- Added Chatpops
+	- Small phrases said before saying their actual message, as the prompt evaluates.
+	- Lowers perceived response time, and let you know that they are responding.
+	- Only works with API_STREAM messages.
+	- Configurable.
+
+- Adjusted the RAG to be faster by storing fewer common words, and by tending to provide shorter memories.
+- Updated requirements.
+- Chat requests that come back blank now add in a " Hmm." at the end of the message.
+	- This is to fix issues with streaming_lm and other issues where repeating the prompt causes soft failures.
+
+
+---.---.---.---
+
 v1.12
 
 - Silero VAD

@@ -350,6 +350,7 @@ def web_ui_toggle_hangout_mode():
     print("Hangout mode toggled to " + str(utils.settings.hangout_mode))
     utils.zw_logging.update_debug_log("Hangout mode toggled to " + str(utils.settings.hangout_mode))
 
+
 def listener_timer():
     global SPEAK_TOGGLED
     global general_listener_speaking_detected
