@@ -60,29 +60,23 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.12
+v1.13
 
-- Silero VAD
-	- Voice activity detection for the autochat. Based on if speech is detected, instead of just volume.
-	- Around ~0.7 seconds of additional delay, but more accurate.
-	- Toggleable in the .env, ON by default.
+- Added API_TYPE_VISUAL in the .env
+	- Allows you to use a different API for your visual requests.
+	- Mostly so you can use Oobabooga as the main, and Ollama as a visual assistant.
 
-- Improved repeat detection at the end of messages.
-	- No longer splits with punctuation, but loops through increasing string segments to check for repetition.
-	- Old version is kept in code, renamed to "old_remove_repeats".
+- Added Chatpops
+	- Small phrases said before saying their actual message, as the prompt evaluates.
+	- Lowers perceived response time, and let you know that they are responding.
+	- Only works with API_STREAM messages.
+	- Configurable.
 
-- Added a configurable option in the .env to let you change the minimum activation length for the autochat.
-- Widened the autochat buffer (amount of recording picked up before chat is triggered) a bit.
+- Adjusted the RAG to be faster by storing fewer common words, and by tending to provide shorter memories.
+- Updated requirements.
+- Chat requests that come back blank now add in a " Hmm." at the end of the message.
+	- This is to fix issues with streaming_lm and other issues where repeating the prompt causes soft failures.
 
-- Asterisks will no longer be read out loud.
-- Requests through the API will only automatically retry 4 times.
-	- This is the "Bad message - redoing...", when you see that.
-	- Saves resources, it is a lost cause at that point.
-- Fixed an issue where multiple exclamation marks would cause the bot to not speak the sentence aloud.
-- Added a "/RipOut/" command for bots to use. If they generate this, it will close the program.
-	- Good to let them know about it if left on their own for a bit, that way they don't spiral.
-- Adjusted default options for Ollama.
-- Adjusted default options for Oobabooga.
 
 ## To-Do
 
