@@ -1,4 +1,7 @@
+# Standard library imports
 import os
+
+# Third-party imports
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -6,7 +9,7 @@ load_dotenv()
 
 # API settings
 API_TYPE = os.getenv("API_TYPE", "Oobabooga")  # Default to Oobabooga if not set
-HOST_PORT = os.getenv("HOST_PORT", "127.0.0.1:50534")  # Default to the running server port
+HOST_PORT = os.getenv("HOST_PORT", "127.0.0.1:5000")  # Default to the running server port
 
 # Character settings
 char_name = os.getenv("CHAR_NAME", "")
@@ -89,3 +92,6 @@ rvc_speed = float(os.environ.get("RVC_SPEED", "1.0"))
 MODEL_TYPE = os.environ.get("MODEL_TYPE", "chatml").lower()  # Options: alpaca, chatml, vicuna
 MODEL_NAME = os.environ.get("MODEL_NAME", "Noromaid-7B-0.4-DPO")
 MODEL_TEMPLATE = os.environ.get("MODEL_TEMPLATE", "chatml")  # Template to use for formatting prompts
+
+# Speech control
+live_pipe_no_speak = False

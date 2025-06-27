@@ -1,19 +1,26 @@
-import requests
-import os
+# Standard library imports
 import json
 import logging
+import os
 import re
+
+# Third-party imports
+import requests
 import yaml
-from utils.user_context import get_user_context
-from utils.user_relationships import get_relationship_status
+import sseclient
+
+# Local imports - Utils modules
 from utils.conversation_analysis import analyze_conversation_style
 from utils.settings import char_name, MODEL_NAME
+from utils.user_context import get_user_context
+from utils.user_relationships import get_relationship_status
+from utils import zw_logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:50534")
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
 # Handle both URL and host:port formats
 if HOST.startswith("http://"):
     BASE_URI = HOST
@@ -140,7 +147,8 @@ def format_prompt_vicuna(user_input, user_context, relationship, conversation_st
 
 def get_model_type():
     """Determine the model type from environment or settings"""
-    model_type = os.environ.get("MODEL_TYPE", "alpaca").lower()
+    # Default to chatml for modern models that support ChatML format
+    model_type = os.environ.get("MODEL_TYPE", "chatml").lower()
     return model_type
 
 def format_request(prompt, model_type, request_params):
@@ -158,7 +166,12 @@ def format_request(prompt, model_type, request_params):
         "relationships with anyone else."
     )
     
-    character_context = os.environ.get("CHARACTER_CONTEXT", "") or base_context
+    # Use API-specific context if available, otherwise fall back to CHARACTER_CONTEXT, then base_context
+    api_context = os.environ.get("API_CHARACTER_CONTEXT", "")
+    if api_context:
+        character_context = api_context
+    else:
+        character_context = os.environ.get("CHARACTER_CONTEXT", "") or base_context
     
     if model_type == "chatml":
         base_req = {
@@ -204,15 +217,20 @@ def extract_response(result, model_type):
         return ""
         
     choice = result["choices"][0]
-    if model_type == "chatml":
-        content = choice.get("message", {}).get("content", "") or choice.get("text", "")
-        # Use character name from settings
-        char = char_name if char_name else "Assistant"
-        if not content.startswith(f"{char}:"):
-            content = f"{char}: {content}"
-        return content
+    
+    # Handle chat completions format (has message.content)
+    if "message" in choice and "content" in choice["message"]:
+        content = choice["message"]["content"]
+    # Handle completions format (has text)
+    elif "text" in choice:
+        content = choice["text"]
     else:
-        return choice.get("text", "") or choice.get("message", {}).get("content", "")
+        return ""
+    
+    if not content or not content.strip():
+        return ""
+        
+    return content.strip()
 
 def api_standard(request):
     try:
@@ -237,12 +255,15 @@ def api_standard(request):
         # Format the request
         formatted_request = format_request(prompt, model_type, request)
 
-        logger.info(f"Sending request to {BASE_URI}/v1/completions")
+        # Determine the correct endpoint based on the request format
+        endpoint = "/v1/chat/completions" if "messages" in formatted_request else "/v1/completions"
+        
+        logger.info(f"Sending request to {BASE_URI}{endpoint}")
         logger.debug(f"Request payload: {json.dumps(formatted_request, indent=2)}")
 
         # Make the API call
         response = requests.post(
-            f"{BASE_URI}/v1/completions",
+            BASE_URI + endpoint,
             headers=headers,
             json=formatted_request,
             verify=False,
@@ -277,3 +298,79 @@ def api_standard(request):
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return "Error: An unexpected error occurred while processing the API response."
+
+def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=None, char_send=None, stop=None):
+    """
+    Unified API call function for Oobabooga that handles both simple and streaming requests.
+    This consolidates the API logic that was previously scattered in api_controller.py.
+    """
+    from API.api_controller import encode_for_oobabooga_chat, max_context, HOST, headers
+    import requests
+    import sseclient
+    from utils import zw_logging
+    
+    try:
+        # Encode messages for oobabooga chat format
+        messages = encode_for_oobabooga_chat(user_input)
+        
+        # Build the request
+        request = {
+            "messages": messages,
+            'max_tokens': max_tokens,
+            'temperature': temp_level,
+            'mode': 'chat'
+        }
+        
+        # Add streaming-specific parameters
+        if streaming:
+            request.update({
+                'truncation_length': max_context,
+                'stream': True
+            })
+            if stop:
+                request['stop'] = stop
+            if preset:
+                request['preset'] = preset
+            # Only add character if we have one - otherwise use system messages
+            if char_send and char_send != "None":
+                request['character'] = char_send
+        
+        # Handle both URL and host:port formats (http only, no https support yet)
+        if HOST.startswith("http://"):
+            uri = f'{HOST}/v1/chat/completions'
+        else:
+            uri = f'http://{HOST}/v1/chat/completions'
+        
+        if streaming:
+            # Return streaming response
+            stream_response = requests.post(uri, headers=headers, json=request, verify=False, stream=True)
+            stream_response.raise_for_status()
+            client = sseclient.SSEClient(stream_response)
+            return client.events()
+        else:
+            # Return simple response
+            return api_standard(request)
+            
+    except requests.exceptions.RequestException as e:
+        zw_logging.log_error(f"Oobabooga API request failed: {e}")
+        return "Sorry, I'm having connection issues right now." if not streaming else []
+    except Exception as e:
+        zw_logging.log_error(f"Unexpected error in Oobabooga API: {e}")
+        return "Sorry, I'm having trouble responding right now." if not streaming else []
+
+def extract_streaming_chunk(event):
+    """
+    Extract content chunk from Oobabooga streaming event.
+    This consolidates the API-specific parsing logic.
+    """
+    try:
+        # Handle chat-style SSE events
+        if event.data:
+            payload = json.loads(event.data)
+            if 'choices' in payload and payload['choices']:
+                delta = payload['choices'][0].get('delta', {})
+                return delta.get('content', '')
+    except json.JSONDecodeError:
+        # Fallback for older/different formats, though less likely now
+        pass
+    return ""

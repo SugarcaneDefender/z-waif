@@ -1,47 +1,54 @@
+# Standard library imports
+import base64
 import datetime
-import os
 import html
 import json
-import base64
-import time
+import os
 import random
-
-import requests
-import sseclient
-
-import main
-from utils import cane_lib
-from utils import based_rag
-from utils import zw_logging
-from dotenv import load_dotenv
-from utils import settings
-from utils import retrospect
-from utils import lorebook
-from utils import tag_task_controller
-import colorama
-from utils import voice_splitter
-from utils import voice
-import emoji
 import threading
-from utils import hotkeys
-from utils import vtube_studio
-from utils import hangout
-
-import API.oobaooga_api
-import API.ollama_api
-import API.character_card
-
-from ollama import chat
-from ollama import ChatResponse
-
+import time
 from pathlib import Path
 
+# Third-party imports
+import colorama
+import emoji
+import requests
+import sseclient
+from dotenv import load_dotenv
+from ollama import chat, ChatResponse
+
+# Local imports - API modules
+import API.character_card
 from API.character_card import character_card
 
-load_dotenv()
+# Dynamic API import based on API_TYPE
+load_dotenv()  # Load environment variables first
+API_TYPE = os.environ.get("API_TYPE", "Oobabooga")
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:7860")
-# Handle both URL and host:port formats
+if API_TYPE == "Ollama":
+    import API.ollama_api as API
+else:  # Default to Oobabooga
+    import API.oobaooga_api as API
+
+# Local imports - Main module
+import main
+
+# Local imports - Utils modules
+from utils import based_rag
+from utils import cane_lib
+from utils import hangout
+from utils import hotkeys
+from utils import lorebook
+from utils import retrospect
+from utils import settings
+from utils import tag_task_controller
+from utils import voice
+from utils import voice_splitter
+from utils import vtube_studio
+from utils import zw_logging
+
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
+# Handle both URL and host:port formats (http only, no https support yet)
 if HOST.startswith("http://"):
     URI = f'{HOST}/v1/chat/completions'
     URL_MODEL = f'{HOST}/v1/engines/'
@@ -49,15 +56,15 @@ else:
     URI = f'http://{HOST}/v1/chat/completions'
     URL_MODEL = f'http://{HOST}/v1/engines/'
 
-IMG_PORT = os.environ.get("IMG_PORT")
-IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
-IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
+IMG_HOST = os.environ.get("IMG_HOST", "127.0.0.1")
+IMG_PORT = os.environ.get("IMG_PORT", "5007")
+IMG_URI = f'http://{IMG_HOST}:{IMG_PORT}/v1/chat/completions'
+IMG_URL_MODEL = f'http://{IMG_HOST}:{IMG_PORT}/v1/engines/'
 
 received_message = ""
-CHARACTER_CARD = os.environ.get("CHARACTER_CARD")
+# Use environment character card setting or None to use system messages
+CHARACTER_CARD = os.environ.get("CHARACTER_CARD", None)
 YOUR_NAME = os.environ.get("YOUR_NAME")
-
-API_TYPE = os.environ.get("API_TYPE")
 
 history_loaded = False
 
@@ -67,8 +74,8 @@ headers = {
     "Content-Type": "application/json"
 }
 
-max_context = int(os.environ.get("TOKEN_LIMIT"))
-marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT"))
+max_context = int(os.environ.get("TOKEN_LIMIT", "4096"))
+marker_length = int(os.environ.get("MESSAGE_PAIR_LIMIT", "30"))
 
 force_token_count = False
 forced_token_level = 120
@@ -110,57 +117,54 @@ with open("Configurables/StoppingStrings.json", 'r') as openfile:
 def run(user_input, temp_level):
     global received_message
     global ooga_history
-    global forced_token_level
-    global force_token_count
-    global currently_sending_message
-    global currently_streaming_message
-    global last_message_streamed
     global is_in_api_request
+
+    # If the input is blank, do not proceed. This prevents recursion loops.
+    if not user_input or user_input.strip() == "":
+        zw_logging.update_debug_log("API 'run' received blank input. Aborting.")
+        is_in_api_request = False
+        return ""
 
     # We are starting our API request!
     is_in_api_request = True
+    
+    try:
+        # Load the history from JSON
+        with open("LiveLog.json", 'r') as openfile:
+            ooga_history = json.load(openfile)
+    except Exception as e:
+        zw_logging.log_error(f"Failed to load LiveLog.json: {e}")
+        ooga_history = []
 
-    # Message that is currently being sent
-    currently_sending_message = user_input
-
-    # Clear the old streaming message, also we are not streaming so set it so
-    currently_streaming_message = ""
-    last_message_streamed = False
-
-    # Did the last message we got contain our name?
+    # Check for name in message
     check_for_name_in_message(user_input)
+    
+    # Simple API call using unified interface
+    try:
+        received_message = API.api_call(
+            user_input=user_input,
+            temp_level=temp_level,
+            max_tokens=150,
+            streaming=False
+        )
+    except Exception as e:
+        zw_logging.log_error(f"API request failed: {e}")
+        received_message = "Sorry, I'm having connection issues right now."
 
-    # Load the history from JSON, to clean up the quotation marks
-    with open("LiveLog.json", 'r') as openfile:
-        ooga_history = json.load(openfile)
+    # Simple post-processing
+    if received_message:
+        received_message = html.unescape(received_message)
+        if settings.supress_rp:
+            received_message = supress_rp_as_others(received_message)
+    else:
+        received_message = "I'm having trouble responding right now."
 
-    # Encode
-    prompt = encode_new_api(user_input)
-
-    # Send the actual API Request
-    if API_TYPE == "Oobabooga":
-        request = {
-            "prompt": prompt,
-            "max_tokens": settings.max_tokens,
-            "truncation_length": max_context,
-            "stop": settings.stopping_strings,
-            "character": CHARACTER_CARD
-        }
-        
-        try:
-            received_message = API.oobaooga_api.api_standard(request)
-        except requests.exceptions.RequestException as e:
-            log_error(f"Oobabooga API request failed: {e}")
-            received_message = f"Error: {e}"
-
-        # Add to history if successful
-        if not received_message.startswith("Error:"):
-            ooga_history.append([user_input, received_message])
-            save_histories()
-
-    elif API_TYPE == "Ollama":
-        received_message = API.ollama_api.api_standard(history=prompt, temp_level=temp_level, stop=settings.stopping_strings, max_tokens=settings.max_tokens)
-
+    # Log it to our history - simplified format like release version
+    ooga_history.append([user_input, received_message])
+    
+    # Save history
+    save_histories()
+    
     # We are done with our API request!
     is_in_api_request = False
 
@@ -206,16 +210,41 @@ def run_streaming(user_input, temp_level):
     with open("LiveLog.json", 'r') as openfile:
         ooga_history = json.load(openfile)
 
-    # Encode
-    prompt = encode_new_api(user_input)
+    # Determine what preset we want to load in with
+    preset = 'Z-Waif-ADEF-Standard'
+    if random.random() > 0.77:
+        preset = 'Z-Waif-ADEF-Tempered'
+    if random.random() > 0.99:
+        preset = 'Z-Waif-ADEF-Blazing'
 
-    #
-    # Send the actual API Request
-    #
+    if temp_level == 1:
+        preset = 'Z-Waif-ADEF-Tempered'
+        if random.random() > 0.7:
+            preset = 'Z-Waif-ADEF-Blazing'
+    if temp_level == 2:
+        preset = 'Z-Waif-ADEF-Blazing'
 
-    #
-    # STREAMING TOOLING GOES HERE o7
-    #
+    if settings.model_preset != "Default":
+        preset = settings.model_preset
+
+    zw_logging.kelvin_log = preset
+
+    # Set what char/task we are sending to - force None to use our character card
+    char_send = settings.cur_task_char
+    if char_send == "None":
+        char_send = None  # Don't use backend character, use our system messages
+
+    # Forced tokens check
+    cur_tokens_required = settings.max_tokens
+    if force_token_count:
+        cur_tokens_required = forced_token_level
+
+    # Set the stop right
+    stop = settings.stopping_strings.copy()
+    if settings.newline_cut:
+        stop.append("\n")
+    if settings.asterisk_ban:
+        stop.append("*")
 
     # We will print the header only when we receive the first chunk,
     # avoiding an empty name banner if the request fails.
@@ -224,29 +253,16 @@ def run_streaming(user_input, temp_level):
     # Reset the ticker (starts counting at 1)
     streaming_sentences_ticker = 1
 
-    # Send the actual API Request
-    if API_TYPE == "Oobabooga":
-        request = {
-            "prompt": prompt,
-            "max_tokens": settings.max_tokens,
-            "truncation_length": max_context,
-            "stop": settings.stopping_strings,
-            "character": CHARACTER_CARD,
-            "stream": True
-        }
-
-        # Actual streaming bit
-        try:
-            stream_response = requests.post(URI, headers=headers, json=request, verify=False, stream=True)
-            stream_response.raise_for_status()  # Raise an exception for bad status codes
-            client = sseclient.SSEClient(stream_response)
-            streamed_api_stringpuller = client.events()
-        except requests.exceptions.RequestException as e:
-            log_error(f"Oobabooga API request failed: {e}")
-            streamed_api_stringpuller = []
-
-    elif API_TYPE == "Ollama":
-        streamed_api_stringpuller = API.ollama_api.api_stream(history=prompt, temp_level=temp_level, stop=settings.stopping_strings, max_tokens=settings.max_tokens)
+    # Send the actual API Request using unified interface
+    streamed_api_stringpuller = API.api_call(
+        user_input=user_input,
+        temp_level=temp_level,
+        max_tokens=cur_tokens_required,
+        streaming=True,
+        preset=preset,
+        char_send=char_send,
+        stop=stop
+    )
 
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
@@ -255,15 +271,8 @@ def run_streaming(user_input, temp_level):
     supressed_rp = False
     force_skip_streaming = False
     for event in streamed_api_stringpuller:
-        chunk = ""
-
-        # Split based on API type
-        if API_TYPE == "Oobabooga":
-            payload = json.loads(event.data)
-            chunk = payload['choices'][0]['delta']['content']
-
-        elif API_TYPE == "Ollama":
-            chunk = event['message']['content']
+        # Extract chunk using unified API interface
+        chunk = API.extract_streaming_chunk(event)
 
         # On first chunk, print the speaker header so output isn't blank beforehand
         if not header_printed:
@@ -333,7 +342,7 @@ def run_streaming(user_input, temp_level):
             vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak and len(sentence_list) > 0:
+        if not settings.live_pipe_no_speak and len(sentence_list) > 0:
             voice.set_speaking(True)
             voice.speak_line(sentence_list[-1], refuse_pause=True)
 
@@ -416,14 +425,14 @@ def streamed_update_handler(chunk, assistant_message):
     # Check if the generated update has added a new sentence.
     # If a complete new sentence is found, read it aloud
     sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
-    if len(sentence_list) > streaming_sentences_ticker and not main.live_pipe_no_speak:
+    if len(sentence_list) > streaming_sentences_ticker and not settings.live_pipe_no_speak:
         # Emotes for VTube Studio
         if settings.vtube_enabled:
             vtube_studio.set_emote_string(sentence_list[streaming_sentences_ticker - 1])
             vtube_studio.check_emote_string_streaming()
 
         # Speaking with RVC support
-        if settings.use_rvc and not main.live_pipe_no_speak:
+        if settings.use_rvc and not settings.live_pipe_no_speak:
             try:
                 # Use RVC for voice conversion
                 voice.set_speaking(True)
@@ -458,12 +467,9 @@ def set_force_skip_streaming(tf_input):
 
 def send_via_oogabooga(user_input):
     """Send a message to the API"""
+    print(f"[API] 'send_via_oogabooga' received user_input: '{user_input}'")
     global received_message
     global force_skip_streaming
-
-    # Handle blank messages
-    if not user_input or user_input.strip() == "":
-        user_input = "*listens attentively*"
 
     # Check if we should stream or not
     if settings.stream_chats and not force_skip_streaming:
@@ -473,13 +479,21 @@ def send_via_oogabooga(user_input):
         # `run_streaming` updates the module-level `received_message` variable but does
         # not always return it.  Prefer the global value if the direct return is None.
         received_message = local_stream_result if local_stream_result else received_message
+        print(f"[API] Streaming call finished. Received message: '{received_message}'")
 
         # Fallback: if no message was produced at all, retry with a standard request
         if not received_message or len(str(received_message).strip()) == 0:
             zw_logging.update_debug_log("Streaming response was empty – retrying with standard (non-streaming) request…")
             received_message = run(user_input, 0.7)
+            print(f"[API] Fallback non-streaming call finished. Received message: '{received_message}'")
     else:
         received_message = run(user_input, 0.7)
+        print(f"[API] Non-streaming call finished. Received message: '{received_message}'")
+
+    # Debug: Check if message was added to history
+    print(f"[API] Chat history length after processing: {len(ooga_history)}")
+    if len(ooga_history) > 0:
+        print(f"[API] Last history entry: {ooga_history[-1][:2]}")  # Show only user message and response
 
     force_skip_streaming = False
     return received_message
@@ -487,7 +501,7 @@ def send_via_oogabooga(user_input):
 def receive_via_oogabooga():
     """Get the last received message"""
     global received_message
-    return received_message if received_message and received_message.strip() else ""
+    return received_message or ""
 
 def send_image_via_oobabooga(direct_talk_transcript):
 
@@ -579,8 +593,8 @@ def check_load_past_chat():
         try:
             with open("LiveLogBackup.bak", 'r') as twopenfile:
                 ooga_history_old = json.load(twopenfile)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error loading LiveLogBackup.bak: {e}")
 
         if len(ooga_history) > len(ooga_history_old):
             # Export to JSON
@@ -633,7 +647,7 @@ def soft_reset():
 
     for message_pair in soft_reset_message:
 
-        ooga_history.append([message_pair[0], message_pair[1],  message_pair[1], settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        ooga_history.append([message_pair[0], message_pair[1], message_pair[1], settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
 
 
 
@@ -734,10 +748,22 @@ def summary_memory_run(messages_input, user_sent_message):
             'preset': preset
         }
 
-        received_message = API.oobaooga_api.api_standard(request)
+        try:
+            received_message = API.oobaooga_api.api_standard(request)
+        except Exception as e:
+            zw_logging.log_error(f"Oobabooga API request failed in summary_memory_run: {e}")
+            received_message = f"Error: {e}"
 
     elif API_TYPE == "Ollama":
-        received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+        try:
+            received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+        except Exception as e:
+            zw_logging.log_error(f"Ollama API request failed in summary_memory_run: {e}")
+            received_message = f"Error: {e}"
+    
+    else:
+        zw_logging.log_error(f"Unknown API_TYPE in summary_memory_run: {API_TYPE}")
+        received_message = f"Error: Unknown API type '{API_TYPE}'. Please check your configuration."
 
 
     # Translate issues with the received message
@@ -943,36 +969,48 @@ def view_image(direct_talk_transcript):
     if API_TYPE == "Oobabooga":
 
         # Append the image the good ol' way
-        with open('LiveImage.png', 'rb') as f:
-            img_str = base64.b64encode(f.read()).decode('utf-8')
-            prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
-            past_messages.append({"role": "user", "content": prompt})
+        try:
+            with open('LiveImage.png', 'rb') as f:
+                img_str = base64.b64encode(f.read()).decode('utf-8')
+                prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
+                past_messages.append({"role": "user", "content": prompt})
 
-        request = {
-            'max_tokens': 300,
-            'prompt': "This image",
-            'messages': past_messages,
-            'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': OOBA_VISUAL_CHARACTER_NAME,
-            'your_name': YOUR_NAME,
-            'regenerate': False,
-            '_continue': False,
-            'truncation_length': 2048,
-            'stop': stop,
+            request = {
+                'max_tokens': 300,
+                'prompt': "This image",
+                'messages': past_messages,
+                'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+                'character': OOBA_VISUAL_CHARACTER_NAME,
+                'your_name': YOUR_NAME,
+                'regenerate': False,
+                '_continue': False,
+                'truncation_length': 2048,
+                'stop': stop,
 
-            'preset': OOBA_VISUAL_PRESET_NAME
-        }
+                'preset': OOBA_VISUAL_PRESET_NAME
+            }
 
-        response = requests.post(IMG_URI, json=request)
-        received_cam_message = response.json()['choices'][0]['message']['content']
+            response = requests.post(IMG_URI, json=request)
+            received_cam_message = response.json()['choices'][0]['message']['content']
+        except Exception as e:
+            zw_logging.log_error(f"Oobabooga image API request failed: {e}")
+            received_cam_message = f"Error processing image: {e}"
 
     elif API_TYPE == "Ollama":
 
-        # Append the image (via file path, so not for real but just link file)
-        img_str = str(os.path.abspath('LiveImage.png'))
-        past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
+        try:
+            # Append the image (via file path, so not for real but just link file)
+            img_str = str(os.path.abspath('LiveImage.png'))
+            past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-        received_cam_message = API.ollama_api.api_standard_image(history=past_messages)
+            received_cam_message = API.ollama_api.api_standard_image(history=past_messages)
+        except Exception as e:
+            zw_logging.log_error(f"Ollama image API request failed: {e}")
+            received_cam_message = f"Error processing image: {e}"
+    
+    else:
+        zw_logging.log_error(f"Unknown API_TYPE for image processing: {API_TYPE}")
+        received_cam_message = f"Error: Unknown API type '{API_TYPE}' for image processing. Please check your configuration."
 
 
     # Translate issues with the received message
@@ -1137,45 +1175,52 @@ def view_image_streaming(direct_talk_transcript):
 
     # Send the actual API Request
     if API_TYPE == "Oobabooga":
-        with open('LiveImage.png', 'rb') as f:
-            img_str = base64.b64encode(f.read()).decode('utf-8')
-            prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
-            past_messages.append({"role": "user", "content": prompt})
-
-        request = {
-            'max_tokens': 300,
-            'prompt': "This image",
-            'messages': past_messages,
-            'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': OOBA_VISUAL_CHARACTER_NAME,
-            'your_name': YOUR_NAME,
-            'regenerate': False,
-            '_continue': False,
-            'truncation_length': 2048,
-            'stop': stop,
-
-            'preset': OOBA_VISUAL_PRESET_NAME,
-
-            'stream': True,
-        }
-
-        # Actual streaming bit
         try:
+            with open('LiveImage.png', 'rb') as f:
+                img_str = base64.b64encode(f.read()).decode('utf-8')
+                prompt = f'{base_prompt}<img src="data:image/jpeg;base64,{img_str}">'
+                past_messages.append({"role": "user", "content": prompt})
+
+            request = {
+                'max_tokens': 300,
+                'prompt': "This image",
+                'messages': past_messages,
+                'mode': 'chat-instruct',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+                'character': OOBA_VISUAL_CHARACTER_NAME,
+                'your_name': YOUR_NAME,
+                'regenerate': False,
+                '_continue': False,
+                'truncation_length': 2048,
+                'stop': stop,
+
+                'preset': OOBA_VISUAL_PRESET_NAME,
+
+                'stream': True,
+            }
+
+            # Actual streaming bit
             stream_response = requests.post(IMG_URI, headers=headers, json=request, verify=False, stream=True)
             stream_response.raise_for_status()  # Raise an exception for bad status codes
             client = sseclient.SSEClient(stream_response)
             streamed_api_stringpuller = client.events()
-        except requests.exceptions.RequestException as e:
-            log_error(f"Oobabooga API request failed: {e}")
+        except Exception as e:
+            zw_logging.log_error(f"Oobabooga streaming image API request failed: {e}")
             streamed_api_stringpuller = []
 
-
     elif API_TYPE == "Ollama":
-        # Append the image (via file path, so not for real but just link file)
-        img_str = str(os.path.abspath('LiveImage.png'))
-        past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
+        try:
+            # Append the image (via file path, so not for real but just link file)
+            img_str = str(os.path.abspath('LiveImage.png'))
+            past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-        streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
+            streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
+        except Exception as e:
+            zw_logging.log_error(f"Ollama streaming image API request failed: {e}")
+            streamed_api_stringpuller = []
+    
+    else:
+        zw_logging.log_error(f"Unknown API_TYPE for streaming image processing: {API_TYPE}")
+        streamed_api_stringpuller = []
 
 
     # Clear streamed emote list
@@ -1185,16 +1230,8 @@ def view_image_streaming(direct_talk_transcript):
     force_skip_streaming = False
     supressed_rp = False
     for event in streamed_api_stringpuller:
-        chunk = ""
-
-        # Split based on API type
-        if API_TYPE == "Oobabooga":
-            payload = json.loads(event.data)
-            chunk = payload['choices'][0]['delta']['content']
-
-        elif API_TYPE == "Ollama":
-            chunk = event['message']['content']
-
+        # Extract chunk using unified API interface
+        chunk = API.extract_streaming_chunk(event)
 
         # On first chunk, print the speaker header so output isn't blank beforehand
         if not header_printed:
@@ -1269,7 +1306,7 @@ def view_image_streaming(direct_talk_transcript):
             vtube_studio.check_emote_string_streaming()
 
         # Speaking
-        if not main.live_pipe_no_speak and len(sentence_list) > 0:
+        if not settings.live_pipe_no_speak and len(sentence_list) > 0:
             voice.set_speaking(True)
             voice.speak_line(sentence_list[-1], refuse_pause=True)
 
@@ -1365,7 +1402,12 @@ def check_if_in_history(message):
 
 
 # Encodes from the old api's way of storing history (and ooba internal) to the new one
-def encode_new_api(user_input):
+def _encode_new_api_deprecated(user_input):
+    """
+    DEPRECATED: This function creates a flat string prompt.
+    The new standard is to use a structured message list.
+    Kept for reference or potential fallback scenarios.
+    """
     messages = []
     
     # Add character card
@@ -1375,11 +1417,24 @@ def encode_new_api(user_input):
     # Add history
     history_start = max(0, len(ooga_history) - marker_length)
     for i in range(history_start, len(ooga_history)):
-        messages.append(ooga_history[i][0])
-        messages.append(ooga_history[i][1])
+        # Guard against malformed history entries that may be shorter than expected
+        try:
+            user_msg = ooga_history[i][0]
+            assistant_msg = ooga_history[i][1]
+        except IndexError:
+            # Skip malformed pair to avoid crashes
+            continue
+
+        if user_msg:
+            messages.append(str(user_msg))
+        if assistant_msg:
+            messages.append(str(assistant_msg))
     
-    # Add current message
-    messages.append(user_input)
+    # Add current message (fallback to placeholder if blank)
+    if user_input and user_input.strip():
+        messages.append(user_input)
+    else:
+        messages.append("*listens attentively*")
     
     # Join all messages with newlines
     prompt = "\n".join(messages)
@@ -1388,69 +1443,63 @@ def encode_new_api(user_input):
 
 
 def encode_new_api_ollama(user_input):
-    #
-    # Append 40 of the most recent history pairs (however long our marker length is)
-    #
-
+    """Simplified Ollama encoding like release version"""
     global ooga_history
 
     messages_to_send = []
+    
+    # Simple system prompt - just character card
+    if character_card and isinstance(character_card, str):
+        messages_to_send.append({"role": "system", "content": character_card.strip()})
 
-    # Append our system message, if we are using OLLAMA
+    # Add recent history (last 10 exchanges like release version)
+    recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
+    
+    for entry in recent_history:
+        # Handle both old format (2 elements) and new format (4+ elements)
+        if len(entry) >= 2:
+            user_msg = entry[0]
+            assistant_msg = entry[1]
+            
+            if user_msg:
+                messages_to_send.append({"role": "user", "content": user_msg})
+            if assistant_msg:
+                messages_to_send.append({"role": "assistant", "content": assistant_msg})
 
-    #
-    # Gather and send our composite metadata!
-
-    # Char card
-    ollama_composite_content = API.character_card.character_card + "\n\n"
-
-    # Task
-    if settings.cur_task_char != "" and settings.cur_task_char != "None":
-        ollama_composite_content += tag_task_controller.get_cur_task_description() + "\n\n"
-
-    # RAG Messegg
-    if settings.rag_enabled:
-        ollama_composite_content += based_rag.call_rag_message() + "\n\n"
-
-    # Lorebook Gathering
-    lore_gathered = lorebook.lorebook_gather(ooga_history[-3:], user_input)
-
-    if lore_gathered != lorebook.total_lore_default:
-        ollama_composite_content += lore_gathered + "\n\n"
-
-    # Time
-    if ENCODE_TIME:
-        timestamp_string = "The current time now is "
-        current_time = datetime.datetime.now()
-        timestamp_string += current_time.strftime("%d %B, %Y at %I:%M %p")
-        timestamp_string += "."
-        ollama_composite_content += timestamp_string + "\n\n"
-
-    # Appandage!
-    messages_to_send.append({"role": "system", "content": ollama_composite_content})
-
-    message_marker = len(ooga_history) - marker_length
-    if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
-        message_marker = 0
-
-    messages_to_send.append({"role": "user", "content": ooga_history[message_marker][0]})
-    messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker][1]})
-
-    i = 1
-    while i < marker_length and i < len(ooga_history):
-        messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
-        messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
-
-
-        i = i + 1
-
-    #
-    # Append our most recent message
-    #
-
+    # Add current user input
     messages_to_send.append({"role": "user", "content": user_input})
-
+    
     return messages_to_send
+
+
+def encode_for_oobabooga_chat(user_input):
+    """
+    Simplified encoding like release version - just character card + recent history + current input
+    """
+    messages = []
+    
+    # Add character card as system message
+    if character_card and isinstance(character_card, str):
+        messages.append({"role": "system", "content": character_card.strip()})
+
+    # Add recent history (last 10 exchanges like release version)
+    recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
+    
+    for entry in recent_history:
+        # Handle both old format (2 elements) and new format (4+ elements)
+        if len(entry) >= 2:
+            user_msg = entry[0]
+            assistant_msg = entry[1]
+            
+            if user_msg:
+                messages.append({"role": "user", "content": str(user_msg)})
+            if assistant_msg:
+                messages.append({"role": "assistant", "content": str(assistant_msg)})
+            
+    # Add the current user message
+    messages.append({"role": "user", "content": user_input})
+    
+    return messages
 
 
 # encodes a given input to the new API, with no additives

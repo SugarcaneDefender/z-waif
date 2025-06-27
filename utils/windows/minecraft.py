@@ -1,13 +1,22 @@
 # Support for playing Minecraft!
 
-from pythmc import ChatLink
-import pygetwindow
-from utils import cane_lib
-import time
-import main
-import API.api_controller
-from utils import settings
+# Standard library imports
 import json
+import time
+
+# Third-party imports
+import pygetwindow
+from pythmc import ChatLink
+
+# Local imports - API modules
+import API.api_controller
+
+# Local imports - Main module
+import main
+
+# Local imports - Utils modules
+from utils import cane_lib
+from utils import settings
 
 if settings.minecraft_enabled:
     chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
@@ -59,8 +68,8 @@ def check_for_command(message):
 
         try:
             chat.send(word_collector)
-        except:
-            print("No MC Client!")
+        except Exception as e:
+            print(f"No MC Client or error sending command: {e}")
 
 
 

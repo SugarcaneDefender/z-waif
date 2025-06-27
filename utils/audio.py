@@ -17,8 +17,8 @@ from utils import voice
 from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
 
 CHUNK = 1024
-CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE")
-MAX_CHUNKS = int(os.environ.get("WHISPER_CHUNKS_MAX"))
+CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE", "1000")
+MAX_CHUNKS = int(os.environ.get("WHISPER_CHUNKS_MAX", "10"))
 
 FORMAT = pyaudio.paInt16
 

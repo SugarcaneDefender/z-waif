@@ -15,3 +15,6 @@ log.txt
 
 RAG_Database/
 !RAG_Database/RAG_WILL_GENERATE_HERE.txt
+
+# Voice input files
+utils/resource/voice_in/

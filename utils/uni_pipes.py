@@ -35,7 +35,7 @@ def start_new_pipe(desired_process, is_main_pipe):
         main_pipe_running = True
 
     # Make it and run in another thread for us
-    new_pipe = threading.Thread(target=pipe_loop(this_pipe))
+    new_pipe = threading.Thread(target=pipe_loop, args=(this_pipe,))
     new_pipe.daemon = True
     new_pipe.start()
 
@@ -73,6 +73,10 @@ def pipe_loop(this_pipe):
 
         elif this_pipe[3] == "Main-View-Image":
             main.main_view_image()
+            this_pipe[0] = "BAKED"
+
+        elif this_pipe[3] == "Main-Text-Chat":
+            main.main_text_chat()
             this_pipe[0] = "BAKED"
 
         elif this_pipe[3] == "Main-Blank":

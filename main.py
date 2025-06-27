@@ -1,44 +1,48 @@
+# Standard library imports
+import asyncio
+import os
 import sys
+import threading
 import time
 
+# Third-party imports
 import colorama
-import humanize, os, threading
 import emoji
-import asyncio
+import humanize
+from dotenv import load_dotenv
 
-from utils import audio
-from utils import hotkeys
-from utils import transcriber_translate
-from utils import voice
-from utils import vtube_studio
-from utils import alarm
-from utils import volume_listener
-from utils import minecraft
-from utils import log_conversion
-from utils import cane_lib
-
+# Local imports - API modules
 import API.api_controller
 import API.character_card
 import API.task_profiles
 
-from utils import lorebook
-from utils import camera
-
-from utils import z_waif_discord
-from utils import z_waif_twitch
-from utils import web_ui
-
-from utils import settings
-from utils import retrospect
+# Local imports - Utils modules
+from utils import alarm
+from utils import audio
 from utils import based_rag
-from utils import tag_task_controller
+from utils import camera
+from utils import cane_lib
+from utils import console_input
 from utils import gaming_control
 from utils import hangout
-
+from utils import hotkeys
+from utils import log_conversion
+from utils import lorebook
+from utils import minecraft
+from utils import retrospect
+from utils import settings
+from utils import tag_task_controller
+from utils import transcriber_translate
 from utils import uni_pipes
+from utils import voice
+from utils import volume_listener
+from utils import vtube_studio
+from utils import web_ui
+from utils import z_waif_discord
+from utils import z_waif_twitch
 from utils import zw_logging
+from utils.chat_history import add_message_to_history
 
-from dotenv import load_dotenv
 load_dotenv()
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
@@ -51,66 +55,150 @@ is_live_pipe = False
 
 # Not for sure live pipe... atleast how it is counted now. Unipipes in a few updates will clear this up
 # Livepipe is only for the hotkeys actions, that is why... but these are for non-hotkey stuff!
-live_pipe_no_speak = False
+settings.live_pipe_no_speak = False
 live_pipe_force_speak_on_response = False
 live_pipe_use_streamed_interrupt_watchdog = False
 
+text_chat_input = None
+
+# Command line message input support
+startup_message = None
+
+def handle_command_line_args():
+    """Handle command line arguments for message input like the release version"""
+    global startup_message
+    
+    # Get command line arguments (skip script name at index 0)
+    args = sys.argv[1:]
+    
+    if len(args) > 0:
+        # Join all arguments into a single message
+        startup_message = ' '.join(args)
+        print(f"\n{colorama.Fore.CYAN}Command line message received: {startup_message}{colorama.Fore.RESET}\n")
+        return True
+    
+    return False
+
+def process_startup_message():
+    """Process the startup message if provided"""
+    global startup_message
+    
+    if startup_message:
+        print(f"\n{colorama.Fore.GREEN}Processing startup message...{colorama.Fore.RESET}")
+        
+        # Wait a moment for all systems to be ready
+        time.sleep(2)
+        
+        # Process the message directly without using the global variable
+        message = startup_message
+        startup_message = None  # Clear it immediately
+        
+        # Process the message directly like main_text_chat does
+        print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+              + "----Me----"
+              + colorama.Fore.RED + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+        print(f"{message.strip()}")
+        print("\n")
+
+        # Store the message, for cycling purposes
+        global stored_transcript
+        stored_transcript = message
+
+        # Use the improved API run function with anti-streaming personality
+        reply_message = API.api_controller.run(message, temp_level=0.7)
+        
+        if reply_message and reply_message.strip():
+            # Apply response cleaning to prevent streaming personality
+            clean_reply = clean_twitch_response(reply_message)
+            message_checks(clean_reply)
+
+        # Speak the reply
+        main_message_speak()
+        
+        print(f"\n{colorama.Fore.GREEN}Startup message processed. Continuing with normal operation...{colorama.Fore.RESET}\n")
 
 # noinspection PyBroadException
 def main():
 
     while True:
-        print("You" + colorama.Fore.GREEN + colorama.Style.BRIGHT + " (mic) " + colorama.Fore.RESET + ">", end="", flush=True)
+        # -- Non-blocking input handling --
 
+        # 1. Check for console input
+        command = None
+        
         # Stative control depending on what mode we are (gaming, streaming, normal, ect.)
         if settings.is_gaming_loop:
             command = gaming_control.gaming_step()
+        
         else:
-            command = hotkeys.chat_input_await()
+            typed_line = console_input.get_line_nonblocking()
+            if typed_line is not None:
+                typed_line = typed_line.strip()
+                lowercase_line = typed_line.lower()
 
-        # Flag us as running a command now
-        global is_live_pipe
-        is_live_pipe = True
+                if lowercase_line in {"/next", "next"}:
+                    command = "NEXT"
+                elif lowercase_line in {"/redo", "redo"}:
+                    command = "REDO"
+                elif lowercase_line in {"/soft_reset", "soft reset", "reset"}:
+                    command = "SOFT_RESET"
+                elif lowercase_line in {"/view", "view"}:
+                    command = "VIEW"
+                elif lowercase_line in {"/blank", "blank"}:
+                    command = "BLANK"
+                else:
+                    # Treat as a standard chat message
+                    global text_chat_input
+                    text_chat_input = typed_line
+                    command = "TEXT_CHAT"
 
-        if command == "CHAT":
-            uni_pipes.start_new_pipe(desired_process="Main-Chat", is_main_pipe=True)
+        # 2. If no console input, check for hotkeys
+        if command is None:
+            command = hotkeys.get_command_nonblocking()
 
-        elif command == "NEXT":
-            uni_pipes.start_new_pipe(desired_process="Main-Next", is_main_pipe=True)
+        # 3. If still no command, check for alarms
+        if command is None and alarm.alarm_check():
+            command = "ALARM"
 
-        elif command == "REDO":
-            uni_pipes.start_new_pipe(desired_process="Main-Redo", is_main_pipe=True)
+        # If any command was found, process it
+        if command:
+            global is_live_pipe
+            is_live_pipe = True
 
-        elif command == "SOFT_RESET":
-            uni_pipes.start_new_pipe(desired_process="Main-Soft-Reset", is_main_pipe=True)
+            # Map command to a pipe process
+            if command == "CHAT":
+                uni_pipes.start_new_pipe(desired_process="Main-Chat", is_main_pipe=True)
+            elif command == "TEXT_CHAT":
+                uni_pipes.start_new_pipe(desired_process="Main-Text-Chat", is_main_pipe=True)
+            elif command == "NEXT":
+                uni_pipes.start_new_pipe(desired_process="Main-Next", is_main_pipe=True)
+            elif command == "REDO":
+                uni_pipes.start_new_pipe(desired_process="Main-Redo", is_main_pipe=True)
+            elif command == "SOFT_RESET":
+                uni_pipes.start_new_pipe(desired_process="Main-Soft-Reset", is_main_pipe=True)
+            elif command == "ALARM":
+                uni_pipes.start_new_pipe(desired_process="Main-Alarm", is_main_pipe=True)
+            elif command == "VIEW":
+                uni_pipes.start_new_pipe(desired_process="Main-View-Image", is_main_pipe=True)
+            elif command == "BLANK":
+                uni_pipes.start_new_pipe(desired_process="Main-Blank", is_main_pipe=True)
+            elif command == "Hangout":
+                uni_pipes.start_new_pipe(desired_process="Hangout-Loop", is_main_pipe=True)
+            elif command == "Twitch-Chat":
+                uni_pipes.start_new_pipe(desired_process="Main-Twitch-Chat", is_main_pipe=True)
 
-        elif command == "ALARM":
-            uni_pipes.start_new_pipe(desired_process="Main-Alarm", is_main_pipe=True)
+            # Wait until the main pipe we have sent is finished
+            while uni_pipes.main_pipe_running:
+                time.sleep(0.001)
 
-        elif command == "VIEW":
-            uni_pipes.start_new_pipe(desired_process="Main-View-Image", is_main_pipe=True)
+            hotkeys.stack_wipe_inputs()
+            if settings.semi_auto_chat:
+                hotkeys.speak_input_toggle_from_ui()
 
-        elif command == "BLANK":
-            uni_pipes.start_new_pipe(desired_process="Main-Blank", is_main_pipe=True)
-
-        elif command == "Hangout":
-            uni_pipes.start_new_pipe(desired_process="Hangout-Loop", is_main_pipe=True)
-
-        # Wait until the main pipe we have sent is finished
-        while uni_pipes.main_pipe_running:
-            # Sleep the loop while our main pipe still running
-            time.sleep(0.001)
-
-        # Stack wipe any current inputs, to avoid doing multiple in a row
-        hotkeys.stack_wipe_inputs()
-
-        # For semi-autochat, press the button
-        if settings.semi_auto_chat:
-            hotkeys.speak_input_toggle_from_ui()
-
-        # Flag us as no longer running a command
-        is_live_pipe = False
-
+            is_live_pipe = False
+        
+        # Prevent busy-spinning
+        time.sleep(0.05)
 
 
 def main_converse():
@@ -124,7 +212,8 @@ def main_converse():
     size_string = ""
     try:
         size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
+        print(f"Error getting audio buffer size: {e}")
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -171,13 +260,13 @@ def main_converse():
 
 
     # Actual sending of the message, waits for reply automatically
-
-    API.api_controller.send_via_oogabooga(transcript)
-
-
-    # Run our message checks
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    # Use the improved API run function with anti-streaming personality
+    reply_message = API.api_controller.run(transcript, temp_level=0.7)
+    
+    if reply_message and reply_message.strip():
+        # Apply response cleaning to prevent streaming personality
+        clean_reply = clean_twitch_response(reply_message)
+        message_checks(clean_reply)
 
     # Pipe us to the reply function
     main_message_speak()
@@ -185,8 +274,8 @@ def main_converse():
     # After use, delete the recording.
     try:
         os.remove(audio_buffer)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting audio buffer file {audio_buffer}: {e}")
 
 
 def main_message_speak():
@@ -232,7 +321,8 @@ def message_checks(message):
 
     # Log message only if it was NOT streamed
     if not API.api_controller.last_message_streamed:
-        zw_logging.update_chat_log(message)
+        # Use debug log since update_chat_log doesn't exist
+        zw_logging.update_debug_log(f"Message from {char_name if char_name else 'Assistant'}: {message}")
 
     # Print banner + text only if not streamed (streamed path prints in real-time)
     if not API.api_controller.last_message_streamed:
@@ -244,8 +334,9 @@ def message_checks(message):
         print()
 
     # Speak in shadow-chat configuration (non-streamed)
-    if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
-        voice.speak(message)
+    # if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
+    #     # voice.speak(message)  # Function doesn't exist in this version
+    #     pass
 
     # Plugin checks
     if settings.minecraft_enabled:
@@ -261,8 +352,9 @@ def message_checks(message):
     if settings.gaming_enabled:
         gaming_control.message_inputs(message)
 
-    if settings.rag_enabled:
-        based_rag.check_message(message)
+    # if settings.rag_enabled:
+    #     # based_rag.check_message(message)  # Function doesn't exist in this version
+    #     pass
 
     # Handle kill-word
     if "/ripout/" in message.lower():
@@ -297,9 +389,9 @@ def main_minecraft_chat(message):
     """Handle incoming Minecraft game chat (shadow chat)"""
 
     # Flag that we are in a non-spoken shadow chat if shadow-speech is disabled while streaming
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Minecraft chat box can only hold so many characters – force the token count low
     API.api_controller.force_tokens_count(47)
@@ -315,7 +407,7 @@ def main_minecraft_chat(message):
     message_checks(reply_message)
 
     # If we're configured to speak shadow chats and we aren't streaming, speak the line aloud
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -323,9 +415,9 @@ def main_discord_chat(message):
     """Handle Discord chat messages (shadow chat)"""
 
     # Shadow-chat voice suppression when streaming
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Send the Discord message to the LLM
     API.api_controller.send_via_oogabooga(message)
@@ -335,74 +427,251 @@ def main_discord_chat(message):
     message_checks(reply_message)
 
     # Speak it if configured
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_twitch_chat(message):
-    """Handle Twitch chat messages (shadow chat)"""
+    """Handle Twitch chat messages as personal conversations (NOT streaming)"""
+    
+    # Parse the Twitch message format: "username: message"
+    if ": " in message:
+        username, user_message = message.split(": ", 1)
+        
+        print(f"[Twitch] {username}: {user_message}")
+        
+        # Log the user message to chat history
+        try:
+            from utils.chat_history import add_message_to_history
+            add_message_to_history(username, "user", user_message, "twitch")
+        except Exception as e:
+            print(f"[Twitch] Could not log to chat history: {e}")
+        
+        # Send the message to the API
+        API.api_controller.send_via_oogabooga(user_message)
+        
+        # Get the raw response
+        reply_message = API.api_controller.receive_via_oogabooga()
+        
+        if reply_message and reply_message.strip():
+            # Clean the response to remove streaming artifacts and ensure personal conversation tone
+            clean_reply = clean_twitch_response(reply_message)
+            
+            # Update the history with the cleaned response instead of the raw one
+            if len(API.api_controller.ooga_history) > 0:
+                # Replace the last response in history with the cleaned version
+                API.api_controller.ooga_history[-1][1] = clean_reply
+                # Save the updated history
+                API.api_controller.save_histories()
+            
+            # Log the assistant response to chat history
+            try:
+                from utils.chat_history import add_message_to_history
+                add_message_to_history(username, "assistant", clean_reply, "twitch")
+            except Exception as e:
+                print(f"[Twitch] Could not log assistant response to chat history: {e}")
+            
+            # Run message checks and speak if enabled
+            message_checks(clean_reply)
+            main_message_speak()
+            
+            print(f"[Twitch Response] {clean_reply}")
+            return clean_reply  # Return the cleaned response for Twitch bot to send
+        return ""  # Return empty string if no response
+    else:
+        # Fallback for malformed messages
+        print(f"[Twitch] Malformed message: {message}")
+        API.api_controller.send_via_oogabooga(message)
+        reply_message = API.api_controller.receive_via_oogabooga()
+        if reply_message and reply_message.strip():
+            clean_reply = clean_twitch_response(reply_message)
+            
+            # Update the history with the cleaned response
+            if len(API.api_controller.ooga_history) > 0:
+                API.api_controller.ooga_history[-1][1] = clean_reply
+                API.api_controller.save_histories()
+            
+            message_checks(clean_reply)
+            main_message_speak()
+            return clean_reply  # Return the cleaned response for Twitch bot to send
+        return ""  # Return empty string if no response
 
-    global live_pipe_no_speak
-    if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
-
-    # Send Twitch message to LLM
-    API.api_controller.send_via_oogabooga(message)
-
-    # Process reply
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
-
-    live_pipe_no_speak = False
-    if settings.speak_shadowchats and not settings.stream_chats:
-        main_message_speak()
+def clean_twitch_response(response):
+    """Clean Twitch responses to ensure personal conversation tone and remove streaming artifacts"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if clean_reply.startswith("Alexcia:"):
+        clean_reply = clean_reply[8:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove streaming context and roleplay actions
+    streaming_contexts = [
+        "*The stream has just ended",
+        "*chatting with viewers",
+        "*in the chat*",
+        "*stream*",
+        "*viewers*",
+        "*chat*",
+        "*streaming*",
+        "*on stream*",
+        "*live*"
+    ]
+    
+    for context in streaming_contexts:
+        if context.lower() in clean_reply.lower():
+            # Remove the entire streaming context
+            clean_reply = ""
+            break
+    
+    # If we cleared the response due to streaming context, provide a natural alternative
+    if not clean_reply or clean_reply.strip() == "":
+        return "Hey there! How's it going?"
+    
+    # Remove streaming personality artifacts (more comprehensive)
+    streaming_phrases = [
+        "Thanks for watching",
+        "enjoying the stream",
+        "Welcome to my stream",
+        "Don't forget to follow",
+        "Hey viewers",
+        "Welcome to the stream", 
+        "Thanks for the follow",
+        "Appreciate the subscription",
+        "Welcome everyone",
+        "Hey stream",
+        "What's up chat",
+        "Hello viewers",
+        "Thanks for being here",
+        "Welcome back to the stream",
+        "stream has just ended",
+        "chatting with viewers",
+        "glad you're enjoying the stream",
+        "thanks for watching",
+        "quiet in chat",
+        "interacting online"
+    ]
+    
+    # Check for streaming language and replace entire response if found
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            # If streaming language detected, replace with personal conversation
+            return "Hey! How are you doing today? What's been going on with you?"
+    
+    # Additional check for streaming context words
+    streaming_context_words = [
+        "streaming", "stream", "viewers", "gameplay", "joining us", 
+        "blast streaming", "new viewers", "send me a message"
+    ]
+    
+    for word in streaming_context_words:
+        if word.lower() in clean_reply.lower():
+            # Replace streaming response with personal conversation
+            return "Hey there! How's your day going? What's on your mind?"
+    
+    # Remove action text in asterisks
+    import re
+    clean_reply = re.sub(r'\*[^*]*\*', '', clean_reply).strip()
+    
+    # Remove any "You:" or "Response:" artifacts
+    if "You:" in clean_reply:
+        clean_reply = clean_reply.split("You:")[0].strip()
+    if "Response:" in clean_reply:
+        clean_reply = clean_reply.split("Response:")[0].strip()
+    
+    # Remove fake conversation artifacts
+    lines = clean_reply.split('\n')
+    cleaned_lines = []
+    for line in lines:
+        line = line.strip()
+        # Skip lines that look like fake conversations
+        if ':' in line and any(indicator in line.lower() for indicator in ['you:', 'user:', 'response:', 'assistant:']):
+            continue
+        if line:
+            cleaned_lines.append(line)
+    
+    if cleaned_lines:
+        clean_reply = ' '.join(cleaned_lines)
+    
+    # Final fallback if response is empty or just whitespace
+    if not clean_reply or clean_reply.strip() == "":
+        return "Hi! Nice to see you!"
+    
+    return clean_reply
 
 def main_twitch_next():
     """Handle Twitch chat regeneration command (shadow chat)"""
 
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     API.api_controller.next_message_oogabooga()
 
     reply_message = API.api_controller.receive_via_oogabooga()
     message_checks(reply_message)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_web_ui_chat(message):
-    """Handle chat messages from the web UI"""
-    # Shadow chat handling
-    global live_pipe_no_speak
-    if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+    """Handle chat messages from the web UI by spawning a worker thread."""
+    
+    # This function is now just a trigger.
+    # The actual work is done in a separate thread to avoid blocking the UI.
+    
+    chat_thread = threading.Thread(target=main_web_ui_chat_worker, args=(message,))
+    chat_thread.daemon = True
+    chat_thread.start()
 
-    # Send message to LLM
+def main_web_ui_chat_worker(message):
+    """The actual logic for handling web UI chat, runs in a background thread."""
+    
+    # If the message is blank, use the dedicated function for that
+    if message == "":
+        main_send_blank()
+        return
+    
+    # Web UI messages should use the same improved API as Twitch for consistent personality
+    # global settings.live_pipe_no_speak - not needed since settings is a module
+    if (not settings.speak_shadowchats) and settings.stream_chats:
+        settings.live_pipe_no_speak = True
+
+    # Send the message to the API
     API.api_controller.send_via_oogabooga(message)
 
-    # Process reply
+    # Get the raw response
     reply_message = API.api_controller.receive_via_oogabooga()
+    
     if reply_message and reply_message.strip():
-        message_checks(reply_message)
+        # Apply the same response cleaning as Twitch to prevent streaming personality
+        clean_reply = clean_twitch_response(reply_message)
+        
+        # Update the history with the cleaned response instead of the raw one
+        if len(API.api_controller.ooga_history) > 0:
+            # Replace the last response in history with the cleaned version
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            # Save the updated history
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
-        # Speak if shadow-chat speaking is enabled
-        if settings.speak_shadowchats and not settings.stream_chats:
-            voice.speak(reply_message)
-
-    # Reset suppression flag and optionally run speech pipeline
-    live_pipe_no_speak = False
+    # Reset suppression flag and run speech pipeline like other shadow chats
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_web_ui_next():
     """Handle regeneration requests from the web UI"""
     # Shadow chat regeneration
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Cut voice if needed
     voice.force_cut_voice()
@@ -410,7 +679,7 @@ def main_web_ui_next():
     # If a generation is already running, request skip and exit early
     if API.api_controller.is_in_api_request:
         API.api_controller.set_force_skip_streaming(True)
-        live_pipe_no_speak = False
+        settings.live_pipe_no_speak = False
         return
 
     # Generate new response
@@ -424,16 +693,16 @@ def main_web_ui_next():
         if settings.speak_shadowchats and not settings.stream_chats:
             voice.speak(reply_message)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
 def main_discord_next():
 
     # This is a shadow chat
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     API.api_controller.next_message_oogabooga()
 
@@ -442,7 +711,7 @@ def main_discord_next():
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -499,9 +768,9 @@ def main_memory_proc():
         return
 
     # This is a shadow chat
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
-        live_pipe_no_speak = True
+        settings.live_pipe_no_speak = True
 
     # Retrospect and get a random memory
     retrospect.retrospect_random_mem_summary()
@@ -515,7 +784,7 @@ def main_memory_proc():
     message_checks(reply_message)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
-    live_pipe_no_speak = False
+    # settings.live_pipe_no_speak moved to settings.py to avoid circular import
     if settings.speak_shadowchats and not settings.stream_chats:
         main_message_speak()
 
@@ -615,7 +884,7 @@ def view_image_prompt_get():
     size_string = ""
     try:
          size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -691,7 +960,7 @@ def hangout_converse():
     size_string = ""
     try:
          size_string = humanize.naturalsize(os.path.getsize(audio_buffer))
-    except:
+    except Exception as e:
         size_string = str(1 + len(transcriber_translate.transcription_chunks)) + " Chunks"
 
     try:
@@ -740,8 +1009,8 @@ def hangout_converse():
     # After use, delete the recording.
     try:
         os.remove(audio_buffer)
-    except:
-        pass
+    except Exception as e:
+        print(f"Error deleting audio buffer file {audio_buffer}: {e}")
 
     return transcript
 
@@ -768,14 +1037,15 @@ def hangout_reply(transcript):
 
 def hangout_wait_reply_waitportion(transcript):
     # Send our request, be sure to not read it aloud
-    global live_pipe_no_speak, live_pipe_use_streamed_interrupt_watchdog
-    live_pipe_no_speak = True
+    global live_pipe_use_streamed_interrupt_watchdog
+    # Note: settings.live_pipe_no_speak doesn't need global declaration
+    settings.live_pipe_no_speak = True
     live_pipe_use_streamed_interrupt_watchdog = True
 
     API.api_controller.send_via_oogabooga(transcript)
 
     live_pipe_use_streamed_interrupt_watchdog = False
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
 
 def hangout_wait_reply_replyportion():
 
@@ -801,7 +1071,7 @@ def hangout_wait_reply_replyportion():
 
 
 def hangout_view_image_reply(transcript, dont_speak_aloud):
-    global live_pipe_no_speak
+    # global settings.live_pipe_no_speak - not needed since settings is a module
 
     # Give us some feedback
     print("\n\nViewing the camera! Please wait...\n")
@@ -831,7 +1101,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     direct_talk_transcript = transcript
 
     # Set us speaking aloud or not (controls are in the API script for streamed update handler
-    live_pipe_no_speak = dont_speak_aloud
+    settings.live_pipe_no_speak = dont_speak_aloud
 
     # View and process the image, storing the result
     transcript = API.api_controller.send_image_via_oobabooga_hangout(direct_talk_transcript)
@@ -840,7 +1110,7 @@ def hangout_view_image_reply(transcript, dont_speak_aloud):
     # Run our required message checks
     message_checks(transcript)
 
-    live_pipe_no_speak = False
+    settings.live_pipe_no_speak = False
 
     # Clear our appendables (hangout)
     hangout.clear_appendables()
@@ -879,14 +1149,66 @@ def hangout_interrupt_audio_recordable():
             # We can exit now
             return
 
+def main_text_chat():
+    """Handle chat messages from the text input"""
+    global text_chat_input
+    if text_chat_input is None:
+        print("Error: No text chat input was provided.")
+        return
+
+    # Use the text input from the global variable
+    transcript = text_chat_input
+    text_chat_input = None  # Clear it after use
+
+    # Print the transcript
+    print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+          + "----Me----"
+          + colorama.Fore.RED + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+    print(f"{transcript.strip()}")
+    print("\n")
+
+    # Store the message, for cycling purposes
+    global stored_transcript
+    stored_transcript = transcript
+
+    # Actual sending of the message, waits for reply automatically
+    API.api_controller.send_via_oogabooga(transcript)
+
+    # Run our message checks
+    reply_message = API.api_controller.receive_via_oogabooga()
+    message_checks(reply_message)
+
+    # Pipe us to the reply function
+    main_message_speak()
 
 def run_program():
-    # Set up logging first
-    from utils.logging import setup_logging
-    setup_logging()
+    """Main program startup function with proper error handling"""
+    try:
+        # Initialize colorama for cross-platform colored output
+        colorama.init()
+        
+        print(f"{colorama.Fore.CYAN}Z-WAIF System Initializing...{colorama.Fore.RESET}")
+        
+        # Set up basic error logging (after colorama init)
+        try:
+            zw_logging.log_startup()
+        except Exception as log_error:
+            print(f"Warning: Logging initialization failed: {log_error}")
+        
+    except Exception as e:
+        print(f"FATAL: Failed to initialize basic systems: {e}")
+        input("Press Enter to exit...")
+        return
 
-    # Announce that the program is running
-    print("Welcome back! Loading chat interface...\n\n", end="", flush=True)
+    #
+    # Startup Prep
+    #
+
+    # Load any available character cards
+    API.character_card.load_char_card()
+
+    # Load any available task profiles
+    API.task_profiles.load_task_profiles()
 
     # Load hotkey ON/OFF on boot
     hotkeys.load_hotkey_bootstate()
@@ -941,7 +1263,7 @@ def run_program():
     # Other settings
 
     settings.eyes_follow = os.environ.get("EYES_FOLLOW")
-    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH"))
+    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH", "400"))
 
     silero_string = os.environ.get("SILERO_VAD")
     if silero_string == "ON":
@@ -1038,6 +1360,8 @@ def run_program():
         twitch_thread.daemon = True
         twitch_thread.start()
 
+
+
     # Start another thread for camera facial track, if we want that
     if settings.eyes_follow == "Faces":
         face_follow_thread = threading.Thread(target=camera.loop_follow_look)
@@ -1067,26 +1391,62 @@ def run_program():
         API.character_card.load_char_card()
         API.task_profiles.load_task_profiles()
 
-    # Run the primary loop
-    main()
+    # Handle command line arguments for message input
+    handle_command_line_args()
+
+    # Kick off the console reader so typed input works alongside hotkeys/voice
+    console_input.start_console_reader()
+
+    # Announce that the program is running
+    print(f"{colorama.Fore.GREEN}Welcome back! Loading chat interface...{colorama.Fore.RESET}\n")
+    
+    # Process startup message if provided (after all systems are ready)
+    if startup_message:
+        try:
+            process_startup_message()
+        except Exception as e:
+            print(f"{colorama.Fore.RED}Error processing startup message: {e}{colorama.Fore.RESET}")
+            zw_logging.log_error(f"Startup message error: {e}")
+
+    # Run the primary loop with error handling
+    try:
+        print(f"{colorama.Fore.CYAN}Z-WAIF is ready! Type messages or use hotkeys...{colorama.Fore.RESET}\n")
+        main()
+    except KeyboardInterrupt:
+        print(f"\n{colorama.Fore.YELLOW}Shutdown requested by user{colorama.Fore.RESET}")
+        sys.exit(0)
+    except Exception as e:
+        print(f"{colorama.Fore.RED}Critical error in main loop: {e}{colorama.Fore.RESET}")
+        zw_logging.log_error(f"Main loop critical error: {e}")
+        print("Check log.txt for details")
+        input("Press Enter to exit...")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
+    try:
+        current_directory = os.path.dirname(os.path.abspath(__file__))
 
-    current_directory = os.path.dirname(os.path.abspath(__file__))
+        # Create the resource directory path based on the current directory
+        resource_directory = os.path.join(current_directory, "utils","resource")
+        os.makedirs(resource_directory, exist_ok=True)
 
-    # Create the resource directory path based on the current directory
-    resource_directory = os.path.join(current_directory, "utils","resource")
-    os.makedirs(resource_directory, exist_ok=True)
+        # Create the voice_in and voice_out directory paths
+        voice_in_directory = os.path.join(resource_directory, "voice_in")
+        voice_out_directory = os.path.join(resource_directory, "voice_out")
 
-    # Create the voice_in and voice_out directory paths
-    voice_in_directory = os.path.join(resource_directory, "voice_in")
-    voice_out_directory = os.path.join(resource_directory, "voice_out")
+        # Create the voice_in and voice_out directories if they don't exist
+        os.makedirs(voice_in_directory, exist_ok=True)
+        os.makedirs(voice_out_directory, exist_ok=True)
 
-    # Create the voice_in and voice_out directories if they don't exist
-    os.makedirs(voice_in_directory, exist_ok=True)
-    os.makedirs(voice_out_directory, exist_ok=True)
-
-
-    run_program()
+        # Run the main program
+        run_program()
+        
+    except Exception as e:
+        # Final catch-all error handler
+        print(f"\nFATAL ERROR: {e}")
+        print("Z-WAIF failed to start properly.")
+        print("Please check your configuration and requirements.")
+        input("Press Enter to exit...")
+        sys.exit(1)
 
