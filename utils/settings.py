@@ -33,6 +33,8 @@ is_recording = False
 auto_chat = False
 hangout_mode = False
 semi_auto_chat = False
+use_chatpops = True
+chatpop_phrases = []
 
 # Speech settings
 speak_shadowchats = True

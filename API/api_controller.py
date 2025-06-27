@@ -66,6 +66,9 @@ received_message = ""
 CHARACTER_CARD = os.environ.get("CHARACTER_CARD", None)
 YOUR_NAME = os.environ.get("YOUR_NAME")
 
+API_TYPE = os.environ.get("API_TYPE")
+API_TYPE_VISUAL = os.environ.get("API_TYPE_VISUAL")
+
 history_loaded = False
 
 ooga_history = [ ["Hello, I am back!", "Welcome back! *smiles*"] ]
@@ -267,6 +270,13 @@ def run_streaming(user_input, temp_level):
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
 
+    # Chatpop Check
+    if settings.use_chatpops and not main.live_pipe_no_speak:
+            voice.set_speaking(True)
+            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
+            voice.speak_line(this_chatpop, refuse_pause=True)
+
+
     assistant_message = ''
     supressed_rp = False
     force_skip_streaming = False
@@ -383,6 +393,8 @@ def run_streaming(user_input, temp_level):
         print("\nBad (blank) message, delegating retry to caller!\n")
         zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Delegating retry to caller...")
         regenerate_requests_count += 1
+        run_streaming((user_input + " Hmm."), 1)
+
         is_in_api_request = False
         return ""
 
@@ -903,7 +915,7 @@ def view_image(direct_talk_transcript):
     #
 
     global ooga_history
-    image_marker_length = 5     # shorting this so we don't take up a ton of context while image processing
+    image_marker_length = 4     # shorting this so we don't take up a ton of context while image processing
 
     past_messages = []
 
@@ -914,7 +926,7 @@ def view_image(direct_talk_transcript):
     #
     # Append our system message, if we are using OLLAMA, configs for guidance message and what character card to use
     #
-    if API_TYPE == "Ollama":
+    if API_TYPE_VISUAL == "Ollama":
 
         system_message = ""
 
@@ -966,7 +978,7 @@ def view_image(direct_talk_transcript):
     received_cam_message = ""
 
     # Send the actual API Request
-    if API_TYPE == "Oobabooga":
+    if API_TYPE_VISUAL == "Oobabooga":
 
         # Append the image the good ol' way
         try:
@@ -996,7 +1008,7 @@ def view_image(direct_talk_transcript):
             zw_logging.log_error(f"Oobabooga image API request failed: {e}")
             received_cam_message = f"Error processing image: {e}"
 
-    elif API_TYPE == "Ollama":
+    elif API_TYPE_VISUAL == "Ollama":
 
         try:
             # Append the image (via file path, so not for real but just link file)
@@ -1098,7 +1110,7 @@ def view_image_streaming(direct_talk_transcript):
     #
 
     global ooga_history
-    image_marker_length = 5     # shorting this so we don't take up a ton of context while image processing
+    image_marker_length = 2     # shorting this so we don't take up a ton of context while image processing
 
     past_messages = []
 
@@ -1106,10 +1118,11 @@ def view_image_streaming(direct_talk_transcript):
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
+
     #
     # Append our system message, if we are using OLLAMA, configs for guidance message and what character card to use
     #
-    if API_TYPE == "Ollama":
+    if API_TYPE_VISUAL == "Ollama":
 
         system_message = ""
 
@@ -1174,7 +1187,7 @@ def view_image_streaming(direct_talk_transcript):
     streaming_sentences_ticker = 1
 
     # Send the actual API Request
-    if API_TYPE == "Oobabooga":
+    if API_TYPE_VISUAL == "Oobabooga":
         try:
             with open('LiveImage.png', 'rb') as f:
                 img_str = base64.b64encode(f.read()).decode('utf-8')
@@ -1207,11 +1220,14 @@ def view_image_streaming(direct_talk_transcript):
             zw_logging.log_error(f"Oobabooga streaming image API request failed: {e}")
             streamed_api_stringpuller = []
 
-    elif API_TYPE == "Ollama":
+    elif API_TYPE_VISUAL == "Ollama":
         try:
             # Append the image (via file path, so not for real but just link file)
             img_str = str(os.path.abspath('LiveImage.png'))
             past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
+        # Append the image (via file path, so not for real but just link file)
+        img_str = str(os.path.abspath('LiveImage.png'))
+        past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
             streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
         except Exception as e:
@@ -1226,12 +1242,32 @@ def view_image_streaming(direct_talk_transcript):
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
 
+    # Chatpop Check
+    if settings.use_chatpops and not main.live_pipe_no_speak:
+            voice.set_speaking(True)
+            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
+            voice.speak_line(this_chatpop, refuse_pause=True)
+
+    # Chatpop Check
+    if settings.use_chatpops and not main.live_pipe_no_speak:
+            voice.set_speaking(True)
+            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
+            voice.speak_line(this_chatpop, refuse_pause=True)
+
     assistant_message = ''
     force_skip_streaming = False
     supressed_rp = False
     for event in streamed_api_stringpuller:
         # Extract chunk using unified API interface
         chunk = API.extract_streaming_chunk(event)
+
+        # Split based on API type
+        if API_TYPE_VISUAL == "Oobabooga":
+            payload = json.loads(event.data)
+            chunk = payload['choices'][0]['delta']['content']
+
+        elif API_TYPE_VISUAL == "Ollama":
+            chunk = event['message']['content']
 
         # On first chunk, print the speaker header so output isn't blank beforehand
         if not header_printed:

@@ -265,8 +265,8 @@ def run_based_rag(message, her_previous):
         central_score += histories_word_id_database["scores"][i]
         central_score += histories_word_id_database["scores"][i + 1]
 
-        # Less than or equal to makes it so that more recent entries are given a bigger score
-        if best_message_score <= histories_word_id_database["scores"][i]:
+        # Less than or equal to makes it so that more recent entries are chosen, if equal
+        if best_message_score <= histories_word_id_database['scores'][i]:
             best_message_id = i
             best_message_score = histories_word_id_database["scores"][i]
 
@@ -278,7 +278,7 @@ def run_based_rag(message, her_previous):
 
     global current_rag_message
 
-    current_rag_message = "[System M]; This message is a memory of an interaction you have had, relevant to what is currently happening;\n"
+    current_rag_message = "[System M]; This is from your past memory, relevant to what is currently happening;\n"
     current_rag_message += "User: " + history_database[best_message_id - 1][0] + "\n"
     current_rag_message += (
         char_name + ": " + history_database[best_message_id - 1][1] + "\n"
@@ -460,11 +460,11 @@ def evaluate_message(valued_word_ids, hist_word_ids):
         i = i + 1
 
     # Reduce the value of the statement if it is long, to avoid "fillabustering" (content getting picked via mass)
-    value = value - (len(hist_word_ids) / 105)
+    value = value - (len(hist_word_ids) / 115)
 
-    # Never less than 0
-    if value < 0:
-        value = 0
+    # Never less than -1 (NOTE: This is a recent update, meaning that really long messages can actually take away!)
+    if value < -1:
+        value = -1
 
     return value
 

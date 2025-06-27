@@ -404,6 +404,7 @@ def pull_next_press_input():
     else:
         return False
 
+
 def listener_timer():
 
     global SPEAKING_TIMER
