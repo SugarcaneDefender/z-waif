@@ -81,7 +81,19 @@ def load_hotkey_bootstate():
     # Also bind all of our needed hotkeys at this point
     bind_all_hotkeys()
 
+def unbind_all_hotkeys():
+    """Clear all existing hotkey bindings"""
+    try:
+        keyboard.unhook_all_hotkeys()
+        keyboard.unhook_all()
+        print("🧹 Cleared all existing hotkeys")
+    except Exception as e:
+        print(f"⚠️ Warning clearing hotkeys: {e}")
+
 def bind_all_hotkeys():
+
+    # Clear any existing bindings first
+    unbind_all_hotkeys()
 
     # Load in our hotkeys
     with open("Configurables/Keybinds.json", 'r') as openfile:
@@ -122,8 +134,16 @@ def bind_hotkey(binding, input_action):
         input_action()
 
     try:
-        keyboard.on_press_key(binding, lambda _: safe_hotkey_action())
-        print(f"✅ Bound hotkey: {binding}")
+        # Check if it's a modifier combination (contains + sign)
+        if '+' in binding:
+            # Use add_hotkey for modifier combinations (convert to lowercase format)
+            hotkey_combo = binding.lower()
+            keyboard.add_hotkey(hotkey_combo, safe_hotkey_action)
+            print(f"✅ Bound combination hotkey: {binding} ({hotkey_combo})")
+        else:
+            # Use on_press_key for single keys
+            keyboard.on_press_key(binding, lambda _: safe_hotkey_action())
+            print(f"✅ Bound single hotkey: {binding}")
     except Exception as e:
         print(f"❌ Issue binding hotkey {binding}: {e}")
         zw_logging.update_debug_log(f"Issue binding to hotkey {binding}: {e}")
