@@ -66,6 +66,9 @@ text_chat_input = None
 # Command line message input support
 startup_message = None
 
+# Debug mode toggle
+debug_mode = False
+
 def handle_command_line_args():
     """Handle command line arguments for message input like the release version"""
     global startup_message
@@ -141,6 +144,7 @@ def print_console_help():
   • /help, help, /?                     → Show this help
   • /status, status                     → Show current system status
   • /clear, clear_history               → Clear conversation history
+  • /debug, debug_toggle                → Toggle debug mode on/off
   • /quit, exit                         → Shutdown Z-WAIF
 
 {colorama.Fore.YELLOW}Hotkey Commands:{colorama.Fore.RESET}
@@ -177,6 +181,14 @@ def clear_conversation_history():
         
     except Exception as e:
         print(f"{colorama.Fore.RED}❌ Error clearing history: {e}{colorama.Fore.RESET}")
+
+
+def toggle_debug_mode():
+    """Toggle debug mode on/off"""
+    global debug_mode
+    debug_mode = not debug_mode
+    status = "ON" if debug_mode else "OFF"
+    print(f"{colorama.Fore.CYAN}🐛 Debug mode: {status}{colorama.Fore.RESET}")
 
 
 def print_status_info():
@@ -246,6 +258,9 @@ def main():
                 elif lowercase_line in {"/clear", "clear", "/clear_history", "clear_history"}:
                     clear_conversation_history()
                     command = None  # Don't process as command, just clear history
+                elif lowercase_line in {"/debug", "debug", "/debug_toggle", "debug_toggle"}:
+                    toggle_debug_mode()
+                    command = None  # Don't process as command, just toggle debug
                 elif lowercase_line in {"/quit", "quit", "exit", "/exit"}:
                     print("👋 Shutting down Z-WAIF...")
                     sys.exit(0)
@@ -384,17 +399,29 @@ def main_converse():
 def main_message_speak():
     """Handle speaking messages (voice + plugin checks)"""
     global live_pipe_force_speak_on_response
+    
+    if debug_mode:
+        print(f"[DEBUG] main_message_speak() called")
 
     # Message is received here
     message = API.api_controller.receive_via_oogabooga()
+    if debug_mode:
+        print(f"[DEBUG] main_message_speak() received: {repr(message)}")
 
     # Stop if the message was streamed—we already spoke it, unless a force-speak was queued
     if API.api_controller.last_message_streamed and not live_pipe_force_speak_on_response:
         live_pipe_force_speak_on_response = False
         return
 
+    # Clean the message for TTS (remove character name prefix)
+    clean_message = message or ""
+    if char_name and clean_message.startswith(f"{char_name}:"):
+        clean_message = clean_message[len(char_name)+1:].strip()
+    elif clean_message.startswith("Assistant:"):
+        clean_message = clean_message[10:].strip()
+    
     # Strip emojis for clearer TTS
-    s_message = emoji.replace_emoji(message or "", replace="")
+    s_message = emoji.replace_emoji(clean_message, replace="")
 
     if s_message.strip():
         t = threading.Thread(target=voice.speak_line, args=(s_message,), kwargs={"refuse_pause": False})
@@ -411,13 +438,22 @@ def main_message_speak():
 
         # Force speak if specifically requested (e.g., hangout interrupt)
         if live_pipe_force_speak_on_response:
-            voice.speak(message)
+            # Also clean the force speak message
+            force_speak_clean = message
+            if char_name and force_speak_clean.startswith(f"{char_name}:"):
+                force_speak_clean = force_speak_clean[len(char_name)+1:].strip()
+            elif force_speak_clean.startswith("Assistant:"):
+                force_speak_clean = force_speak_clean[10:].strip()
+            voice.speak(force_speak_clean)
             live_pipe_force_speak_on_response = False
 
 
 
 def message_checks(message):
     """Run post-response tasks: logging, plugin hooks, prints, etc."""
+    
+    if debug_mode:
+        print(f"[DEBUG] message_checks() called with: {repr(message)}")
 
     if not message or message.strip() == "":
         return
@@ -433,7 +469,15 @@ def message_checks(message):
         print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
               + f"----{banner_name}----"
               + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
-        print(message.strip())
+        
+        # Clean the message for display (remove character name prefix)
+        display_message = message
+        if char_name and display_message.startswith(f"{char_name}:"):
+            display_message = display_message[len(char_name)+1:].strip()
+        elif display_message.startswith("Assistant:"):
+            display_message = display_message[10:].strip()
+        
+        print(display_message.strip())
         print()
 
     # Speak in shadow-chat configuration (non-streamed)
@@ -1274,7 +1318,8 @@ def main_text_chat(transcript=None):
     # If no transcript passed as parameter, try the global variable (fallback)
     if transcript is None:
         global text_chat_input
-        print(f"[DEBUG] main_text_chat called with no parameter, text_chat_input = {repr(text_chat_input)}")
+        if debug_mode:
+            print(f"[DEBUG] main_text_chat called with no parameter, text_chat_input = {repr(text_chat_input)}")
         
         if text_chat_input is None:
             print("Error: No text chat input was provided.")
@@ -1283,7 +1328,8 @@ def main_text_chat(transcript=None):
         transcript = text_chat_input
         text_chat_input = None  # Clear it immediately after capturing
     else:
-        print(f"[DEBUG] main_text_chat called with parameter: {repr(transcript)}")
+        if debug_mode:
+            print(f"[DEBUG] main_text_chat called with parameter: {repr(transcript)}")
     
     # Validate we have actual content
     if not transcript or not transcript.strip():
@@ -1305,11 +1351,7 @@ def main_text_chat(transcript=None):
         # Use the proper API flow - send then receive
         API.api_controller.send_via_oogabooga(transcript)
 
-        # Run our message checks
-        reply_message = API.api_controller.receive_via_oogabooga()
-        message_checks(reply_message)
-
-        # Pipe us to the reply function
+        # Pipe us to the reply function (this will handle receiving and message_checks internally)
         main_message_speak()
         
     except Exception as e:
