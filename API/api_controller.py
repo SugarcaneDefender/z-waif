@@ -1523,8 +1523,12 @@ def encode_for_oobabooga_chat(user_input):
             if assistant_msg:
                 messages.append({"role": "assistant", "content": str(assistant_msg)})
             
-    # Add the current user message
-    messages.append({"role": "user", "content": user_input})
+    # Add the current user message - convert blank to meaningful prompt for AI
+    if user_input and user_input.strip():
+        messages.append({"role": "user", "content": user_input})
+    else:
+        # Send meaningful prompt to AI for blank messages while preserving blank in history
+        messages.append({"role": "user", "content": "*listens attentively*"})
     
     return messages
 
