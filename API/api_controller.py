@@ -122,11 +122,11 @@ def run(user_input, temp_level):
     global ooga_history
     global is_in_api_request
 
-    # If the input is blank, do not proceed. This prevents recursion loops.
+    # Handle blank input by converting to meaningful prompt for AI while preserving original
+    original_user_input = user_input
     if not user_input or user_input.strip() == "":
-        zw_logging.update_debug_log("API 'run' received blank input. Aborting.")
-        is_in_api_request = False
-        return ""
+        zw_logging.update_debug_log("API 'run' received blank input. Converting to listening prompt.")
+        user_input = "*listens attentively*"  # Convert for AI processing
 
     # We are starting our API request!
     is_in_api_request = True
@@ -162,8 +162,8 @@ def run(user_input, temp_level):
     else:
         received_message = "I'm having trouble responding right now."
 
-    # Log it to our history - simplified format like release version
-    ooga_history.append([user_input, received_message])
+    # Log it to our history - simplified format like release version (use original input, not converted)
+    ooga_history.append([original_user_input, received_message])
     
     # Save history
     save_histories()
@@ -188,6 +188,12 @@ def run_streaming(user_input, temp_level):
     global streaming_sentences_ticker
     global force_skip_streaming
     global is_in_api_request
+
+    # Handle blank input by converting to meaningful prompt for AI while preserving original
+    original_user_input = user_input
+    if not user_input or user_input.strip() == "":
+        zw_logging.update_debug_log("API 'run_streaming' received blank input. Converting to listening prompt.")
+        user_input = "*listens attentively*"  # Convert for AI processing
 
     # We are starting our API request!
     is_in_api_request = True
@@ -306,8 +312,8 @@ def run_streaming(user_input, temp_level):
 
         # Cut for the hangout name being said
         if streamed_response_check == "Hangout-Name-Cut" and settings.hangout_mode:
-            # Add any existing stuff to our actual chat history
-            ooga_history.append([user_input, assistant_message, settings.cur_tags,
+            # Add any existing stuff to our actual chat history (use original input, not converted)
+            ooga_history.append([original_user_input, assistant_message, settings.cur_tags,
                                  "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
             save_histories()
 
@@ -401,8 +407,8 @@ def run_streaming(user_input, temp_level):
     # Clear our regen requests count, we have hit our limit
     regenerate_requests_count = 0
 
-    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
-    log_user_input = "{0}".format(user_input)
+    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively (use original input, not converted)
+    log_user_input = "{0}".format(original_user_input)
     log_received_message = "{0}".format(received_message)
 
     ooga_history.append([log_user_input, log_received_message, tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
