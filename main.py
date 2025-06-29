@@ -452,8 +452,8 @@ def main_message_speak():
 
     # Clean the message for TTS (remove character name prefix)
     clean_message = message or ""
-    if char_name and clean_message.startswith(f"{char_name}:"):
-        clean_message = clean_message[len(char_name)+1:].strip()
+    if settings.char_name and clean_message.startswith(f"{settings.char_name}:"):
+        clean_message = clean_message[len(settings.char_name)+1:].strip()
     elif clean_message.startswith("Assistant:"):
         clean_message = clean_message[10:].strip()
     
@@ -477,8 +477,8 @@ def main_message_speak():
         if live_pipe_force_speak_on_response:
             # Also clean the force speak message
             force_speak_clean = message
-            if char_name and force_speak_clean.startswith(f"{char_name}:"):
-                force_speak_clean = force_speak_clean[len(char_name)+1:].strip()
+            if settings.char_name and force_speak_clean.startswith(f"{settings.char_name}:"):
+                force_speak_clean = force_speak_clean[len(settings.char_name)+1:].strip()
             elif force_speak_clean.startswith("Assistant:"):
                 force_speak_clean = force_speak_clean[10:].strip()
             voice.speak(force_speak_clean)
@@ -486,7 +486,7 @@ def main_message_speak():
 
 
 
-def message_checks(message):
+def message_checks(message, skip_print=False):
     """Run post-response tasks: logging, plugin hooks, prints, etc."""
     
     if debug_mode:
@@ -498,19 +498,19 @@ def message_checks(message):
     # Log message only if it was NOT streamed
     if not API.api_controller.last_message_streamed:
         # Use debug log since update_chat_log doesn't exist
-        zw_logging.update_debug_log(f"Message from {char_name if char_name else 'Assistant'}: {message}")
+        zw_logging.update_debug_log(f"Message from {settings.char_name if settings.char_name else 'Assistant'}: {message}")
 
-    # Print banner + text only if not streamed (streamed path prints in real-time)
-    if not API.api_controller.last_message_streamed:
-        banner_name = char_name if char_name else 'Assistant'
+    # Print banner + text only if not streamed (streamed path prints in real-time) and not skipping print
+    if not API.api_controller.last_message_streamed and not skip_print:
+        banner_name = settings.char_name if settings.char_name else 'Assistant'
         print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
               + f"----{banner_name}----"
               + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
         
         # Clean the message for display (remove character name prefix)
         display_message = message
-        if char_name and display_message.startswith(f"{char_name}:"):
-            display_message = display_message[len(char_name)+1:].strip()
+        if settings.char_name and display_message.startswith(f"{settings.char_name}:"):
+            display_message = display_message[len(settings.char_name)+1:].strip()
         elif display_message.startswith("Assistant:"):
             display_message = display_message[10:].strip()
         
@@ -733,11 +733,17 @@ def clean_personal_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start (like "Alexcia:", "Alexicia:", "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove streaming language completely for personal conversations
     streaming_phrases = [
@@ -757,7 +763,6 @@ def clean_personal_response(response):
             return "Hey! How are you doing? What's on your mind?"
     
     # Remove action text in asterisks
-    import re
     clean_reply = re.sub(r'\*[^*]*\*', '', clean_reply).strip()
     
     # Remove platform context markers
@@ -776,14 +781,19 @@ def clean_discord_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # Keep Discord-appropriate language (casual, fun, emojis OK)
@@ -811,14 +821,19 @@ def clean_twitch_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # For Twitch, we want to keep it conversational but not overly streaming-focused
@@ -849,14 +864,19 @@ def clean_voice_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # Remove streaming language completely for voice conversations
@@ -892,14 +912,19 @@ def clean_minecraft_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # Keep responses short for Minecraft chat (character limit)
@@ -925,14 +950,19 @@ def clean_alarm_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # Remove streaming language completely for alarms
@@ -954,14 +984,19 @@ def clean_hangout_response(response):
     
     clean_reply = response.strip()
     
-    # Remove character name prefix if present
-    if char_name and clean_reply.startswith(f"{char_name}:"):
-        clean_reply = clean_reply[len(char_name)+1:].strip()
-    elif clean_reply.startswith("Assistant:"):
-        clean_reply = clean_reply[10:].strip()
+    # Remove character name prefix if present - more robust matching
+    import re
+    from utils import settings
+    
+    # Match any name followed by a colon at the start
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
+    
+    # Also specifically remove the configured character name if present
+    if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
+        clean_reply = clean_reply[len(settings.char_name)+1:].strip()
     
     # Remove platform context markers
-    import re
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
     
     # Remove streaming language but keep casual tone
@@ -1624,19 +1659,20 @@ def main_text_chat(transcript=None):
         clean_reply = send_platform_aware_message(transcript, platform="cmd")
         
         if clean_reply and clean_reply.strip():
-            # Run message checks with cleaned response
-            message_checks(clean_reply)
+            # Print the cleaned response directly (no double output via message_checks)
+            banner_name = char_name if char_name else 'Assistant'
+            print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                  + f"----{banner_name}----"
+                  + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+            print(clean_reply.strip())
+            print()
+            
+            # Run plugin checks without the printing (using skip_print flag)
+            message_checks(clean_reply, skip_print=True)
             
             # Handle TTS directly with the already cleaned message
-            clean_tts_message = clean_reply
-            if char_name and clean_tts_message.startswith(f"{char_name}:"):
-                clean_tts_message = clean_tts_message[len(char_name)+1:].strip()
-            elif clean_tts_message.startswith("Assistant:"):
-                clean_tts_message = clean_tts_message[10:].strip()
-                
-            # Strip emojis for clearer TTS and speak
-            if clean_tts_message.strip():
-                s_message = emoji.replace_emoji(clean_tts_message, replace="")
+            if clean_reply.strip():
+                s_message = emoji.replace_emoji(clean_reply, replace="")
                 if s_message.strip():
                     t = threading.Thread(target=voice.speak_line, args=(s_message,), kwargs={"refuse_pause": False})
                     t.daemon = True
