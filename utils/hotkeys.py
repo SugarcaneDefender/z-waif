@@ -465,23 +465,37 @@ def listener_timer():
 
 def get_sensitivity_input():
     global SPEAKING_VOLUME_SENSITIVITY
+    from utils import console_input
 
-    print("\n\nPlease enter a new sensitivity value! (1-200)\n")
-    new_sens = input()
+    print("\n\nPlease enter a new sensitivity value! (1-200)")
+    print("You can type other commands while waiting...")
+    
+    # Use non-blocking input instead of blocking input()
+    start_time = time.time()
+    while True:
+        # Check for console input non-blockingly
+        new_sens_str = console_input.get_line_nonblocking()
+        if new_sens_str is not None:
+            try:
+                new_sens = int(new_sens_str.strip())
+                if new_sens < 1:
+                    new_sens = 1
+                if new_sens > 200:
+                    new_sens = 200
 
-    try:
-        new_sens = int(new_sens)
-    except Exception as e:
-        print(f"Not a valid value! Sensitivity must be a whole number! Error: {e}")
-        return
-
-    if new_sens < 1:
-        new_sens = 1
-    if new_sens > 200:
-        new_sens = 200
-
-    SPEAKING_VOLUME_SENSITIVITY = new_sens
-    print("\nSensitivity set to " + str(new_sens) + " !")
+                SPEAKING_VOLUME_SENSITIVITY = new_sens
+                print(f"Sensitivity set to {new_sens}!")
+                return
+            except ValueError:
+                print(f"'{new_sens_str}' is not a valid number! Please enter a whole number (1-200)")
+                continue
+        
+        # Timeout after 30 seconds to prevent infinite waiting
+        if time.time() - start_time > 30:
+            print("Sensitivity input timeout. Keeping current value.")
+            return
+            
+        time.sleep(0.1)  # Small delay to prevent busy waiting
 
 def input_toggle_semi_autochat():
     # No toggle in hangout mode

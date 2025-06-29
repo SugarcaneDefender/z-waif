@@ -32,12 +32,28 @@ def _process_print_queue():
         try:
             message = _print_queue.get_nowait()
             # Clear the current line, print the message, and redraw the prompt
-            sys.stdout.write(f"\r{' ' * 80}\r")  # Clear line
+            sys.stdout.write(f"\r{' ' * 100}\r")  # Clear line (increased space)
             sys.stdout.write(f"{message}\n")
             sys.stdout.write(f"You > {_current_input}")
             sys.stdout.flush()
         except queue.Empty:
             break
+
+
+def update_input_display(text=""):
+    """Update the current input display"""
+    global _current_input
+    _current_input = text
+    # Clear current line and redraw prompt with input
+    sys.stdout.write(f"\r{' ' * 100}\r")  # Clear line
+    sys.stdout.write(f"You > {_current_input}")
+    sys.stdout.flush()
+
+
+def show_prompt():
+    """Show the input prompt"""
+    sys.stdout.write("You > ")
+    sys.stdout.flush()
 
 def start_console_reader() -> None:
     """Spin up the background thread once; safe to call multiple times."""

@@ -120,6 +120,56 @@ def process_startup_message():
         print(f"\n{colorama.Fore.GREEN}Startup message processed. Continuing with normal operation...{colorama.Fore.RESET}\n")
 
 # noinspection PyBroadException
+def print_console_help():
+    """Display available console commands"""
+    help_text = f"""
+{colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════
+                              Z-WAIF CONSOLE COMMANDS
+═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
+
+{colorama.Fore.GREEN}Chat Commands:{colorama.Fore.RESET}
+  • Type any message                    → Send as chat to AI
+  • /blank, blank                       → Send blank message (AI will self-talk)
+
+{colorama.Fore.YELLOW}Control Commands:{colorama.Fore.RESET}
+  • /next, next                         → Generate next response
+  • /redo, redo                         → Regenerate last response
+  • /soft_reset, reset                  → Reset conversation context
+  • /view, view                         → Take/send image (if vision enabled)
+
+{colorama.Fore.BLUE}System Commands:{colorama.Fore.RESET}
+  • /help, help, /?                     → Show this help
+  • /status, status                     → Show current system status
+  • /quit, exit                         → Shutdown Z-WAIF
+
+{colorama.Fore.MAGENTA}Note:{colorama.Fore.RESET} All commands work while other functions are running!
+{colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
+"""
+    print(help_text)
+
+
+def print_status_info():
+    """Display current system status"""
+    status_text = f"""
+{colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════
+                                Z-WAIF STATUS
+═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
+
+{colorama.Fore.GREEN}🎤 Recording:{colorama.Fore.RESET}          {'ON' if hotkeys.get_speak_input() else 'OFF'}
+{colorama.Fore.GREEN}🤖 Auto-Chat:{colorama.Fore.RESET}         {'ON' if hotkeys.get_autochat_toggle() else 'OFF'}
+{colorama.Fore.GREEN}📱 Semi-Auto Chat:{colorama.Fore.RESET}    {'ON' if settings.semi_auto_chat else 'OFF'}
+{colorama.Fore.GREEN}🏠 Hangout Mode:{colorama.Fore.RESET}      {'ON' if settings.hangout_mode else 'OFF'}
+{colorama.Fore.GREEN}🎮 Gaming Mode:{colorama.Fore.RESET}       {'ON' if settings.is_gaming_loop else 'OFF'}
+{colorama.Fore.GREEN}🔒 Hotkeys Locked:{colorama.Fore.RESET}    {'YES' if settings.hotkeys_locked else 'NO'}
+{colorama.Fore.GREEN}👁️ Vision:{colorama.Fore.RESET}           {'ON' if settings.vision_enabled else 'OFF'}
+{colorama.Fore.GREEN}🎯 Sensitivity:{colorama.Fore.RESET}       {hotkeys.get_autochat_sensitivity()}
+{colorama.Fore.GREEN}📊 Current Mode:{colorama.Fore.RESET}      {'Live Pipe' if is_live_pipe else 'Waiting for Input'}
+
+{colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
+"""
+    print(status_text)
+
+
 def main():
 
     while True:
@@ -139,17 +189,32 @@ def main():
                 lowercase_line = typed_line.lower()
 
                 if lowercase_line in {"/next", "next"}:
+                    print("⏭️ Processing NEXT command...")
                     command = "NEXT"
                 elif lowercase_line in {"/redo", "redo"}:
+                    print("🔄 Processing REDO command...")
                     command = "REDO"
                 elif lowercase_line in {"/soft_reset", "soft reset", "reset"}:
+                    print("🔄 Processing SOFT RESET command...")
                     command = "SOFT_RESET"
                 elif lowercase_line in {"/view", "view"}:
+                    print("👁️ Processing VIEW IMAGE command...")
                     command = "VIEW"
                 elif lowercase_line in {"/blank", "blank"}:
+                    print("📝 Processing BLANK MESSAGE command...")
                     command = "BLANK"
+                elif lowercase_line in {"/help", "help", "/?"}:
+                    print_console_help()
+                    command = None  # Don't process as command, just show help
+                elif lowercase_line in {"/status", "status"}:
+                    print_status_info()
+                    command = None  # Don't process as command, just show status
+                elif lowercase_line in {"/quit", "quit", "exit", "/exit"}:
+                    print("👋 Shutting down Z-WAIF...")
+                    sys.exit(0)
                 else:
                     # Treat as a standard chat message
+                    print(f"💬 Processing text chat: '{typed_line}'")
                     global text_chat_input
                     text_chat_input = typed_line
                     command = "TEXT_CHAT"
@@ -1437,7 +1502,10 @@ def run_program():
 
     # Run the primary loop with error handling
     try:
-        print(f"{colorama.Fore.CYAN}Z-WAIF is ready! Type messages or use hotkeys...{colorama.Fore.RESET}\n")
+        print(f"{colorama.Fore.CYAN}Z-WAIF is ready!{colorama.Fore.RESET}")
+        print(f"{colorama.Fore.GREEN}💬 Type messages to chat with AI")
+        print(f"🎛️ Use /help for console commands")
+        print(f"⌨️ Hotkeys and buttons work while functions are running!{colorama.Fore.RESET}\n")
         main()
     except KeyboardInterrupt:
         print(f"\n{colorama.Fore.YELLOW}Shutdown requested by user{colorama.Fore.RESET}")
