@@ -252,9 +252,9 @@ def main():
                 else:
                     # Treat as a standard chat message
                     print(f"💬 Processing text chat: '{typed_line}'")
-                    global text_chat_input
-                    text_chat_input = typed_line
-                    command = "TEXT_CHAT"
+                    # Pass the message directly to the pipe instead of using global variable
+                    uni_pipes.start_new_pipe(desired_process="Main-Text-Chat", is_main_pipe=True, data=typed_line)
+                    command = None  # Don't process through normal command flow
 
         # 2. If no console input, check for hotkeys
         if command is None:
@@ -272,8 +272,7 @@ def main():
             # Map command to a pipe process
             if command == "CHAT":
                 uni_pipes.start_new_pipe(desired_process="Main-Chat", is_main_pipe=True)
-            elif command == "TEXT_CHAT":
-                uni_pipes.start_new_pipe(desired_process="Main-Text-Chat", is_main_pipe=True)
+
             elif command == "NEXT":
                 uni_pipes.start_new_pipe(desired_process="Main-Next", is_main_pipe=True)
             elif command == "REDO":
@@ -1269,16 +1268,27 @@ def hangout_interrupt_audio_recordable():
             # We can exit now
             return
 
-def main_text_chat():
+def main_text_chat(transcript=None):
     """Handle chat messages from the text input"""
-    global text_chat_input
-    if text_chat_input is None:
-        print("Error: No text chat input was provided.")
+    
+    # If no transcript passed as parameter, try the global variable (fallback)
+    if transcript is None:
+        global text_chat_input
+        print(f"[DEBUG] main_text_chat called with no parameter, text_chat_input = {repr(text_chat_input)}")
+        
+        if text_chat_input is None:
+            print("Error: No text chat input was provided.")
+            return
+        
+        transcript = text_chat_input
+        text_chat_input = None  # Clear it immediately after capturing
+    else:
+        print(f"[DEBUG] main_text_chat called with parameter: {repr(transcript)}")
+    
+    # Validate we have actual content
+    if not transcript or not transcript.strip():
+        print("Error: Text chat input was empty.")
         return
-
-    # Use the text input from the global variable
-    transcript = text_chat_input
-    text_chat_input = None  # Clear it after use
 
     # Print the transcript
     print('\r' + colorama.Fore.RED + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
@@ -1291,15 +1301,20 @@ def main_text_chat():
     global stored_transcript
     stored_transcript = transcript
 
-    # Actual sending of the message, waits for reply automatically
-    API.api_controller.send_via_oogabooga(transcript)
+    try:
+        # Use the proper API flow - send then receive
+        API.api_controller.send_via_oogabooga(transcript)
 
-    # Run our message checks
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+        # Run our message checks
+        reply_message = API.api_controller.receive_via_oogabooga()
+        message_checks(reply_message)
 
-    # Pipe us to the reply function
-    main_message_speak()
+        # Pipe us to the reply function
+        main_message_speak()
+        
+    except Exception as e:
+        print(f"{colorama.Fore.RED}Error processing text chat: {e}{colorama.Fore.RESET}")
+        zw_logging.log_error(f"Text chat processing error: {e}")
 
 def run_program():
     """Main program startup function with proper error handling"""

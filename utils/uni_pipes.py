@@ -25,12 +25,12 @@ from utils import zw_logging
 pipe_counter = 0 # This is just the total number of pipes created this session. Appends as pipe id
 main_pipe_running = False
 
-def start_new_pipe(desired_process, is_main_pipe):
+def start_new_pipe(desired_process, is_main_pipe, data=None):
     global pipe_counter, main_pipe_running
     pipe_counter += 1
 
-    # Make our pipe
-    this_pipe = ["Init", "None", pipe_counter, desired_process, is_main_pipe]
+    # Make our pipe - add data field at index 5
+    this_pipe = ["Init", "None", pipe_counter, desired_process, is_main_pipe, data]
     if is_main_pipe:
         main_pipe_running = True
 
@@ -76,7 +76,11 @@ def pipe_loop(this_pipe):
             this_pipe[0] = "BAKED"
 
         elif this_pipe[3] == "Main-Text-Chat":
-            main.main_text_chat()
+            # Pass the data to main_text_chat if available
+            if len(this_pipe) > 5 and this_pipe[5] is not None:
+                main.main_text_chat(this_pipe[5])
+            else:
+                main.main_text_chat()
             this_pipe[0] = "BAKED"
 
         elif this_pipe[3] == "Main-Blank":
