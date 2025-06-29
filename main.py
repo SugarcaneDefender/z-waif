@@ -103,10 +103,16 @@ def verify_system_integration():
     
     # Check chatpops configuration
     try:
-        if settings.use_chatpops and len(settings.chatpop_phrases) > 0:
-            print(f"{colorama.Fore.GREEN}✅ Chatpops enabled with {len(settings.chatpop_phrases)} phrases{colorama.Fore.RESET}")
+        # Re-import settings to ensure we have the latest state
+        from utils import settings
+        chatpop_count = len(settings.chatpop_phrases) if hasattr(settings, 'chatpop_phrases') else 0
+        
+        if settings.use_chatpops and chatpop_count > 0:
+            print(f"{colorama.Fore.GREEN}✅ Chatpops enabled with {chatpop_count} phrases{colorama.Fore.RESET}")
+        elif not settings.use_chatpops:
+            print(f"{colorama.Fore.YELLOW}⚠️ Chatpops disabled in settings{colorama.Fore.RESET}")
         else:
-            print(f"{colorama.Fore.YELLOW}⚠️ Chatpops disabled or no phrases loaded{colorama.Fore.RESET}")
+            print(f"{colorama.Fore.YELLOW}⚠️ Chatpops enabled but no phrases loaded (found {chatpop_count}){colorama.Fore.RESET}")
     except Exception as e:
         print(f"{colorama.Fore.RED}❌ Chatpops configuration issue: {e}{colorama.Fore.RESET}")
     
@@ -1807,15 +1813,16 @@ def run_program():
     # Load the previous chat history, and make a backup of it
     API.api_controller.check_load_past_chat()
 
-    # Load in our chatpops
+    # Load in our chatpops - use environment variable to potentially override
     chatpops_enabled_string = os.environ.get("USE_CHATPOPS")
     if chatpops_enabled_string == "ON":
         settings.use_chatpops = True
-    else:
+    elif chatpops_enabled_string == "OFF":
         settings.use_chatpops = False
-
-    with open("Configurables/Chatpops.json", 'r') as openfile:
-        settings.chatpop_phrases = json.load(openfile)
+    # If not set in environment, keep the current setting from settings.py
+    
+    # Chatpops are already loaded in settings.py, no need to reload them here
+    # The loading in settings.py handles the JSON file properly with error handling
 
 
     # Start the VTube Studio interaction in a separate thread, we ALWAYS do this FYI

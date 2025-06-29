@@ -84,11 +84,21 @@ def load_hotkey_bootstate():
 def unbind_all_hotkeys():
     """Clear all existing hotkey bindings"""
     try:
+        # Try the newer method first
         keyboard.unhook_all_hotkeys()
         keyboard.unhook_all()
         print("🧹 Cleared all existing hotkeys")
+    except AttributeError:
+        # Fallback for older keyboard library versions
+        try:
+            keyboard.clear_all_hotkeys()
+            print("🧹 Cleared all existing hotkeys (fallback method)")
+        except AttributeError:
+            # Final fallback - just continue without clearing
+            print("⚠️ Could not clear existing hotkeys - continuing anyway")
     except Exception as e:
-        print(f"⚠️ Warning clearing hotkeys: {e}")
+        # Handle any other errors gracefully
+        print(f"⚠️ Warning clearing hotkeys: {e} - continuing anyway")
 
 def bind_all_hotkeys():
 
