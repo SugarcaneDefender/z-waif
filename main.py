@@ -1,5 +1,6 @@
 # Standard library imports
 import asyncio
+import datetime
 import os
 import json
 import sys
@@ -936,16 +937,33 @@ def main_send_blank():
     # Give us some feedback
     print("\nSending blank message...\n")
 
-    # Send a blank message
-    API.api_controller.send_via_oogabooga("")
+    # Send a blank message (convert to listening placeholder for AI)
+    blank_placeholder = "*listens attentively*"
+    API.api_controller.send_via_oogabooga(blank_placeholder)
 
-    # Run our message checks
+    # Get the response
     reply_message = API.api_controller.receive_via_oogabooga()
+    
+    # Always process the response, even if it's empty
+    # This ensures the interaction gets added to chat history for web UI
     if reply_message and reply_message.strip():
         message_checks(reply_message)
         # Speak the response if shadow chats are enabled
         if settings.speak_shadowchats:
             voice.speak(reply_message)
+    else:
+        # Even with empty response, run message_checks to ensure proper logging
+        message_checks(reply_message or "*nods quietly*")
+        # Manually ensure the interaction is in history for web UI
+        if len(API.api_controller.ooga_history) == 0 or API.api_controller.ooga_history[-1][0] != blank_placeholder:
+            # Add the interaction to history if it wasn't added by the API
+            API.api_controller.ooga_history.append([
+                blank_placeholder, 
+                reply_message or "*nods quietly*", 
+                settings.cur_tags.copy(), 
+                "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())
+            ])
+            API.api_controller.save_histories()
 
 #
 # Defs for main hangout functions
