@@ -164,20 +164,24 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             def regenerate():
                 """Regenerate the last response"""
+                print("Regenerating last response (Web UI)")
                 main.main_web_ui_next()
                 return
 
             def send_blank():
                 """Send a blank message through the web UI"""
+                print("Sending blank message (Web UI)")
                 main.main_web_ui_chat("")
                 return
 
             def undo():
+                print("Undoing last action (Web UI)")
                 main.main_undo()
                 return
 
             def soft_reset():
                 """Trigger a soft reset of the chat system"""
+                print("Performing chat soft reset (Web UI)")
                 API.api_controller.soft_reset()
                 return
 
@@ -239,6 +243,12 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             # Toggle
             settings.semi_auto_chat = not settings.semi_auto_chat
+
+            # Log the toggle for UI tracking
+            if settings.semi_auto_chat:
+                print("Semi-Auto Chat toggled ON (Web UI)")
+            else:
+                print("Semi-Auto Chat toggled OFF (Web UI)")
 
             # Disable
             hotkeys.disable_autochat()

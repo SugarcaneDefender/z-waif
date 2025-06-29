@@ -162,11 +162,23 @@ def speak_input_toggle():
     global SPEAK_TOGGLED
 
     SPEAK_TOGGLED = not SPEAK_TOGGLED
+    
+    # Log the toggle
+    if SPEAK_TOGGLED:
+        print("Microphone Recording toggled ON")
+    else:
+        print("Microphone Recording toggled OFF")
 
 def speak_input_toggle_from_ui():
     global SPEAK_TOGGLED
 
     SPEAK_TOGGLED = not SPEAK_TOGGLED
+    
+    # Log the toggle for UI tracking
+    if SPEAK_TOGGLED:
+        print("Microphone Recording toggled ON (Web UI)")
+    else:
+        print("Microphone Recording toggled OFF (Web UI)")
 
 def speak_input_on_from_cam_direct_talk():
     global SPEAK_TOGGLED
@@ -267,6 +279,12 @@ def input_toggle_autochat_from_ui():
     global FULL_AUTO_TOGGLED
 
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
+
+    # Log the toggle for UI tracking
+    if FULL_AUTO_TOGGLED:
+        print("Auto-Chat toggled ON (Web UI)")
+    else:
+        print("Auto-Chat toggled OFF (Web UI)")
 
 
 def disable_autochat():
@@ -472,6 +490,12 @@ def input_toggle_semi_autochat():
 
     # Toggle
     settings.semi_auto_chat = not settings.semi_auto_chat
+
+    # Log the toggle
+    if settings.semi_auto_chat:
+        print("Semi-Auto Chat toggled ON")
+    else:
+        print("Semi-Auto Chat toggled OFF")
 
     # Disable
     disable_autochat()
