@@ -286,7 +286,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             """Update all settings views with current values."""
             return (
                 settings.is_recording,
-                settings.auto_chat,
+                hotkeys.get_autochat_toggle(),  # Fix: Use correct autochat variable
                 settings.semi_auto_chat,
                 settings.hangout_mode,
                 settings.speak_shadowchats,
@@ -301,8 +301,8 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             )
 
 
-        demo.load(update_settings_view, every=0.06,
-                  outputs=[recording_checkbox_view, autochat_checkbox_view, semi_auto_chat_checkbox_view, hangout_mode_checkbox_view, shadowchats_checkbox_view, speaking_choice_checkbox_view, supress_rp_checkbox_view, newline_cut_checkbox_view, asterisk_ban_checkbox_view, hotkey_checkbox_view, max_tokens_slider, alarm_time_box, model_preset_box])
+        # Note: Checkbox updates moved to consolidated update_all_views function below
+        # This prevents duplicate updates that cause visual glitching
 
 
 
@@ -529,24 +529,25 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
         rag_log = gr.Textbox(links_text, lines=14, label="Links")
 
-    # Universal update function for all dynamic UI elements
+    # Universal update function for all dynamic UI elements (consolidated to prevent conflicts)
     def update_all_views():
         return (
-            hotkeys.get_speak_input(),
-            hotkeys.get_autochat_toggle(),
-            settings.semi_auto_chat,
-            settings.hangout_mode,
-            settings.speak_shadowchats,
-            settings.hotkeys_locked,
-            settings.supress_rp,
-            settings.newline_cut,
-            settings.asterisk_ban
+            hotkeys.get_speak_input(),           # recording_checkbox_view
+            hotkeys.get_autochat_toggle(),       # autochat_checkbox_view - FIXED: use correct variable
+            settings.semi_auto_chat,             # semi_auto_chat_checkbox_view
+            settings.hangout_mode,               # hangout_mode_checkbox_view
+            settings.speak_shadowchats,          # shadowchats_checkbox_view
+            settings.hotkeys_locked,             # hotkeys_checkbox_view
+            settings.supress_rp,                 # rp_sup_checkbox_view
+            settings.newline_cut,                # newline_cut_checkbox_view
+            settings.asterisk_ban                # asterisk_ban_checkbox_view
         )
 
     # A single demo.load call to update all checkboxes simultaneously
+    # Update frequency reduced to prevent visual glitching
     demo.load(
         fn=update_all_views,
-        every=0.1,
+        every=0.25,  # Reduced frequency to prevent glitching
         outputs=[
             recording_checkbox_view,
             autochat_checkbox_view,
