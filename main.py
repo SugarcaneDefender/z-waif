@@ -142,7 +142,16 @@ def print_console_help():
   • /status, status                     → Show current system status
   • /quit, exit                         → Shutdown Z-WAIF
 
+{colorama.Fore.YELLOW}Hotkey Commands:{colorama.Fore.RESET}
+  • Ctrl+A                              → Toggle Auto-Chat
+  • Ctrl+B                              → Send Blank Message
+  • Ctrl+R                              → Soft Reset
+  • Ctrl+S                              → Change Autochat Sensitivity
+  • Right Arrow                         → Next Response
+  • Up Arrow                            → Redo Last Response
+
 {colorama.Fore.MAGENTA}Note:{colorama.Fore.RESET} All commands work while other functions are running!
+{colorama.Fore.GREEN}✅ Console typing now works without hotkey interference!{colorama.Fore.RESET}
 {colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
 """
     print(help_text)
@@ -1505,7 +1514,8 @@ def run_program():
         print(f"{colorama.Fore.CYAN}Z-WAIF is ready!{colorama.Fore.RESET}")
         print(f"{colorama.Fore.GREEN}💬 Type messages to chat with AI")
         print(f"🎛️ Use /help for console commands")
-        print(f"⌨️ Hotkeys and buttons work while functions are running!{colorama.Fore.RESET}\n")
+        print(f"⌨️ Hotkeys use Ctrl+letter or Alt+letter combinations")
+        print(f"🔓 Console typing now works without hotkey interference!{colorama.Fore.RESET}\n")
         main()
     except KeyboardInterrupt:
         print(f"\n{colorama.Fore.YELLOW}Shutdown requested by user{colorama.Fore.RESET}")

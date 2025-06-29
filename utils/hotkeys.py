@@ -111,11 +111,21 @@ def bind_all_hotkeys():
 
 
 def bind_hotkey(binding, input_action):
+    """Bind hotkey with proper action handling"""
+    
+    def safe_hotkey_action():
+        # Skip hotkey if hotkeys are locked
+        if settings.hotkeys_locked:
+            return
+            
+        # Execute the hotkey action
+        input_action()
 
     try:
-        keyboard.on_press_key(binding, lambda _: input_action())
+        keyboard.on_press_key(binding, lambda _: safe_hotkey_action())
+        print(f"✅ Bound hotkey: {binding}")
     except Exception as e:
-        print(f"Issue binding to hotkey {binding}: {e}")
+        print(f"❌ Issue binding hotkey {binding}: {e}")
         zw_logging.update_debug_log(f"Issue binding to hotkey {binding}: {e}")
 
 
