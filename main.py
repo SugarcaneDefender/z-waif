@@ -937,9 +937,8 @@ def main_send_blank():
     # Give us some feedback
     print("\nSending blank message...\n")
 
-    # Send a blank message (convert to listening placeholder for AI)
-    blank_placeholder = "*listens attentively*"
-    API.api_controller.send_via_oogabooga(blank_placeholder)
+    # Send the actual blank message
+    API.api_controller.send_via_oogabooga("")
 
     # Get the response
     reply_message = API.api_controller.receive_via_oogabooga()
@@ -954,11 +953,11 @@ def main_send_blank():
     else:
         # Even with empty response, run message_checks to ensure proper logging
         message_checks(reply_message or "*nods quietly*")
-        # Manually ensure the interaction is in history for web UI
-        if len(API.api_controller.ooga_history) == 0 or API.api_controller.ooga_history[-1][0] != blank_placeholder:
+        # Manually ensure the interaction is in history for web UI with blank input
+        if len(API.api_controller.ooga_history) == 0 or API.api_controller.ooga_history[-1][0] != "":
             # Add the interaction to history if it wasn't added by the API
             API.api_controller.ooga_history.append([
-                blank_placeholder, 
+                "", 
                 reply_message or "*nods quietly*", 
                 settings.cur_tags.copy(), 
                 "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())
