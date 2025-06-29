@@ -1225,9 +1225,6 @@ def view_image_streaming(direct_talk_transcript):
             # Append the image (via file path, so not for real but just link file)
             img_str = str(os.path.abspath('LiveImage.png'))
             past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
-        # Append the image (via file path, so not for real but just link file)
-        img_str = str(os.path.abspath('LiveImage.png'))
-        past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
             streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
         except Exception as e:
@@ -1241,12 +1238,6 @@ def view_image_streaming(direct_talk_transcript):
 
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
-
-    # Chatpop Check
-    if settings.use_chatpops and not main.live_pipe_no_speak:
-            voice.set_speaking(True)
-            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
-            voice.speak_line(this_chatpop, refuse_pause=True)
 
     # Chatpop Check
     if settings.use_chatpops and not main.live_pipe_no_speak:
