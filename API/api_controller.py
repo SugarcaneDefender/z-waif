@@ -653,12 +653,16 @@ def save_histories():
 def soft_reset():
 
     # Saftey breaker for if the previous message was also a Soft Reset / System D
-    if cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):
+    if len(ooga_history) > 1 and cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):
         print("\nStopping potential additional soft reset!\n")
         return
 
     print("\n\nRunning a soft reset of the chat system!\n")
 
+    # Clear problematic recent history (keep only last 5 messages to preserve context)
+    if len(ooga_history) > 5:
+        ooga_history = ooga_history[-5:]
+        print("Pruned old conversation history for fresh context")
 
     # Add in the soft reset messages
     # Cycle through all the configed messages and add them. Allows for (mostly) variable length
@@ -666,8 +670,6 @@ def soft_reset():
     for message_pair in soft_reset_message:
 
         ooga_history.append([message_pair[0], message_pair[1], message_pair[1], settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
-
-
 
     # Save
     save_histories()

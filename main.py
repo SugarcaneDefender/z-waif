@@ -140,6 +140,7 @@ def print_console_help():
 {colorama.Fore.BLUE}System Commands:{colorama.Fore.RESET}
   • /help, help, /?                     → Show this help
   • /status, status                     → Show current system status
+  • /clear, clear_history               → Clear conversation history
   • /quit, exit                         → Shutdown Z-WAIF
 
 {colorama.Fore.YELLOW}Hotkey Commands:{colorama.Fore.RESET}
@@ -157,8 +158,31 @@ def print_console_help():
     print(help_text)
 
 
+def clear_conversation_history():
+    """Clear conversation history and reset to fresh start"""
+    try:
+        # Reset the history to just the default greeting
+        fresh_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+        
+        # Save to LiveLog.json
+        import json
+        with open("LiveLog.json", 'w') as outfile:
+            json.dump(fresh_history, outfile, indent=4)
+        
+        # Clear the in-memory history
+        API.api_controller.ooga_history = fresh_history
+        
+        print(f"{colorama.Fore.GREEN}✅ Conversation history cleared successfully!")
+        print(f"🔄 Chat has been reset to fresh start{colorama.Fore.RESET}")
+        
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ Error clearing history: {e}{colorama.Fore.RESET}")
+
+
 def print_status_info():
     """Display current system status"""
+    history_length = len(API.api_controller.ooga_history) if hasattr(API.api_controller, 'ooga_history') else 0
+    
     status_text = f"""
 {colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════
                                 Z-WAIF STATUS
@@ -172,6 +196,7 @@ def print_status_info():
 {colorama.Fore.GREEN}🔒 Hotkeys Locked:{colorama.Fore.RESET}    {'YES' if settings.hotkeys_locked else 'NO'}
 {colorama.Fore.GREEN}👁️ Vision:{colorama.Fore.RESET}           {'ON' if settings.vision_enabled else 'OFF'}
 {colorama.Fore.GREEN}🎯 Sensitivity:{colorama.Fore.RESET}       {hotkeys.get_autochat_sensitivity()}
+{colorama.Fore.GREEN}💬 History Length:{colorama.Fore.RESET}    {history_length} messages
 {colorama.Fore.GREEN}📊 Current Mode:{colorama.Fore.RESET}      {'Live Pipe' if is_live_pipe else 'Waiting for Input'}
 
 {colorama.Fore.CYAN}═══════════════════════════════════════════════════════════════════════════════{colorama.Fore.RESET}
@@ -218,6 +243,9 @@ def main():
                 elif lowercase_line in {"/status", "status"}:
                     print_status_info()
                     command = None  # Don't process as command, just show status
+                elif lowercase_line in {"/clear", "clear", "/clear_history", "clear_history"}:
+                    clear_conversation_history()
+                    command = None  # Don't process as command, just clear history
                 elif lowercase_line in {"/quit", "quit", "exit", "/exit"}:
                     print("👋 Shutting down Z-WAIF...")
                     sys.exit(0)
