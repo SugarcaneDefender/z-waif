@@ -1534,6 +1534,18 @@ def encode_new_api_ollama(user_input):
     # Add current user input
     messages_to_send.append({"role": "user", "content": user_input})
     
+    # Debug logging to see what we're sending (only if debug mode is on)
+    try:
+        if main.debug_mode:
+            zw_logging.update_debug_log(f"Encoded {len(messages_to_send)} messages for Ollama:")
+            for i, msg in enumerate(messages_to_send):
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")[:100] + ("..." if len(msg.get("content", "")) > 100 else "")
+                zw_logging.update_debug_log(f"  Message {i}: {role}: {content}")
+    except (ImportError, AttributeError):
+        # If we can't access main.debug_mode, skip debug logging
+        pass
+    
     return messages_to_send
 
 
@@ -1567,6 +1579,18 @@ def encode_for_oobabooga_chat(user_input):
     else:
         # Send meaningful prompt to AI for blank messages while preserving blank in history
         messages.append({"role": "user", "content": "*listens attentively*"})
+    
+    # Debug logging to see what we're sending (only if debug mode is on)
+    try:
+        if main.debug_mode:
+            zw_logging.update_debug_log(f"Encoded {len(messages)} messages for API:")
+            for i, msg in enumerate(messages):
+                role = msg.get("role", "unknown")
+                content = msg.get("content", "")[:100] + ("..." if len(msg.get("content", "")) > 100 else "")
+                zw_logging.update_debug_log(f"  Message {i}: {role}: {content}")
+    except (ImportError, AttributeError):
+        # If we can't access main.debug_mode, skip debug logging
+        pass
     
     return messages
 

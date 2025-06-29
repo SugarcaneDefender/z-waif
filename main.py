@@ -743,13 +743,13 @@ def clean_personal_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start (like "Alexcia:", "Alexicia:", "Assistant:", etc.)
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove streaming language completely for personal conversations
     streaming_phrases = [
@@ -791,13 +791,13 @@ def clean_discord_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -831,13 +831,13 @@ def clean_twitch_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -874,13 +874,13 @@ def clean_voice_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -922,13 +922,13 @@ def clean_minecraft_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -960,13 +960,13 @@ def clean_alarm_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -994,13 +994,13 @@ def clean_hangout_response(response):
     import re
     from utils import settings
     
-    # Match any name followed by a colon at the start
-    name_pattern = r'^[A-Za-z]+:\s*'
-    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
-    
-    # Also specifically remove the configured character name if present
+    # First, try to remove the configured character name specifically
     if settings.char_name and clean_reply.startswith(f"{settings.char_name}:"):
         clean_reply = clean_reply[len(settings.char_name)+1:].strip()
+    
+    # Then, catch any other name patterns (like "Assistant:", etc.)
+    name_pattern = r'^[A-Za-z]+:\s*'
+    clean_reply = re.sub(name_pattern, '', clean_reply).strip()
     
     # Remove platform context markers
     clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
@@ -1070,7 +1070,16 @@ def main_web_ui_chat_worker(message):
             API.api_controller.ooga_history[-1][1] = clean_reply
             API.api_controller.save_histories()
         
-        message_checks(clean_reply)
+        # Print the cleaned response directly like main_text_chat does to avoid double printing
+        banner_name = settings.char_name if settings.char_name else 'Assistant'
+        print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+              + f"----{banner_name}----"
+              + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+        print(clean_reply.strip())
+        print()
+        
+        # Run plugin checks without the printing (using skip_print flag)
+        message_checks(clean_reply, skip_print=True)
 
     # Reset suppression flag and run speech pipeline like other shadow chats
     settings.live_pipe_no_speak = False

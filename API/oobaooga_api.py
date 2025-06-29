@@ -355,7 +355,7 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
     from utils import zw_logging
     
     try:
-        # Encode messages for oobabooga chat format
+        # Encode messages for oobabooga chat format - this includes conversation history + user input
         messages = encode_for_oobabooga_chat(user_input)
         
         # Build the request
@@ -393,8 +393,44 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
             client = sseclient.SSEClient(stream_response)
             return client.events()
         else:
-            # Return simple response
-            return api_standard(request)
+            # Make direct API call for non-streaming with the proper conversation context
+            try:
+                import main
+                if main.debug_mode:
+                    zw_logging.update_debug_log(f"Sending non-streaming request with {len(messages)} messages to {uri}")
+            except (ImportError, AttributeError):
+                pass
+            
+            response = requests.post(uri, headers=headers, json=request, verify=False, timeout=30)
+            response.raise_for_status()
+            
+            result = response.json()
+            
+            # Extract the response content
+            if 'choices' in result and result['choices']:
+                choice = result['choices'][0]
+                if 'message' in choice and 'content' in choice['message']:
+                    received_message = choice['message']['content']
+                elif 'text' in choice:
+                    received_message = choice['text']
+                else:
+                    received_message = ""
+            else:
+                received_message = ""
+            
+            if received_message:
+                # Clean up the response
+                cleaned_message = clean_response(received_message)
+                try:
+                    import main
+                    if main.debug_mode:
+                        zw_logging.update_debug_log(f"Successfully received response: {cleaned_message[:100]}...")
+                except (ImportError, AttributeError):
+                    pass
+                return cleaned_message
+            else:
+                zw_logging.log_error(f"No valid response from API: {result}")
+                return "Sorry, I didn't receive a proper response."
             
     except requests.exceptions.RequestException as e:
         zw_logging.log_error(f"Oobabooga API request failed: {e}")
