@@ -90,6 +90,7 @@ TWITCH_MAX_MESSAGE_LENGTH=450
 
 # Discord Configuration
 DISCORD_TOKEN=your_discord_bot_token_here
+# Note: For Discord voice support, ensure PyNaCl is installed: pip install PyNaCl
 
 # Additional Configuration
 VTUBE_MODEL_NAME=YourVTubeModel

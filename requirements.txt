@@ -19,6 +19,7 @@ cycler==0.12.1
 discord==2.3.2
 discord.py==2.4.0
 emoji==2.9.0
+PyNaCl==1.5.0
 fastapi==0.112.2
 faster-whisper==1.1.1
 ffmpy==0.5.0

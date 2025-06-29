@@ -36,6 +36,14 @@ semi_auto_chat = False
 use_chatpops = True
 chatpop_phrases = []
 
+# Load chatpops at startup
+try:
+    import json
+    with open("Configurables/Chatpops.json", 'r') as openfile:
+        chatpop_phrases = json.load(openfile)
+except Exception:
+    chatpop_phrases = []  # Fallback to empty if loading fails
+
 # Speech settings
 speak_shadowchats = True
 speak_only_spokento = False
