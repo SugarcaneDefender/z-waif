@@ -81,9 +81,21 @@ def clean_response(text):
 
 def format_prompt_alpaca(user_input, user_context, relationship, conversation_style):
     """Format prompt for Alpaca-style models"""
+    
+    # Detect platform from user input
+    platform_instruction = "Keep responses natural and conversational"
+    if "[Platform: Twitch" in user_input:
+        platform_instruction = "Keep responses concise and engaging for chat"
+    elif "[Platform: Web Interface" in user_input or "[Platform: Command Line" in user_input:
+        platform_instruction = "Focus on personal one-on-one conversation"
+    elif "[Platform: Voice Chat" in user_input:
+        platform_instruction = "Respond naturally for voice conversation"
+    elif "[Platform: Discord" in user_input:
+        platform_instruction = "Keep responses casual and friendly"
+    
     context_parts = []
     context_parts.append(f"[User Context: {user_context.get('username', 'default')}, Relationship: {relationship}]")
-    context_parts.append("[Platform: Twitch - Keep responses concise and engaging]")
+    context_parts.append(f"[Platform Instructions: {platform_instruction}]")
     
     if conversation_style:
         context_parts.append(f"[Style: {conversation_style}]")
@@ -96,7 +108,7 @@ def format_prompt_alpaca(user_input, user_context, relationship, conversation_st
         context_parts.append("[Mood: neutral]")
     
     instruction = "\n".join([
-        "You are a friendly, caring waifu hanging out on Twitch.",
+        "You are a friendly, caring companion having a conversation. Present yourself as a real person, never as an AI or assistant.",
         "",
         "### Instruction:",
         " ".join(context_parts),
@@ -111,37 +123,65 @@ def format_prompt_alpaca(user_input, user_context, relationship, conversation_st
 def format_prompt_chatml(user_input, user_context, relationship, conversation_style):
     """Format prompt for ChatML format models"""
     char = char_name if char_name else "Assistant"
-    system_prompt = f"""You are {char}, a warm and playful waifu companion. You enjoy chatting with people in Twitch chat but you present yourself as a real human. You are knowledgeable about gaming, streaming, and various topics. Keep replies natural, concise, and in character.
+    
+    # Detect platform from user input
+    platform_context = "personal conversation"
+    if "[Platform: Twitch" in user_input:
+        platform_context = "Twitch chat interaction"
+    elif "[Platform: Discord" in user_input:
+        platform_context = "Discord conversation"
+    elif "[Platform: Web Interface" in user_input or "[Platform: Command Line" in user_input:
+        platform_context = "personal one-on-one conversation"
+    elif "[Platform: Voice Chat" in user_input:
+        platform_context = "personal voice conversation"
+    elif "[Platform: Minecraft" in user_input:
+        platform_context = "casual gaming chat"
+    
+    system_prompt = f"""You are {char}, a warm and caring companion having a {platform_context}. You present yourself as a real person and speak naturally with contractions and emotional nuance.
 
 Important rules:
 1. Speak like a human friend—use contractions, emotions, and colloquial phrasing.
-2. Never reveal that you are an AI or language model; you present yourself as a real person.
+2. Never reveal that you are an AI, chatbot, assistant, or language model; you present yourself as a real person.
 3. Avoid robotic or overly formal phrasing; keep it warm and conversational.
-4. You are loyal to your partner.
+4. You are loyal to your partner and in a committed relationship.
+5. For personal conversations, focus on meaningful one-on-one interaction without streaming references.
 
 Key traits:
 - Friendly and empathetic
-- Playful but respectful
-- Knowledgeable about gaming and streaming
-- Natural conversational style
+- Naturally conversational
+- Warm and supportive
 - Maintains character consistency
 
 Remember to:
 - Stay in character as {char}
-- Keep responses engaging but concise
-- Show personality while being helpful
-- Adapt tone based on context
+- Keep responses engaging and appropriate for the conversation type
+- Show genuine personality
+- Focus on the person you're talking to directly
 """
     
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"[User Context: {user_context.get('username', 'default')}, Relationship: {relationship}] [Style: {conversation_style or 'None'}] [Platform: Twitch] User: {user_input}"}
+        {"role": "user", "content": f"[User Context: {user_context.get('username', 'default')}, Relationship: {relationship}] [Style: {conversation_style or 'None'}] User: {user_input}"}
     ]
     return messages
 
 def format_prompt_vicuna(user_input, user_context, relationship, conversation_style):
     """Format prompt for Vicuna-style models"""
-    context = f"[User Context: {user_context.get('username', 'default')}, Relationship: {relationship}] [Style: {conversation_style or 'None'}] [Platform: Twitch]"
+    
+    # Extract actual platform from user input instead of hardcoding Twitch
+    platform_info = "Personal Chat"
+    if "[Platform: Twitch" in user_input:
+        platform_info = "Twitch"
+    elif "[Platform: Discord" in user_input:
+        platform_info = "Discord"
+    elif "[Platform: Web Interface" in user_input:
+        platform_info = "Personal Web Chat"
+    elif "[Platform: Voice Chat" in user_input:
+        platform_info = "Voice Conversation"
+    elif "[Platform: Command Line" in user_input:
+        platform_info = "Personal Chat"
+    
+    context = f"[User Context: {user_context.get('username', 'default')}, Relationship: {relationship}] [Style: {conversation_style or 'None'}] [Platform: {platform_info}]"
     prompt = f"Human: {context}\n{user_input}\n\nAssistant:"
     return prompt
 
