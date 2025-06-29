@@ -45,6 +45,9 @@ from utils import z_waif_twitch
 from utils import zw_logging
 from utils.chat_history import add_message_to_history
 
+# Import enhanced AI handler for better integration
+from utils.ai_handler import AIHandler
+
 load_dotenv()
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
@@ -69,6 +72,9 @@ startup_message = None
 # Debug mode toggle
 debug_mode = False
 
+# Initialize enhanced AI handler for better integration
+enhanced_ai_handler = AIHandler()
+
 def handle_command_line_args():
     """Handle command line arguments for message input like the release version"""
     global startup_message
@@ -83,6 +89,37 @@ def handle_command_line_args():
         return True
     
     return False
+
+def verify_system_integration():
+    """Verify that all enhanced components are working together"""
+    print(f"{colorama.Fore.CYAN}🔧 Verifying enhanced system integration...{colorama.Fore.RESET}")
+    
+    # Check AI handler
+    try:
+        test_chatpop = enhanced_ai_handler.get_contextual_chatpop({"platform": "personal"}, "Hello")
+        print(f"{colorama.Fore.GREEN}✅ Enhanced AI handler working - Sample chatpop: '{test_chatpop}'{colorama.Fore.RESET}")
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ AI handler issue: {e}{colorama.Fore.RESET}")
+    
+    # Check chatpops configuration
+    try:
+        if settings.use_chatpops and len(settings.chatpop_phrases) > 0:
+            print(f"{colorama.Fore.GREEN}✅ Chatpops enabled with {len(settings.chatpop_phrases)} phrases{colorama.Fore.RESET}")
+        else:
+            print(f"{colorama.Fore.YELLOW}⚠️ Chatpops disabled or no phrases loaded{colorama.Fore.RESET}")
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ Chatpops configuration issue: {e}{colorama.Fore.RESET}")
+    
+    # Check API controller integration
+    try:
+        if hasattr(API.api_controller, 'ai_handler'):
+            print(f"{colorama.Fore.GREEN}✅ API controller has enhanced AI handler{colorama.Fore.RESET}")
+        else:
+            print(f"{colorama.Fore.YELLOW}⚠️ API controller using standard chatpops{colorama.Fore.RESET}")
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ API controller integration issue: {e}{colorama.Fore.RESET}")
+    
+    print(f"{colorama.Fore.CYAN}🔧 System verification complete!{colorama.Fore.RESET}\n")
 
 def process_startup_message():
     """Process the startup message if provided"""
@@ -109,12 +146,10 @@ def process_startup_message():
         global stored_transcript
         stored_transcript = message
 
-        # Use the improved API run function with anti-streaming personality
-        reply_message = API.api_controller.run(message, temp_level=0.7)
+        # Use the enhanced platform-aware messaging system
+        clean_reply = send_platform_aware_message(message, platform="cmd")
         
-        if reply_message and reply_message.strip():
-            # Apply response cleaning to prevent streaming personality
-            clean_reply = clean_twitch_response(reply_message)
+        if clean_reply and clean_reply.strip():
             message_checks(clean_reply)
 
         # Speak the reply
@@ -1840,8 +1875,11 @@ def run_program():
     # Kick off the console reader so typed input works alongside hotkeys/voice
     console_input.start_console_reader()
 
-    # Announce that the program is running
+    # Announce that the program is running and verify system integration
     print(f"{colorama.Fore.GREEN}Welcome back! Loading chat interface...{colorama.Fore.RESET}\n")
+    
+    # Verify that all enhanced components are working together
+    verify_system_integration()
     
     # Process startup message if provided (after all systems are ready)
     if startup_message:
@@ -1853,10 +1891,11 @@ def run_program():
 
     # Run the primary loop with error handling
     try:
-        print(f"{colorama.Fore.CYAN}Z-WAIF is ready!{colorama.Fore.RESET}")
+        print(f"{colorama.Fore.CYAN}Z-WAIF is ready with enhanced natural chatpops!{colorama.Fore.RESET}")
         print(f"{colorama.Fore.GREEN}💬 Type messages to chat with AI")
         print(f"🎛️ Use /help for console commands")
         print(f"⌨️ Hotkeys use Ctrl+letter or Alt+letter combinations")
+        print(f"🗣️ Enhanced contextual chatpops will make conversations more natural")
         print(f"🔓 Console typing now works without hotkey interference!{colorama.Fore.RESET}\n")
         main()
     except KeyboardInterrupt:

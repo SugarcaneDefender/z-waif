@@ -1,7 +1,7 @@
 # import asyncio
 from typing import Dict, List, Any, Optional
+import random
 from utils.zw_logging import log_info, log_error
-import API.api_controller as api_controller
 
 
 class AIHandler:
@@ -9,12 +9,93 @@ class AIHandler:
         self.default_personality = "friendly"
         self.response_cache = {}
         self.max_cache_size = 100
+        
+        # Enhanced chatpops organized by context
+        self.chatpops = {
+            "greeting": [
+                "Oh, hey there!", "Well, hello!", "Oh, hi!", "Hey there!", 
+                "Oh, nice to see you!", "Well, hey!", "Oh, what's up?"
+            ],
+            "thinking": [
+                "Hmm, let me think", "Let me see...", "Hmm, interesting", 
+                "Oh, that's a good question", "Hmm, you know what", "Let me think about that"
+            ],
+            "agreement": [
+                "Oh, absolutely", "Yeah, totally", "Oh, for sure", "Yeah, exactly", 
+                "That's so true", "Oh, definitely", "I hear you", "Hmm, I agree"
+            ],
+            "positive": [
+                "Oh, I love that", "Oh, awesome", "That's great", "Oh, amazing", 
+                "That's wonderful", "Oh, fantastic", "Oh, brilliant", "That's so cool"
+            ],
+            "casual": [
+                "Oh, yeah", "Yeah, well", "Hmm, okay", "Oh, right", "Yeah, I see", 
+                "That's fair", "Oh, I see", "Yeah, of course"
+            ],
+            "surprise": [
+                "Oh, wow", "Oh, really?", "That's interesting", "Oh, nice", 
+                "Oh, cool", "Hmm, interesting", "Oh, sweet"
+            ],
+            "gaming": [
+                "Oh, nice move!", "That's epic!", "Oh, awesome!", "Yeah, let's go!", 
+                "That's so cool!", "Oh, perfect!", "Hmm, interesting strategy"
+            ],
+            "personal": [
+                "Oh, that's sweet", "I hear you", "That makes sense", "Oh, I get it", 
+                "That's really nice", "Oh, I understand", "That's so thoughtful"
+            ]
+        }
+
+    def get_contextual_chatpop(self, context: Dict[str, Any] = None, message: str = "") -> str:
+        """Get a contextually appropriate chatpop"""
+        if not context:
+            context = {}
+            
+        platform = context.get("platform", "personal")
+        personality = context.get("personality", "friendly")
+        
+        # Determine context based on message content and platform
+        message_lower = message.lower()
+        
+        # Gaming context
+        if platform == "minecraft" or "game" in message_lower or "play" in message_lower:
+            return random.choice(self.chatpops["gaming"])
+        
+        # Greeting context
+        if any(word in message_lower for word in ["hello", "hi", "hey", "morning", "evening"]):
+            return random.choice(self.chatpops["greeting"])
+            
+        # Question context (thinking)
+        if "?" in message or any(word in message_lower for word in ["what", "how", "why", "when", "where"]):
+            return random.choice(self.chatpops["thinking"])
+            
+        # Positive context
+        if any(word in message_lower for word in ["love", "awesome", "great", "amazing", "cool", "nice"]):
+            return random.choice(self.chatpops["positive"])
+            
+        # Agreement context
+        if any(word in message_lower for word in ["yes", "agree", "right", "exactly", "true"]):
+            return random.choice(self.chatpops["agreement"])
+            
+        # Surprise context
+        if any(word in message_lower for word in ["wow", "really", "seriously", "no way"]):
+            return random.choice(self.chatpops["surprise"])
+            
+        # Personal conversation context
+        if platform in ["voice", "webui", "cmd"] or any(word in message_lower for word in ["feel", "think", "believe"]):
+            return random.choice(self.chatpops["personal"])
+        
+        # Default to casual
+        return random.choice(self.chatpops["casual"])
 
     async def generate_response(
         self, prompt: str, personality: Optional[str] = None, context: Optional[Dict[str, Any]] = None
     ) -> str:
         """Generate AI response using the main API controller"""
         try:
+            # Import only when needed to avoid circular imports
+            import API.api_controller as api_controller
+            
             # Use provided personality or default
             current_personality = personality or self.default_personality
 

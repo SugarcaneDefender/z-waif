@@ -47,6 +47,9 @@ from utils import voice_splitter
 from utils import vtube_studio
 from utils import zw_logging
 
+# Import enhanced AI handler
+from utils.ai_handler import AIHandler
+
 HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
 # Handle both URL and host:port formats (http only, no https support yet)
 if HOST.startswith("http://"):
@@ -107,6 +110,9 @@ OLLAMA_VISUAL_ENCODE_GUIDANCE = os.environ.get("OLLAMA_VISUAL_ENCODE_GUIDANCE")
 OLLAMA_VISUAL_CARD = os.environ.get("OLLAMA_VISUAL_CARD")
 
 vision_guidance_message = "There is an image attached to this message! Describe what details you see, and comment on what you think of the features, while keeping in role and continuing the conversation!"
+
+# Initialize enhanced AI handler
+ai_handler = AIHandler()
 
 # Load in the configurable SoftReset message
 with open("Configurables/SoftReset.json", 'r') as openfile:
@@ -276,11 +282,27 @@ def run_streaming(user_input, temp_level):
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
 
-    # Chatpop Check
+    # Enhanced Contextual Chatpop Check
     if settings.use_chatpops and not main.live_pipe_no_speak:
-            voice.set_speaking(True)
-            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
-            voice.speak_line(this_chatpop, refuse_pause=True)
+        voice.set_speaking(True)
+        # Determine platform context from the currently sending message
+        platform_context = {"platform": "personal"}  # Default
+        if "[Platform: Twitch Chat]" in user_input:
+            platform_context["platform"] = "twitch"
+        elif "[Platform: Discord]" in user_input:
+            platform_context["platform"] = "discord"
+        elif "[Platform: Minecraft Game Chat]" in user_input:
+            platform_context["platform"] = "minecraft"
+        elif "[Platform: Voice Chat" in user_input:
+            platform_context["platform"] = "voice"
+        elif "[Platform: Web Interface" in user_input:
+            platform_context["platform"] = "webui"
+        elif "[Platform: Command Line" in user_input:
+            platform_context["platform"] = "cmd"
+        
+        # Get contextual chatpop based on user input and platform
+        this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
+        voice.speak_line(this_chatpop, refuse_pause=True)
 
 
     assistant_message = ''
@@ -1247,11 +1269,19 @@ def view_image_streaming(direct_talk_transcript):
     # Clear streamed emote list
     vtube_studio.clear_streaming_emote_list()
 
-    # Chatpop Check
+    # Enhanced Contextual Chatpop Check for Image Processing
     if settings.use_chatpops and not main.live_pipe_no_speak:
-            voice.set_speaking(True)
-            this_chatpop = settings.chatpop_phrases[random.randrange(0, len(settings.chatpop_phrases))]
-            voice.speak_line(this_chatpop, refuse_pause=True)
+        voice.set_speaking(True)
+        # Special context for image processing - more thoughtful responses
+        platform_context = {"platform": "vision"}
+        # For image processing, we want more thoughtful/interested chatpops
+        visual_chatpops = [
+            "Oh, let me see...", "Hmm, interesting...", "Oh, what do we have here?",
+            "Let me take a look", "Oh, that's cool", "Hmm, let me check this out",
+            "Oh, nice!", "Interesting image...", "Let me examine this"
+        ]
+        this_chatpop = random.choice(visual_chatpops)
+        voice.speak_line(this_chatpop, refuse_pause=True)
 
     assistant_message = ''
     force_skip_streaming = False
