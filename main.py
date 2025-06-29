@@ -377,13 +377,15 @@ def main_converse():
     stored_transcript = transcript
 
 
-    # Actual sending of the message, waits for reply automatically
-    # Use the improved API run function with anti-streaming personality
-    reply_message = API.api_controller.run(transcript, temp_level=0.7)
+    # Use platform-aware messaging for voice chat
+    clean_reply = send_platform_aware_message(transcript, platform="voice")
     
-    if reply_message and reply_message.strip():
-        # Apply response cleaning to prevent streaming personality
-        clean_reply = clean_twitch_response(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
         message_checks(clean_reply)
 
     # Pipe us to the reply function
@@ -543,15 +545,20 @@ def main_minecraft_chat(message):
     # Minecraft chat box can only hold so many characters – force the token count low
     API.api_controller.force_tokens_count(47)
 
-    # Send the player's message to the LLM
-    API.api_controller.send_via_oogabooga(message)
+    # Use platform-aware messaging for Minecraft
+    clean_reply = send_platform_aware_message(message, platform="minecraft")
 
     # Push the assistant reply back into the game chat window
     minecraft.minecraft_chat()
 
     # Standard post-processing (logging, plugin hooks, prints, etc.)
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # If we're configured to speak shadow chats and we aren't streaming, speak the line aloud
     settings.live_pipe_no_speak = False
@@ -566,12 +573,17 @@ def main_discord_chat(message):
     if (not settings.speak_shadowchats) and settings.stream_chats:
         settings.live_pipe_no_speak = True
 
-    # Send the Discord message to the LLM
-    API.api_controller.send_via_oogabooga(message)
+    # Use platform-aware messaging for Discord
+    clean_reply = send_platform_aware_message(message, platform="discord")
 
     # Fetch and process the assistant reply
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # Speak it if configured
     settings.live_pipe_no_speak = False
@@ -594,21 +606,13 @@ def main_twitch_chat(message):
         except Exception as e:
             print(f"[Twitch] Could not log to chat history: {e}")
         
-        # Send the message to the API
-        API.api_controller.send_via_oogabooga(user_message)
+        # Use platform-aware messaging for Twitch
+        clean_reply = send_platform_aware_message(user_message, platform="twitch")
         
-        # Get the raw response
-        reply_message = API.api_controller.receive_via_oogabooga()
-        
-        if reply_message and reply_message.strip():
-            # Clean the response to remove streaming artifacts and ensure personal conversation tone
-            clean_reply = clean_twitch_response(reply_message)
-            
-            # Update the history with the cleaned response instead of the raw one
+        if clean_reply and clean_reply.strip():
+            # Update the history with the cleaned response
             if len(API.api_controller.ooga_history) > 0:
-                # Replace the last response in history with the cleaned version
                 API.api_controller.ooga_history[-1][1] = clean_reply
-                # Save the updated history
                 API.api_controller.save_histories()
             
             # Log the assistant response to chat history
@@ -628,11 +632,8 @@ def main_twitch_chat(message):
     else:
         # Fallback for malformed messages
         print(f"[Twitch] Malformed message: {message}")
-        API.api_controller.send_via_oogabooga(message)
-        reply_message = API.api_controller.receive_via_oogabooga()
-        if reply_message and reply_message.strip():
-            clean_reply = clean_twitch_response(reply_message)
-            
+        clean_reply = send_platform_aware_message(message, platform="twitch")
+        if clean_reply and clean_reply.strip():
             # Update the history with the cleaned response
             if len(API.api_controller.ooga_history) > 0:
                 API.api_controller.ooga_history[-1][1] = clean_reply
@@ -643,6 +644,131 @@ def main_twitch_chat(message):
             return clean_reply  # Return the cleaned response for Twitch bot to send
         return ""  # Return empty string if no response
 
+def send_platform_aware_message(user_input, platform="personal"):
+    """Send a message with platform context to get appropriate responses"""
+    
+    # Add platform context to the user input for the AI to understand
+    if platform == "twitch":
+        contextual_input = f"[Platform: Twitch Chat] {user_input}"
+    elif platform == "discord":
+        contextual_input = f"[Platform: Discord] {user_input}"
+    elif platform == "webui":
+        contextual_input = f"[Platform: Web Interface - Personal Chat] {user_input}"
+    elif platform == "cmd":
+        contextual_input = f"[Platform: Command Line - Personal Chat] {user_input}"
+    elif platform == "voice":
+        contextual_input = f"[Platform: Voice Chat - Personal Conversation] {user_input}"
+    elif platform == "minecraft":
+        contextual_input = f"[Platform: Minecraft Game Chat] {user_input}"
+    elif platform == "alarm":
+        contextual_input = f"[Platform: Alarm/Reminder System] {user_input}"
+    elif platform == "hangout":
+        contextual_input = f"[Platform: Hangout Mode - Casual Conversation] {user_input}"
+    else:
+        contextual_input = user_input
+    
+    # Send the message with context
+    API.api_controller.send_via_oogabooga(contextual_input)
+    
+    # Get the response
+    reply_message = API.api_controller.receive_via_oogabooga()
+    
+    # Clean the response based on platform
+    if platform == "twitch":
+        return clean_twitch_response(reply_message)
+    elif platform == "discord":
+        return clean_discord_response(reply_message)
+    elif platform == "voice":
+        return clean_voice_response(reply_message)
+    elif platform == "minecraft":
+        return clean_minecraft_response(reply_message)
+    elif platform == "alarm":
+        return clean_alarm_response(reply_message)
+    elif platform == "hangout":
+        return clean_hangout_response(reply_message)
+    elif platform in ["webui", "cmd"]:
+        return clean_personal_response(reply_message)
+    else:
+        return clean_personal_response(reply_message)
+
+def clean_personal_response(response):
+    """Clean responses for personal conversations (Web UI, CMD)"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove streaming language completely for personal conversations
+    streaming_phrases = [
+        "Thanks for watching", "enjoying the stream", "Welcome to my stream",
+        "Don't forget to follow", "Hey viewers", "Welcome to the stream", 
+        "Thanks for the follow", "Appreciate the subscription", "Welcome everyone",
+        "Hey stream", "What's up chat", "Hello viewers", "Thanks for being here",
+        "Welcome back to the stream", "stream has just ended", "chatting with viewers",
+        "glad you're enjoying the stream", "thanks for watching", "quiet in chat",
+        "interacting online", "streaming", "stream", "viewers", "gameplay", 
+        "joining us", "blast streaming", "new viewers", "send me a message"
+    ]
+    
+    # Check for streaming language and replace entire response if found
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! How are you doing? What's on your mind?"
+    
+    # Remove action text in asterisks
+    import re
+    clean_reply = re.sub(r'\*[^*]*\*', '', clean_reply).strip()
+    
+    # Remove platform context markers
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Final fallback if response is empty
+    if not clean_reply or clean_reply.strip() == "":
+        return "Hi! Nice to chat with you!"
+    
+    return clean_reply
+
+def clean_discord_response(response):
+    """Clean responses for Discord conversations"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Keep Discord-appropriate language (casual, fun, emojis OK)
+    # But remove streaming references
+    streaming_phrases = [
+        "Thanks for watching", "enjoying the stream", "Welcome to my stream",
+        "Don't forget to follow", "stream has just ended", "chatting with viewers",
+        "glad you're enjoying the stream", "thanks for watching"
+    ]
+    
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! What's up? 😊"
+    
+    # Final fallback if response is empty
+    if not clean_reply or clean_reply.strip() == "":
+        return "Hey there! 👋"
+    
+    return clean_reply
+
 def clean_twitch_response(response):
     """Clean Twitch responses to ensure personal conversation tone and remove streaming artifacts"""
     if not response:
@@ -651,102 +777,172 @@ def clean_twitch_response(response):
     clean_reply = response.strip()
     
     # Remove character name prefix if present
-    if clean_reply.startswith("Alexcia:"):
-        clean_reply = clean_reply[8:].strip()
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
     elif clean_reply.startswith("Assistant:"):
         clean_reply = clean_reply[10:].strip()
     
-    # Remove streaming context and roleplay actions
-    streaming_contexts = [
-        "*The stream has just ended",
-        "*chatting with viewers",
-        "*in the chat*",
-        "*stream*",
-        "*viewers*",
-        "*chat*",
-        "*streaming*",
-        "*on stream*",
-        "*live*"
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # For Twitch, we want to keep it conversational but not overly streaming-focused
+    # Remove heavy streaming language but keep casual chat
+    streaming_phrases = [
+        "Thanks for watching", "Don't forget to follow", "Welcome to my stream",
+        "Thanks for the follow", "Appreciate the subscription", "Welcome to the stream",
+        "Welcome back to the stream", "stream has just ended", "thanks for watching"
     ]
     
-    for context in streaming_contexts:
-        if context.lower() in clean_reply.lower():
-            # Remove the entire streaming context
-            clean_reply = ""
-            break
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! How's it going?"
     
-    # If we cleared the response due to streaming context, provide a natural alternative
+    # Remove action text in asterisks
+    clean_reply = re.sub(r'\*[^*]*\*', '', clean_reply).strip()
+    
+    # Final fallback if response is empty
     if not clean_reply or clean_reply.strip() == "":
-        return "Hey there! How's it going?"
+        return "Hi! Nice to see you!"
     
-    # Remove streaming personality artifacts (more comprehensive)
+    return clean_reply
+
+def clean_voice_response(response):
+    """Clean responses for voice conversations (more natural, conversational)"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Remove streaming language completely for voice conversations
     streaming_phrases = [
-        "Thanks for watching",
-        "enjoying the stream",
-        "Welcome to my stream",
-        "Don't forget to follow",
-        "Hey viewers",
-        "Welcome to the stream", 
-        "Thanks for the follow",
-        "Appreciate the subscription",
-        "Welcome everyone",
-        "Hey stream",
-        "What's up chat",
-        "Hello viewers",
-        "Thanks for being here",
-        "Welcome back to the stream",
-        "stream has just ended",
-        "chatting with viewers",
-        "glad you're enjoying the stream",
-        "thanks for watching",
-        "quiet in chat",
-        "interacting online"
+        "Thanks for watching", "enjoying the stream", "Welcome to my stream",
+        "Don't forget to follow", "Hey viewers", "Welcome to the stream", 
+        "Thanks for the follow", "Appreciate the subscription", "Welcome everyone",
+        "Hey stream", "What's up chat", "Hello viewers", "Thanks for being here",
+        "Welcome back to the stream", "stream has just ended", "chatting with viewers",
+        "glad you're enjoying the stream", "thanks for watching", "quiet in chat",
+        "interacting online", "streaming", "stream", "viewers", "gameplay", 
+        "joining us", "blast streaming", "new viewers"
     ]
     
     # Check for streaming language and replace entire response if found
     for phrase in streaming_phrases:
         if phrase.lower() in clean_reply.lower():
-            # If streaming language detected, replace with personal conversation
-            return "Hey! How are you doing today? What's been going on with you?"
+            return "Hey! How are you feeling today?"
     
-    # Additional check for streaming context words
-    streaming_context_words = [
-        "streaming", "stream", "viewers", "gameplay", "joining us", 
-        "blast streaming", "new viewers", "send me a message"
-    ]
-    
-    for word in streaming_context_words:
-        if word.lower() in clean_reply.lower():
-            # Replace streaming response with personal conversation
-            return "Hey there! How's your day going? What's on your mind?"
-    
-    # Remove action text in asterisks
-    import re
+    # Remove action text in asterisks for cleaner voice
     clean_reply = re.sub(r'\*[^*]*\*', '', clean_reply).strip()
     
-    # Remove any "You:" or "Response:" artifacts
-    if "You:" in clean_reply:
-        clean_reply = clean_reply.split("You:")[0].strip()
-    if "Response:" in clean_reply:
-        clean_reply = clean_reply.split("Response:")[0].strip()
-    
-    # Remove fake conversation artifacts
-    lines = clean_reply.split('\n')
-    cleaned_lines = []
-    for line in lines:
-        line = line.strip()
-        # Skip lines that look like fake conversations
-        if ':' in line and any(indicator in line.lower() for indicator in ['you:', 'user:', 'response:', 'assistant:']):
-            continue
-        if line:
-            cleaned_lines.append(line)
-    
-    if cleaned_lines:
-        clean_reply = ' '.join(cleaned_lines)
-    
-    # Final fallback if response is empty or just whitespace
+    # Final fallback if response is empty
     if not clean_reply or clean_reply.strip() == "":
-        return "Hi! Nice to see you!"
+        return "Hey there! What's on your mind?"
+    
+    return clean_reply
+
+def clean_minecraft_response(response):
+    """Clean responses for Minecraft game chat (short, game-appropriate)"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Keep responses short for Minecraft chat (character limit)
+    if len(clean_reply) > 100:
+        clean_reply = clean_reply[:97] + "..."
+    
+    # Remove streaming language
+    streaming_phrases = ["streaming", "stream", "viewers", "follow", "subscribe"]
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! What's up in the game?"
+    
+    # Final fallback if response is empty
+    if not clean_reply or clean_reply.strip() == "":
+        return "Hi! How's the game going?"
+    
+    return clean_reply
+
+def clean_alarm_response(response):
+    """Clean responses for alarm/reminder system (helpful, direct)"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Remove streaming language completely for alarms
+    streaming_phrases = ["streaming", "stream", "viewers", "follow", "subscribe", "watching"]
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! Just wanted to remind you about something!"
+    
+    # Final fallback if response is empty
+    if not clean_reply or clean_reply.strip() == "":
+        return "Time for your reminder!"
+    
+    return clean_reply
+
+def clean_hangout_response(response):
+    """Clean responses for hangout mode (relaxed, casual, friendly)"""
+    if not response:
+        return ""
+    
+    clean_reply = response.strip()
+    
+    # Remove character name prefix if present
+    if char_name and clean_reply.startswith(f"{char_name}:"):
+        clean_reply = clean_reply[len(char_name)+1:].strip()
+    elif clean_reply.startswith("Assistant:"):
+        clean_reply = clean_reply[10:].strip()
+    
+    # Remove platform context markers
+    import re
+    clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+    
+    # Remove streaming language but keep casual tone
+    streaming_phrases = [
+        "Thanks for watching", "Don't forget to follow", "Welcome to my stream",
+        "Thanks for the follow", "Appreciate the subscription", "Welcome to the stream",
+        "stream has just ended", "thanks for watching"
+    ]
+    
+    for phrase in streaming_phrases:
+        if phrase.lower() in clean_reply.lower():
+            return "Hey! Just hanging out and chatting with you!"
+    
+    # Final fallback if response is empty
+    if not clean_reply or clean_reply.strip() == "":
+        return "Just chilling! What's up?"
     
     return clean_reply
 
@@ -789,21 +985,13 @@ def main_web_ui_chat_worker(message):
     if (not settings.speak_shadowchats) and settings.stream_chats:
         settings.live_pipe_no_speak = True
 
-    # Send the message to the API
-    API.api_controller.send_via_oogabooga(message)
-
-    # Get the raw response
-    reply_message = API.api_controller.receive_via_oogabooga()
+    # Use platform-aware messaging for web UI
+    clean_reply = send_platform_aware_message(message, platform="webui")
     
-    if reply_message and reply_message.strip():
-        # Apply the same response cleaning as Twitch to prevent streaming personality
-        clean_reply = clean_twitch_response(reply_message)
-        
-        # Update the history with the cleaned response instead of the raw one
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
         if len(API.api_controller.ooga_history) > 0:
-            # Replace the last response in history with the cleaned version
             API.api_controller.ooga_history[-1][1] = clean_reply
-            # Save the updated history
             API.api_controller.save_histories()
         
         message_checks(clean_reply)
@@ -829,16 +1017,24 @@ def main_web_ui_next():
         settings.live_pipe_no_speak = False
         return
 
-    # Generate new response
+    # Generate new response using platform-aware system
     API.api_controller.next_message_oogabooga()
 
-    # Get and process the response
+    # Get and process the response with Web UI platform awareness
     reply_message = API.api_controller.receive_via_oogabooga()
     if reply_message and reply_message.strip():
-        message_checks(reply_message)
+        # Clean the response for Web UI platform
+        clean_reply = clean_personal_response(reply_message)
+        
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
         if settings.speak_shadowchats and not settings.stream_chats:
-            voice.speak(reply_message)
+            voice.speak(clean_reply)
 
     settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
@@ -853,9 +1049,18 @@ def main_discord_next():
 
     API.api_controller.next_message_oogabooga()
 
-    # Run our message checks
+    # Run our message checks with Discord platform awareness
     reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if reply_message and reply_message.strip():
+        # Clean the response for Discord platform
+        clean_reply = clean_discord_response(reply_message)
+        
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # Pipe us to the reply function, if we are set to speak them (will be spoken otherwise)
     settings.live_pipe_no_speak = False
@@ -896,12 +1101,17 @@ def main_alarm_message():
     if alarm.random_memories and len(based_rag.history_database) > 100:
         main_memory_proc()
 
-    # Send it!
-    API.api_controller.send_via_oogabooga(alarm.get_alarm_message())
+    # Use platform-aware messaging for alarms
+    clean_reply = send_platform_aware_message(alarm.get_alarm_message(), platform="alarm")
 
     # Run our message checks
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     main_message_speak()
 
@@ -1065,13 +1275,17 @@ def view_image_prompt_get():
 
 def view_image_after_chat(message):
 
-    # Actual sending of the message, waits for reply automatically
-    API.api_controller.send_via_oogabooga(message)
-
+    # Use platform-aware messaging for image follow-up chat (voice context)
+    clean_reply = send_platform_aware_message(message, platform="voice")
 
     # Run our message checks
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # Pipe us to the reply function
     main_message_speak()
@@ -1091,10 +1305,18 @@ def main_send_blank():
     # Always process the response, even if it's empty
     # This ensures the interaction gets added to chat history for web UI
     if reply_message and reply_message.strip():
-        message_checks(reply_message)
+        # Clean the response for personal conversation (web UI/CMD context)
+        clean_reply = clean_personal_response(reply_message)
+        
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
         # Speak the response if shadow chats are enabled
         if settings.speak_shadowchats:
-            voice.speak(reply_message)
+            voice.speak(clean_reply)
     else:
         # Even with empty response, run message_checks to ensure proper logging
         message_checks(reply_message or "*nods quietly*")
@@ -1185,12 +1407,17 @@ def hangout_reply(transcript):
         hangout_interruptable.daemon = True
         hangout_interruptable.start()
 
-    # Actual sending of the message, waits for reply automatically
-    API.api_controller.send_via_oogabooga(transcript)
+    # Use platform-aware messaging for hangout mode
+    clean_reply = send_platform_aware_message(transcript, platform="hangout")
 
     # Run our message checks
-    reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if clean_reply and clean_reply.strip():
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # Pipe us to the reply function
     main_message_speak()
@@ -1205,7 +1432,8 @@ def hangout_wait_reply_waitportion(transcript):
     settings.live_pipe_no_speak = True
     live_pipe_use_streamed_interrupt_watchdog = True
 
-    API.api_controller.send_via_oogabooga(transcript)
+    # Use platform-aware messaging for hangout mode (but don't get response yet)
+    API.api_controller.send_via_oogabooga(f"[Platform: Hangout Mode - Casual Conversation] {transcript}")
 
     live_pipe_use_streamed_interrupt_watchdog = False
     settings.live_pipe_no_speak = False
@@ -1216,9 +1444,18 @@ def hangout_wait_reply_replyportion():
     while API.api_controller.is_in_api_request:
         time.sleep(0.01)
 
-    # Run our message checks
+    # Run our message checks with hangout platform cleaning
     reply_message = API.api_controller.receive_via_oogabooga()
-    message_checks(reply_message)
+    if reply_message and reply_message.strip():
+        # Clean the response for hangout platform
+        clean_reply = clean_hangout_response(reply_message)
+        
+        # Update the history with the cleaned response
+        if len(API.api_controller.ooga_history) > 0:
+            API.api_controller.ooga_history[-1][1] = clean_reply
+            API.api_controller.save_histories()
+        
+        message_checks(clean_reply)
 
     # Set it so that we speak on response
     global live_pipe_force_speak_on_response
@@ -1348,27 +1585,14 @@ def main_text_chat(transcript=None):
     stored_transcript = transcript
 
     try:
-        # Send the message to the API
-        API.api_controller.send_via_oogabooga(transcript)
-
-        # Get the raw response
-        reply_message = API.api_controller.receive_via_oogabooga()
+        # Send the message with CMD platform context
+        clean_reply = send_platform_aware_message(transcript, platform="cmd")
         
-        if reply_message and reply_message.strip():
-            # Clean the response to remove streaming personality artifacts
-            clean_reply = clean_twitch_response(reply_message)
-            
-            # Update the history with the cleaned response instead of the raw one
-            if len(API.api_controller.ooga_history) > 0:
-                # Replace the last response in history with the cleaned version
-                API.api_controller.ooga_history[-1][1] = clean_reply
-                # Save the updated history
-                API.api_controller.save_histories()
-            
+        if clean_reply and clean_reply.strip():
             # Run message checks with cleaned response
             message_checks(clean_reply)
             
-            # Handle TTS directly (since we already consumed the API response)
+            # Handle TTS directly with the already cleaned message
             clean_tts_message = clean_reply
             if char_name and clean_tts_message.startswith(f"{char_name}:"):
                 clean_tts_message = clean_tts_message[len(char_name)+1:].strip()

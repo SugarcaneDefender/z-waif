@@ -29,9 +29,13 @@ class AIHandler:
                 log_info("Using cached response")
                 return self.response_cache[cache_key]
 
-            # Generate response using main API
+            # Generate response using main API with platform context
             api_controller.send_via_oogabooga(enhanced_prompt)
             response = api_controller.receive_via_oogabooga()
+            
+            # Clean response based on platform if context provided
+            if context and context.get("platform"):
+                response = self._clean_response_for_platform(response, context["platform"])
 
             if response:
                 # Cache the response
@@ -67,18 +71,31 @@ class AIHandler:
         # Build enhanced prompt
         enhanced_parts = [personality_instruction]
 
-        # Add context if available
+        # Add platform context if available
         if context:
             if context.get("platform"):
                 platform = context["platform"]
+                # Add standardized platform context tags
                 if platform == "twitch":
-                    enhanced_parts.append(
-                        "This is for Twitch chat - keep responses concise and engaging."
-                    )
+                    enhanced_parts.insert(0, "[Platform: Twitch Chat]")
+                    enhanced_parts.append("Keep responses concise and engaging for Twitch chat.")
                 elif platform == "discord":
-                    enhanced_parts.append(
-                        "This is for Discord - you can be more detailed if needed."
-                    )
+                    enhanced_parts.insert(0, "[Platform: Discord]")
+                    enhanced_parts.append("This is for Discord - you can be casual and use emojis.")
+                elif platform == "voice":
+                    enhanced_parts.insert(0, "[Platform: Voice Chat - Personal Conversation]")
+                    enhanced_parts.append("This is a personal voice conversation.")
+                elif platform == "webui":
+                    enhanced_parts.insert(0, "[Platform: Web Interface - Personal Chat]")
+                    enhanced_parts.append("This is a personal chat through the web interface.")
+                elif platform == "cmd":
+                    enhanced_parts.insert(0, "[Platform: Command Line - Personal Chat]")
+                    enhanced_parts.append("This is a personal chat through the command line.")
+                elif platform == "minecraft":
+                    enhanced_parts.insert(0, "[Platform: Minecraft Game Chat]")
+                    enhanced_parts.append("Keep responses short for Minecraft game chat.")
+                else:
+                    enhanced_parts.insert(0, f"[Platform: {platform}]")
 
             if context.get("user_relationship"):
                 relationship = context["user_relationship"]
@@ -118,6 +135,71 @@ class AIHandler:
         }
 
         return fallback_responses.get(personality, fallback_responses["friendly"])
+
+    def _clean_response_for_platform(self, response: str, platform: str) -> str:
+        """Clean response based on platform requirements"""
+        if not response:
+            return ""
+        
+        import re
+        
+        clean_reply = response.strip()
+        
+        # Remove platform context markers
+        clean_reply = re.sub(r'\[Platform:[^\]]*\]', '', clean_reply).strip()
+        
+        # Platform-specific cleaning
+        if platform == "twitch":
+            return self._clean_twitch_response(clean_reply)
+        elif platform == "discord":
+            return self._clean_discord_response(clean_reply)
+        elif platform in ["voice", "webui", "cmd"]:
+            return self._clean_personal_response(clean_reply)
+        elif platform == "minecraft":
+            return self._clean_minecraft_response(clean_reply)
+        else:
+            return self._clean_personal_response(clean_reply)
+    
+    def _clean_personal_response(self, response: str) -> str:
+        """Clean for personal conversations"""
+        import re
+        streaming_phrases = [
+            "Thanks for watching", "enjoying the stream", "Welcome to my stream",
+            "Don't forget to follow", "Hey viewers", "streaming", "stream", "viewers"
+        ]
+        for phrase in streaming_phrases:
+            if phrase.lower() in response.lower():
+                return "Hey! How are you doing? What's on your mind?"
+        
+        clean_reply = re.sub(r'\*[^*]*\*', '', response).strip()
+        return clean_reply if clean_reply else "Hi! Nice to chat with you!"
+    
+    def _clean_twitch_response(self, response: str) -> str:
+        """Clean for Twitch conversations"""
+        import re
+        streaming_phrases = ["Thanks for watching", "Don't forget to follow", "Welcome to my stream"]
+        for phrase in streaming_phrases:
+            if phrase.lower() in response.lower():
+                return "Hey! How's it going?"
+        
+        clean_reply = re.sub(r'\*[^*]*\*', '', response).strip()
+        return clean_reply if clean_reply else "Hi! Nice to see you!"
+    
+    def _clean_discord_response(self, response: str) -> str:
+        """Clean for Discord conversations"""
+        import re
+        streaming_phrases = ["Thanks for watching", "stream has just ended"]
+        for phrase in streaming_phrases:
+            if phrase.lower() in response.lower():
+                return "Hey! What's up? 😊"
+        
+        return response if response else "Hey there! 👋"
+    
+    def _clean_minecraft_response(self, response: str) -> str:
+        """Clean for Minecraft conversations"""
+        if len(response) > 100:
+            response = response[:97] + "..."
+        return response if response else "Hi! How's the game going?"
 
     async def generate_contextual_response(
         self, message: str, user_context: Dict[str, Any], memories: List[str] = None
