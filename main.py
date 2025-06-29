@@ -1306,12 +1306,12 @@ def run_program():
     # Load in our chatpops
     chatpops_enabled_string = os.environ.get("USE_CHATPOPS")
     if chatpops_enabled_string == "ON":
-        utils.settings.use_chatpops = True
+        settings.use_chatpops = True
     else:
-        utils.settings.use_chatpops = False
+        settings.use_chatpops = False
 
     with open("Configurables/Chatpops.json", 'r') as openfile:
-        utils.settings.chatpop_phrases = json.load(openfile)
+        settings.chatpop_phrases = json.load(openfile)
 
 
     # Start the VTube Studio interaction in a separate thread, we ALWAYS do this FYI
