@@ -1348,11 +1348,44 @@ def main_text_chat(transcript=None):
     stored_transcript = transcript
 
     try:
-        # Use the proper API flow - send then receive
+        # Send the message to the API
         API.api_controller.send_via_oogabooga(transcript)
 
-        # Pipe us to the reply function (this will handle receiving and message_checks internally)
-        main_message_speak()
+        # Get the raw response
+        reply_message = API.api_controller.receive_via_oogabooga()
+        
+        if reply_message and reply_message.strip():
+            # Clean the response to remove streaming personality artifacts
+            clean_reply = clean_twitch_response(reply_message)
+            
+            # Update the history with the cleaned response instead of the raw one
+            if len(API.api_controller.ooga_history) > 0:
+                # Replace the last response in history with the cleaned version
+                API.api_controller.ooga_history[-1][1] = clean_reply
+                # Save the updated history
+                API.api_controller.save_histories()
+            
+            # Run message checks with cleaned response
+            message_checks(clean_reply)
+            
+            # Handle TTS directly (since we already consumed the API response)
+            clean_tts_message = clean_reply
+            if char_name and clean_tts_message.startswith(f"{char_name}:"):
+                clean_tts_message = clean_tts_message[len(char_name)+1:].strip()
+            elif clean_tts_message.startswith("Assistant:"):
+                clean_tts_message = clean_tts_message[10:].strip()
+                
+            # Strip emojis for clearer TTS and speak
+            if clean_tts_message.strip():
+                s_message = emoji.replace_emoji(clean_tts_message, replace="")
+                if s_message.strip():
+                    t = threading.Thread(target=voice.speak_line, args=(s_message,), kwargs={"refuse_pause": False})
+                    t.daemon = True
+                    t.start()
+                    
+                    # Wait until speaking finishes to prevent overlap with next TTS
+                    while voice.check_if_speaking():
+                        time.sleep(0.01)
         
     except Exception as e:
         print(f"{colorama.Fore.RED}Error processing text chat: {e}{colorama.Fore.RESET}")
