@@ -2,12 +2,14 @@
 # Watchdog to check for soundboard sounds
 #
 
+# Standard library imports
 import os
 import random
+import time
 
+# Third-party imports
 from pydub import AudioSegment
 from pydub.playback import play
-import time
 
 def extract_soundboard(input_string):
 
@@ -49,7 +51,7 @@ def soundboard_playsound(sound_name):
     try:
         sound = AudioSegment.from_wav("Configurables/Soundboard/" + sound_name + ".wav")
         play(sound)
-
-    except:
+    except Exception as e:
+        print(f"Error playing soundboard sound '{sound_name}': {e}")
         return
 

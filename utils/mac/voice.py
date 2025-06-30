@@ -1,10 +1,10 @@
 import time
 import os
 
-import utils.hotkeys
-import utils.voice_splitter
-import utils.soundboard
-import utils.settings
+from utils import hotkeys
+from utils import voice_splitter
+from utils import soundboard
+from utils import settings
 import API.api_controller
 
 assert os.name == "posix" # type: ignore
@@ -15,17 +15,17 @@ cut_voice = False
 def speak_line(s_message: str, refuse_pause: bool):
     global cut_voice #, is_speaking
     cut_voice = False
-    chunky_message = utils.voice_splitter.split_into_sentences(s_message)
+    chunky_message = voice_splitter.split_into_sentences(s_message)
     
     for chunk in chunky_message:
         #speaker = win32com.client.Dispatch("SAPI.SpVoice")
         #speaker.Speak(chunk)
 
         # Play soundbaord sounds, if any
-        pure_chunk = utils.soundboard.extract_soundboard(chunk)
+        pure_chunk = soundboard.extract_soundboard(chunk)
 
         # Cut out if we are not speaking unless spoken to!
-        if utils.settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
+        if settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
             continue
 
         # Remove any asterisks from being spoken
@@ -50,7 +50,7 @@ def speak_line(s_message: str, refuse_pause: bool):
             time.sleep(0.001)   # Still have a mini-mini rest, even with pauses
 
         # Break free if we undo/redo, and stop reading
-        if utils.hotkeys.NEXT_PRESSED or utils.hotkeys.REDO_PRESSED or cut_voice:
+        if hotkeys.NEXT_PRESSED or hotkeys.REDO_PRESSED or cut_voice:
             cut_voice = False
             break
 
@@ -58,7 +58,7 @@ def speak_line(s_message: str, refuse_pause: bool):
 
 
     # Reset the volume cooldown so she don't pickup on herself
-    utils.hotkeys.cooldown_listener_timer()
+    hotkeys.cooldown_listener_timer()
 
     set_speaking(False)
 

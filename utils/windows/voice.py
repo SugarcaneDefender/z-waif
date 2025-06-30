@@ -1,33 +1,46 @@
 import time
 import os
+import requests
+import json
+import logging
+from pathlib import Path
 
 assert os.name == 'nt' # type: ignore
 
 import win32com.client
-import utils.hotkeys
-import utils.voice_splitter
-import utils.zw_logging
-import utils.soundboard
-import utils.settings
+from utils import hotkeys
+from utils import voice_splitter
+from utils import zw_logging
+from utils import soundboard
+from utils import settings
 import API.api_controller
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 is_speaking = False
 cut_voice = False
 
-def speak_line(s_message, refuse_pause):
+# RVC Configuration
+RVC_HOST = os.environ.get("RVC_HOST", "127.0.0.1")
+RVC_PORT = os.environ.get("RVC_PORT", "7897")
+RVC_URI = f"http://{RVC_HOST}:{RVC_PORT}/voice"
 
-    global cut_voice #, is_speaking
+def speak_line_rvc(s_message, refuse_pause=False):
+    """Speak a line using RVC voice conversion"""
+    global cut_voice
     cut_voice = False
 
-    chunky_message = utils.voice_splitter.split_into_sentences(s_message)
+    chunky_message = voice_splitter.split_into_sentences(s_message)
 
     for chunk in chunky_message:
         try:
-            # Play soundbaord sounds, if any
-            pure_chunk = utils.soundboard.extract_soundboard(chunk)
+            # Play soundboard sounds, if any
+            pure_chunk = soundboard.extract_soundboard(chunk)
 
             # Cut out if we are not speaking unless spoken to!
-            if utils.settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
+            if settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
                 continue
 
             # Remove any asterisks from being spoken
@@ -39,9 +52,40 @@ def speak_line(s_message, refuse_pause):
             pure_chunk = pure_chunk.replace("!!!!", "!")
             pure_chunk = pure_chunk.replace("!!!!!", "!")
 
-            # Speak
-            speaker = win32com.client.Dispatch("SAPI.SpVoice")
-            speaker.Speak(pure_chunk)
+            # Send to RVC server
+            try:
+                response = requests.post(
+                    RVC_URI,
+                    json={
+                        "text": pure_chunk,
+                        "model": settings.rvc_model,
+                        "speaker": settings.rvc_speaker,
+                        "pitch": settings.rvc_pitch,
+                        "speed": settings.rvc_speed
+                    },
+                    timeout=10
+                )
+                response.raise_for_status()
+
+                # Get audio data and play
+                audio_data = response.content
+                if audio_data:
+                    # Save temporary audio file
+                    temp_file = Path("temp_voice.wav")
+                    temp_file.write_bytes(audio_data)
+                    
+                    # Play audio using default audio player
+                    import winsound
+                    winsound.PlaySound(str(temp_file), winsound.SND_FILENAME)
+                    
+                    # Clean up temp file
+                    temp_file.unlink()
+                
+            except Exception as e:
+                logger.error(f"RVC error: {str(e)}")
+                # Fallback to default voice
+                speaker = win32com.client.Dispatch("SAPI.SpVoice")
+                speaker.Speak(pure_chunk)
 
             if not refuse_pause:
                 time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
@@ -49,21 +93,56 @@ def speak_line(s_message, refuse_pause):
                 time.sleep(0.001)   # Still have a mini-mini rest, even with pauses
 
             # Break free if we undo/redo, and stop reading
-            if utils.hotkeys.NEXT_PRESSED or utils.hotkeys.REDO_PRESSED or cut_voice:
+            if hotkeys.NEXT_PRESSED or hotkeys.REDO_PRESSED or cut_voice:
                 cut_voice = False
                 break
 
-        except:
-            utils.zw_logging.update_debug_log("Error with voice!")
-
-
-
+        except Exception as e:
+            logger.error(f"Voice error: {str(e)}")
+            zw_logging.update_debug_log("Error with voice!")
 
     # Reset the volume cooldown so she don't pickup on herself
-    utils.hotkeys.cooldown_listener_timer()
-
+    hotkeys.cooldown_listener_timer()
     set_speaking(False)
+    return
 
+# Legacy SAPI-based TTS
+def _speak_line_sapi(pure_chunk):
+    speaker = win32com.client.Dispatch("SAPI.SpVoice")
+    speaker.Speak(pure_chunk)
+
+
+def speak_line(s_message, refuse_pause):
+    """Speak a line using RVC if enabled, else fallback to Windows SAPI"""
+    if settings.use_rvc:
+        speak_line_rvc(s_message, refuse_pause)
+        return
+
+    global cut_voice
+    cut_voice = False
+
+    for chunk in voice_splitter.split_into_sentences(s_message):
+        try:
+            pure_chunk = soundboard.extract_soundboard(chunk)
+
+            if settings.speak_only_spokento and not API.api_controller.last_message_received_has_own_name:
+                continue
+
+            pure_chunk = pure_chunk.replace("*", "").replace("!!", "!").replace("!!!", "!").replace("!!!!", "!").replace("!!!!!", "!")
+
+            _speak_line_sapi(pure_chunk)
+
+            time.sleep(0.001 if refuse_pause else 0.05)
+
+            if hotkeys.NEXT_PRESSED or hotkeys.REDO_PRESSED or cut_voice:
+                cut_voice = False
+                break
+
+        except Exception as e:
+            zw_logging.update_debug_log(f"Error with voice! {e}")
+
+    hotkeys.cooldown_listener_timer()
+    set_speaking(False)
     return
 
 # Midspeaking (still processing whole message)

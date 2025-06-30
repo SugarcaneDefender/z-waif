@@ -1,7 +1,7 @@
-import utils.based_rag
+from utils import based_rag
 import random
 import API.api_controller
-import utils.zw_logging
+from utils import zw_logging
 import os
 
 
@@ -14,7 +14,7 @@ char_name = os.environ.get("CHAR_NAME")
 
 # remembers a random past event
 def retrospect_random_mem_summary():
-    history = utils.based_rag.history_database
+    history = based_rag.history_database
 
     # find random point in history to think about (not including anything recently)
     search_point = random.randint(0, len(history) - 90)
@@ -25,7 +25,7 @@ def retrospect_random_mem_summary():
                           "Feel free to focus on details that are of note or you find interest in.")
 
     if enable_debug:
-        utils.zw_logging.update_rag_log(history_scope)
+        zw_logging.update_rag_log(history_scope)
 
     # Encode and send!
     pre_encoded_message = API.api_controller.encode_raw_new_api(history_scope, retrospect_message, search_point_size)

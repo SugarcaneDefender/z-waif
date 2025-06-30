@@ -7,7 +7,7 @@ import torch
 from dotenv import load_dotenv
 load_dotenv()
 
-import utils.cane_lib
+from utils import cane_lib
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -83,7 +83,7 @@ def faster_transcribe(voice):
         nresult += segment.text + " "
 
     # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
-    nresult = utils.cane_lib.remove_repeats(nresult)
+    nresult = cane_lib.remove_repeats(nresult)
 
     return nresult
 
@@ -98,7 +98,7 @@ def classical_transcribe(voice):
         nresult += mem['text']+" "
 
     # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
-    nresult = utils.cane_lib.remove_repeats(nresult)
+    nresult = cane_lib.remove_repeats(nresult)
 
     return nresult
 

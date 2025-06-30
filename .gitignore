@@ -1,0 +1,20 @@
+.env
+.direnv
+venv/
+**/*.pyc
+**/*.bak
+.DS_Store
+**/__pycache__/
+.mypy_cache/
+log.txt
+.vscode/
+.idea/
+
+[lL]ogs/
+!Logs/Drop_Converts_Here/CONVERT_LOGS.txt
+
+RAG_Database/
+!RAG_Database/RAG_WILL_GENERATE_HERE.txt
+
+# Voice input files
+utils/resource/voice_in/

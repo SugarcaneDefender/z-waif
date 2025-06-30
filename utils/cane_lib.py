@@ -1,8 +1,8 @@
 import re
-import utils.zw_logging
+from utils import zw_logging
 
 # Quick lil function to check if any keywords are in a piece of text
-def keyword_check(phrase, keywords):
+def keyword_check(phrase: str, keywords: list[str]):
     for k in keywords:
         if str.lower(k) in str.lower(phrase):
             return True
@@ -10,7 +10,7 @@ def keyword_check(phrase, keywords):
     return False
 
 # Checks for repetitions at the end of strings, and removes them (mainly for Whisper)
-def old_remove_repeats(input_string):
+def old_remove_repeats(input_string: str):
 
     # Remove ending space if it exists
     if input_string != "" and input_string[-1] == " ":
@@ -37,10 +37,10 @@ def old_remove_repeats(input_string):
         new_string = new_string.replace(list_split[-2] + "!", "")
         new_string = new_string.replace(list_split[-2] + "?", "")
         new_string = new_string.replace(list_split[-2] + ",", "")
-        utils.zw_logging.update_debug_log("Removed repeats! Original message was: " + input_string)
+        zw_logging.update_debug_log("Removed repeats! Original message was: " + input_string)
         return new_string
 
-def remove_repeats(input_string):
+def remove_repeats(input_string: str):
 
     # Remove ending space if it exists
     if input_string != "" and input_string[-1] == " ":
@@ -90,6 +90,6 @@ def remove_repeats(input_string):
         new_string = input_string.replace(detected_repeat_string, "")
         new_string += detected_repeat_string
 
-        utils.zw_logging.update_debug_log("Removed repeats! Original message was: " + input_string)
+        zw_logging.update_debug_log("Removed repeats! Original message was: " + input_string)
         return new_string
 
