@@ -718,6 +718,7 @@ def save_histories():
 
 
 def soft_reset():
+    global ooga_history
 
     # Saftey breaker for if the previous message was also a Soft Reset / System D
     if len(ooga_history) > 1 and cane_lib.keyword_check(ooga_history[-2][0], ["[System D]"]):

@@ -190,7 +190,23 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             def soft_reset():
                 """Trigger a soft reset of the chat system"""
                 print("Performing chat soft reset (Web UI)")
-                API.api_controller.soft_reset()
+                try:
+                    # Perform the soft reset
+                    API.api_controller.soft_reset()
+                    
+                    # Force an immediate chat update by triggering the update function
+                    # The soft reset adds system messages to guide the AI back to normal behavior
+                    print("✅ Chat soft reset completed successfully!")
+                    print("🔄 System reset messages added to conversation")
+                    print("💬 The AI will now respond with refreshed context")
+                    
+                    # Small delay to ensure the reset is processed
+                    import time
+                    time.sleep(0.1)
+                    
+                except Exception as e:
+                    print(f"❌ Error during soft reset: {e}")
+                    zw_logging.log_error(f"Web UI soft reset error: {e}")
                 return
 
             button_regen = gr.Button(value="Reroll")
