@@ -128,11 +128,16 @@ def run(user_input, temp_level):
     global ooga_history
     global is_in_api_request
 
+    # Force character card reload before each API call
+    print("[API] Checking character card status...")
+    import API.character_card
+    API.character_card.load_char_card()
+    
     # Handle blank input by converting to meaningful prompt for AI while preserving original
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
         zw_logging.update_debug_log("API 'run' received blank input. Converting to listening prompt.")
-        user_input = "*listens attentively*"  # Convert for AI processing
+        user_input = "*listens attentively*"  # Convert for API processing
 
     # We are starting our API request!
     is_in_api_request = True
@@ -145,18 +150,50 @@ def run(user_input, temp_level):
         zw_logging.log_error(f"Failed to load LiveLog.json: {e}")
         ooga_history = []
 
+    # Debug: Check character card status
+    try:
+        import main
+        if main.debug_mode:
+            from API.character_card import character_card
+            zw_logging.update_debug_log(f"Character card status: {character_card[:100]}...")
+            zw_logging.update_debug_log(f"API_TYPE: {API_TYPE}")
+            zw_logging.update_debug_log(f"Using API module: {API}")
+    except (ImportError, AttributeError):
+        pass
+
     # Check for name in message
     check_for_name_in_message(user_input)
     
+    # Debug: Show connection info
+    print(f"[API] HOST: {HOST}")
+    print(f"[API] API_TYPE: {API_TYPE}")
+    print(f"[API] URI would be: http://{HOST}/v1/chat/completions")
+    
     # Simple API call using unified interface
     try:
-        received_message = API.api_call(
-            user_input=user_input,
-            temp_level=temp_level,
-            max_tokens=150,
-            streaming=False
-        )
+        print(f"[API] About to call API.api_call with user_input: '{user_input[:50]}...'")
+        
+        # Call the correct API based on API_TYPE
+        if API_TYPE == "Ollama":
+            import API.ollama_api
+            received_message = API.ollama_api.api_call(
+                user_input=user_input,
+                temp_level=temp_level,
+                max_tokens=150,
+                streaming=False
+            )
+        else:  # Default to Oobabooga
+            import API.oobaooga_api
+            received_message = API.oobaooga_api.api_call(
+                user_input=user_input,
+                temp_level=temp_level,
+                max_tokens=150,
+                streaming=False
+            )
+        
+        print(f"[API] API.api_call returned: '{received_message[:50] if received_message else 'None'}...'")
     except Exception as e:
+        print(f"[API] Exception in API.api_call: {e}")
         zw_logging.log_error(f"API request failed: {e}")
         received_message = "Sorry, I'm having connection issues right now."
 
@@ -508,11 +545,14 @@ def set_force_skip_streaming(tf_input):
 def send_via_oogabooga(user_input):
     """Send a message to the API"""
     print(f"[API] 'send_via_oogabooga' received user_input: '{user_input}'")
+    print(f"[API] About to call API.api_call...")
+    
     global received_message
     global force_skip_streaming
 
     # Check if we should stream or not
     if settings.stream_chats and not force_skip_streaming:
+        print(f"[API] Using streaming mode")
         # Attempt streaming first
         local_stream_result = run_streaming(user_input, 0.7)
 
@@ -527,8 +567,13 @@ def send_via_oogabooga(user_input):
             received_message = run(user_input, 0.7)
             print(f"[API] Fallback non-streaming call finished. Received message: '{received_message}'")
     else:
-        received_message = run(user_input, 0.7)
-        print(f"[API] Non-streaming call finished. Received message: '{received_message}'")
+        print(f"[API] Using non-streaming mode")
+        try:
+            received_message = run(user_input, 0.7)
+            print(f"[API] Non-streaming call finished. Received message: '{received_message}'")
+        except Exception as e:
+            print(f"[API] Exception in run() function: {e}")
+            received_message = f"Error in API call: {e}"
 
     # Debug: Check if message was added to history
     print(f"[API] Chat history length after processing: {len(ooga_history)}")
@@ -1508,14 +1553,37 @@ def _encode_new_api_deprecated(user_input):
 
 
 def encode_new_api_ollama(user_input):
-    """Simplified Ollama encoding like release version"""
+    """Enhanced Ollama encoding with platform-specific context"""
     global ooga_history
 
     messages_to_send = []
     
-    # Simple system prompt - just character card
+    # Detect platform from user input
+    platform_context = ""
+    if "[Platform: Twitch Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting on Twitch. Keep responses casual, engaging, and chat-friendly. Avoid streaming references but maintain a conversational tone. Be authentic and relatable."
+    elif "[Platform: Discord]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting on Discord. Be casual, fun, and engaging. You can use emojis and informal language. Keep the social energy up."
+    elif "[Platform: Web Interface - Personal Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a personal one-on-one conversation through a web interface. Be warm, caring, and authentic. Focus on meaningful personal interaction."
+    elif "[Platform: Command Line - Personal Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a personal conversation through command line. Be direct but friendly. Keep responses clear and engaging."
+    elif "[Platform: Voice Chat - Personal Conversation]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a voice conversation. Be natural and conversational as if speaking aloud. Use natural speech patterns and be expressive."
+    elif "[Platform: Minecraft Game Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting in Minecraft. Keep responses short, game-appropriate, and fun. Be supportive of gameplay activities."
+    elif "[Platform: Alarm/Reminder System]" in user_input:
+        platform_context = "\n\nCONTEXT: This is an alarm or reminder. Be helpful, direct, and supportive. Focus on being encouraging and useful."
+    elif "[Platform: Hangout Mode - Casual Conversation]" in user_input:
+        platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
+    
+    # Simple system prompt - character card with platform context
     if character_card and isinstance(character_card, str):
-        messages_to_send.append({"role": "system", "content": character_card.strip()})
+        enhanced_character_card = character_card.strip() + platform_context
+        messages_to_send.append({"role": "system", "content": enhanced_character_card})
+        
+        # Debug: Show platform detection
+        print(f"[API] Ollama Platform detected: {platform_context.split(':')[1].split('.')[0] if platform_context else 'Personal'}")
 
     # Add recent history (last 10 exchanges like release version)
     recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
@@ -1527,37 +1595,60 @@ def encode_new_api_ollama(user_input):
             assistant_msg = entry[1]
             
             if user_msg:
-                messages_to_send.append({"role": "user", "content": user_msg})
+                messages_to_send.append({"role": "user", "content": str(user_msg)})
             if assistant_msg:
-                messages_to_send.append({"role": "assistant", "content": assistant_msg})
+                messages_to_send.append({"role": "assistant", "content": str(assistant_msg)})
 
     # Add current user input
-    messages_to_send.append({"role": "user", "content": user_input})
+    if user_input:
+        messages_to_send.append({"role": "user", "content": str(user_input)})
     
-    # Debug logging to see what we're sending (only if debug mode is on)
+    # Debug logging when enabled
     try:
+        import main
         if main.debug_mode:
-            zw_logging.update_debug_log(f"Encoded {len(messages_to_send)} messages for Ollama:")
+            zw_logging.update_debug_log(f"Ollama encoded {len(messages_to_send)} messages with platform context")
             for i, msg in enumerate(messages_to_send):
-                role = msg.get("role", "unknown")
-                content = msg.get("content", "")[:100] + ("..." if len(msg.get("content", "")) > 100 else "")
-                zw_logging.update_debug_log(f"  Message {i}: {role}: {content}")
+                content_preview = msg.get('content', '')[:100] + ('...' if len(msg.get('content', '')) > 100 else '')
+                zw_logging.update_debug_log(f"Ollama Message {i+1} ({msg.get('role', 'unknown')}): {content_preview}")
     except (ImportError, AttributeError):
-        # If we can't access main.debug_mode, skip debug logging
         pass
-    
+
     return messages_to_send
 
 
 def encode_for_oobabooga_chat(user_input):
     """
-    Simplified encoding like release version - just character card + recent history + current input
+    Enhanced encoding with platform-specific context - includes conversation history + platform awareness
     """
     messages = []
     
-    # Add character card as system message
+    # Detect platform from user input
+    platform_context = ""
+    if "[Platform: Twitch Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting on Twitch. Keep responses casual, engaging, and chat-friendly. Avoid streaming references but maintain a conversational tone. Be authentic and relatable."
+    elif "[Platform: Discord]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting on Discord. Be casual, fun, and engaging. You can use emojis and informal language. Keep the social energy up."
+    elif "[Platform: Web Interface - Personal Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a personal one-on-one conversation through a web interface. Be warm, caring, and authentic. Focus on meaningful personal interaction."
+    elif "[Platform: Command Line - Personal Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a personal conversation through command line. Be direct but friendly. Keep responses clear and engaging."
+    elif "[Platform: Voice Chat - Personal Conversation]" in user_input:
+        platform_context = "\n\nCONTEXT: This is a voice conversation. Be natural and conversational as if speaking aloud. Use natural speech patterns and be expressive."
+    elif "[Platform: Minecraft Game Chat]" in user_input:
+        platform_context = "\n\nCONTEXT: You are chatting in Minecraft. Keep responses short, game-appropriate, and fun. Be supportive of gameplay activities."
+    elif "[Platform: Alarm/Reminder System]" in user_input:
+        platform_context = "\n\nCONTEXT: This is an alarm or reminder. Be helpful, direct, and supportive. Focus on being encouraging and useful."
+    elif "[Platform: Hangout Mode - Casual Conversation]" in user_input:
+        platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
+    
+    # Add character card as system message with platform context
     if character_card and isinstance(character_card, str):
-        messages.append({"role": "system", "content": character_card.strip()})
+        enhanced_character_card = character_card.strip() + platform_context
+        messages.append({"role": "system", "content": enhanced_character_card})
+        
+        # Debug: Show platform detection
+        print(f"[API] Platform detected: {platform_context.split(':')[1].split('.')[0] if platform_context else 'Personal'}")
 
     # Add recent history (last 10 exchanges like release version)
     recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
@@ -1572,26 +1663,22 @@ def encode_for_oobabooga_chat(user_input):
                 messages.append({"role": "user", "content": str(user_msg)})
             if assistant_msg:
                 messages.append({"role": "assistant", "content": str(assistant_msg)})
-            
-    # Add the current user message - convert blank to meaningful prompt for AI
-    if user_input and user_input.strip():
-        messages.append({"role": "user", "content": user_input})
-    else:
-        # Send meaningful prompt to AI for blank messages while preserving blank in history
-        messages.append({"role": "user", "content": "*listens attentively*"})
+
+    # Add current user input
+    if user_input:
+        messages.append({"role": "user", "content": str(user_input)})
     
-    # Debug logging to see what we're sending (only if debug mode is on)
+    # Debug logging when enabled
     try:
+        import main
         if main.debug_mode:
-            zw_logging.update_debug_log(f"Encoded {len(messages)} messages for API:")
+            zw_logging.update_debug_log(f"Encoded {len(messages)} messages for API with platform context")
             for i, msg in enumerate(messages):
-                role = msg.get("role", "unknown")
-                content = msg.get("content", "")[:100] + ("..." if len(msg.get("content", "")) > 100 else "")
-                zw_logging.update_debug_log(f"  Message {i}: {role}: {content}")
+                content_preview = msg.get('content', '')[:100] + ('...' if len(msg.get('content', '')) > 100 else '')
+                zw_logging.update_debug_log(f"Message {i+1} ({msg.get('role', 'unknown')}): {content_preview}")
     except (ImportError, AttributeError):
-        # If we can't access main.debug_mode, skip debug logging
         pass
-    
+        
     return messages
 
 

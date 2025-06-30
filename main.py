@@ -439,12 +439,12 @@ def main_converse():
         print(f"Error deleting audio buffer file {audio_buffer}: {e}")
 
 
-def main_message_speak():
+def main_message_speak(skip_message_checks=False):
     """Handle speaking messages (voice + plugin checks)"""
     global live_pipe_force_speak_on_response
     
     if debug_mode:
-        print(f"[DEBUG] main_message_speak() called")
+        print(f"[DEBUG] main_message_speak() called with skip_message_checks={skip_message_checks}")
 
     # Message is received here
     message = API.api_controller.receive_via_oogabooga()
@@ -476,7 +476,8 @@ def main_message_speak():
             time.sleep(0.01)
 
     # Process message checks even if nothing was spoken (so logs/plugins run)
-    if message and message.strip():
+    # But skip if the caller has already handled message_checks
+    if message and message.strip() and not skip_message_checks:
         message_checks(message)
 
         # Force speak if specifically requested (e.g., hangout interrupt)
@@ -495,9 +496,12 @@ def main_message_speak():
 def message_checks(message, skip_print=False):
     """Run post-response tasks: logging, plugin hooks, prints, etc."""
     
-    if debug_mode:
-        print(f"[DEBUG] message_checks() called with: {repr(message)}")
-
+    try:
+        if debug_mode:
+            print(f"[DEBUG] message_checks() called with skip_print={skip_print}, message: {repr(message[:50])}...")
+    except:
+        pass
+    
     if not message or message.strip() == "":
         return
 
@@ -506,29 +510,28 @@ def message_checks(message, skip_print=False):
         # Use debug log since update_chat_log doesn't exist
         zw_logging.update_debug_log(f"Message from {settings.char_name if settings.char_name else 'Assistant'}: {message}")
 
-    # Print banner + text only if not streamed (streamed path prints in real-time) and not skipping print
-    if not API.api_controller.last_message_streamed and not skip_print:
-        banner_name = settings.char_name if settings.char_name else 'Assistant'
-        print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-              + f"----{banner_name}----"
-              + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
-        
-        # Clean the message for display (remove character name prefix)
-        display_message = message
-        if settings.char_name and display_message.startswith(f"{settings.char_name}:"):
-            display_message = display_message[len(settings.char_name)+1:].strip()
-        elif display_message.startswith("Assistant:"):
-            display_message = display_message[10:].strip()
-        
-        print(display_message.strip())
-        print()
+        # Handle printing - skip_print=True completely prevents printing
+        if skip_print:
+            # Skip all printing when skip_print is True
+            pass
+        elif not API.api_controller.last_message_streamed:
+            # Print banner + text only if not streamed (streamed path prints in real-time)
+            banner_name = settings.char_name if settings.char_name else 'Assistant'
+            print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                  + f"----{banner_name}----"
+                  + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+            
+            # Clean the message for display (remove character name prefix)
+            display_message = message
+            if settings.char_name and display_message.startswith(f"{settings.char_name}:"):
+                display_message = display_message[len(settings.char_name)+1:].strip()
+            elif display_message.startswith("Assistant:"):
+                display_message = display_message[10:].strip()
+            
+            print(display_message.strip())
+            print()
 
-    # Speak in shadow-chat configuration (non-streamed)
-    # if settings.speak_shadowchats and not API.api_controller.last_message_streamed:
-    #     # voice.speak(message)  # Function doesn't exist in this version
-    #     pass
-
-    # Plugin checks
+    # Plugin checks (run regardless of printing)
     if settings.minecraft_enabled:
         minecraft.check_for_command(message)
         minecraft.check_message(message)
@@ -1061,6 +1064,13 @@ def main_web_ui_chat_worker(message):
     if (not settings.speak_shadowchats) and settings.stream_chats:
         settings.live_pipe_no_speak = True
 
+    # Debug logging for tracking double printing
+    try:
+        if debug_mode:
+            print(f"[DEBUG] main_web_ui_chat_worker starting with message: '{message}'")
+    except:
+        pass
+
     # Use platform-aware messaging for web UI
     clean_reply = send_platform_aware_message(message, platform="webui")
     
@@ -1069,6 +1079,13 @@ def main_web_ui_chat_worker(message):
         if len(API.api_controller.ooga_history) > 0:
             API.api_controller.ooga_history[-1][1] = clean_reply
             API.api_controller.save_histories()
+        
+        # Debug logging before printing
+        try:
+            if debug_mode:
+                print(f"[DEBUG] About to print clean_reply: '{clean_reply}'")
+        except:
+            pass
         
         # Print the cleaned response directly like main_text_chat does to avoid double printing
         banner_name = settings.char_name if settings.char_name else 'Assistant'
@@ -1084,10 +1101,12 @@ def main_web_ui_chat_worker(message):
     # Reset suppression flag and run speech pipeline like other shadow chats
     settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
-        main_message_speak()
+        main_message_speak(skip_message_checks=True)
 
 def main_web_ui_next():
     """Handle regeneration requests from the web UI"""
+    print("Generating Replacement Message!")
+    
     # Shadow chat regeneration
     # global settings.live_pipe_no_speak - not needed since settings is a module
     if (not settings.speak_shadowchats) and settings.stream_chats:
@@ -1102,28 +1121,45 @@ def main_web_ui_next():
         settings.live_pipe_no_speak = False
         return
 
-    # Generate new response using platform-aware system
-    API.api_controller.next_message_oogabooga()
-
-    # Get and process the response with Web UI platform awareness
-    reply_message = API.api_controller.receive_via_oogabooga()
-    if reply_message and reply_message.strip():
-        # Clean the response for Web UI platform
-        clean_reply = clean_personal_response(reply_message)
-        
-        # Update the history with the cleaned response
+    # Generate new response using the same approach as initial messages
+    try:
+        # Get the last user message from history to regenerate response
         if len(API.api_controller.ooga_history) > 0:
-            API.api_controller.ooga_history[-1][1] = clean_reply
-            API.api_controller.save_histories()
+            last_entry = API.api_controller.ooga_history[-1]
+            last_user_message = last_entry[0] if len(last_entry) > 0 else ""
+            
+            if last_user_message:
+                # Use the same platform-aware messaging as the original chat
+                clean_reply = send_platform_aware_message(last_user_message, platform="webui")
+                
+                if clean_reply and clean_reply.strip():
+                    # Update the history with the new response
+                    API.api_controller.ooga_history[-1][1] = clean_reply
+                    API.api_controller.save_histories()
+                    
+                    # Print the new response with banner
+                    banner_name = settings.char_name if settings.char_name else 'Assistant'
+                    print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                          + f"----{banner_name}----"
+                          + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+                    print(clean_reply.strip())
+                    print()
+                    
+                    # Run plugin checks without additional printing
+                    message_checks(clean_reply, skip_print=True)
+                    
+                    # Handle speech if configured
+                    if settings.speak_shadowchats and not settings.stream_chats:
+                        voice.speak(clean_reply)
+            else:
+                print("No previous message found to regenerate!")
+    except Exception as e:
+        print(f"Error during regeneration: {e}")
         
-        message_checks(clean_reply)
-
-        if settings.speak_shadowchats and not settings.stream_chats:
-            voice.speak(clean_reply)
-
+    # Reset suppression flag and run speech pipeline
     settings.live_pipe_no_speak = False
     if settings.speak_shadowchats and not settings.stream_chats:
-        main_message_speak()
+        main_message_speak(skip_message_checks=True)
 
 def main_discord_next():
 

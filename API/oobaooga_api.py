@@ -354,90 +354,104 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
     import sseclient
     from utils import zw_logging
     
+    # Always log API calls regardless of debug mode
+    print(f"[API] api_call() invoked with user_input: {repr(user_input[:50])}...")
+    
     try:
         # Encode messages for oobabooga chat format - this includes conversation history + user input
         messages = encode_for_oobabooga_chat(user_input)
         
-        # Build the request
+        # Always show what we're sending
+        print(f"[API] Sending {len(messages)} messages to backend")
+        for i, msg in enumerate(messages):
+            content_preview = msg.get('content', '')[:100] + ('...' if len(msg.get('content', '')) > 100 else '')
+            print(f"[API] Message {i+1} ({msg.get('role', 'unknown')}): {content_preview}")
+        
+        # Build the request - Keep full functionality but use supported parameters only
+        uri = f'http://{HOST}/v1/chat/completions'
         request = {
             "messages": messages,
-            'max_tokens': max_tokens,
-            'temperature': temp_level,
-            'mode': 'chat'
+            "mode": "chat",
+            "character": None,  # Disable character to use our system messages
+            "max_tokens": max_tokens,
+            "temperature": temp_level,
+            "do_sample": True,
+            "stream": streaming,
+            "truncation_length": 4096,  # Keep context length
         }
         
-        # Add streaming-specific parameters
-        if streaming:
-            request.update({
-                'truncation_length': max_context,
-                'stream': True
-            })
-            if stop:
-                request['stop'] = stop
-            if preset:
-                request['preset'] = preset
-            # Only add character if we have one - otherwise use system messages
-            if char_send and char_send != "None":
-                request['character'] = char_send
+        # Add preset if specified
+        if preset:
+            request["preset"] = preset
+            
+        # Add stopping criteria if specified
+        if stop:
+            request["stop"] = stop
         
-        # Handle both URL and host:port formats (http only, no https support yet)
-        if HOST.startswith("http://"):
-            uri = f'{HOST}/v1/chat/completions'
-        else:
-            uri = f'http://{HOST}/v1/chat/completions'
+        print(f"[API] Request details: max_tokens={max_tokens}, temp={temp_level}, streaming={streaming}, char_send={char_send}")
+        
+        # Add debugging for request content
+        print(f"[API] Request JSON size: {len(str(request))} characters")
         
         if streaming:
-            # Return streaming response
-            stream_response = requests.post(uri, headers=headers, json=request, verify=False, stream=True)
-            stream_response.raise_for_status()
-            client = sseclient.SSEClient(stream_response)
-            return client.events()
+            # Handle streaming request
+            print(f"[API] Making streaming request to {uri}")
+            response = requests.post(uri, headers=headers, json=request, stream=True, verify=False, timeout=30)
+            response.raise_for_status()
+            return sseclient.SSEClient(response)
         else:
             # Make direct API call for non-streaming with the proper conversation context
+            print(f"[API] Making non-streaming request to {uri}")
+            
             try:
-                import main
-                if main.debug_mode:
-                    zw_logging.update_debug_log(f"Sending non-streaming request with {len(messages)} messages to {uri}")
-            except (ImportError, AttributeError):
-                pass
-            
-            response = requests.post(uri, headers=headers, json=request, verify=False, timeout=30)
-            response.raise_for_status()
-            
-            result = response.json()
-            
-            # Extract the response content
-            if 'choices' in result and result['choices']:
-                choice = result['choices'][0]
-                if 'message' in choice and 'content' in choice['message']:
-                    received_message = choice['message']['content']
-                elif 'text' in choice:
-                    received_message = choice['text']
+                response = requests.post(uri, headers=headers, json=request, verify=False, timeout=30)
+                print(f"[API] Response status code: {response.status_code}")
+                response.raise_for_status()
+                
+                result = response.json()
+                print(f"[API] Received response with keys: {list(result.keys()) if isinstance(result, dict) else 'not a dict'}")
+                
+                # Extract the response content
+                if 'choices' in result and result['choices']:
+                    choice = result['choices'][0]
+                    if 'message' in choice and 'content' in choice['message']:
+                        response_content = choice['message']['content']
+                        print(f"[API] Extracted response content: {repr(response_content[:100])}...")
+                        return response_content
+                    elif 'text' in choice:
+                        response_content = choice['text']
+                        print(f"[API] Extracted response text: {repr(response_content[:100])}...")
+                        return response_content
+                    else:
+                        print(f"[API] Unexpected choice format: {choice}")
+                        return "I'm having trouble with my response format."
                 else:
-                    received_message = ""
-            else:
-                received_message = ""
-            
-            if received_message:
-                # Clean up the response
-                cleaned_message = clean_response(received_message)
-                try:
-                    import main
-                    if main.debug_mode:
-                        zw_logging.update_debug_log(f"Successfully received response: {cleaned_message[:100]}...")
-                except (ImportError, AttributeError):
-                    pass
-                return cleaned_message
-            else:
-                zw_logging.log_error(f"No valid response from API: {result}")
-                return "Sorry, I didn't receive a proper response."
-            
+                    print(f"[API] No choices in response: {result}")
+                    return "I'm having trouble generating a response."
+                    
+            except requests.exceptions.Timeout:
+                print(f"[API] Request timed out after 30 seconds")
+                return "Sorry, the request timed out. Please try again."
+            except requests.exceptions.ConnectionError as e:
+                print(f"[API] Connection error: {e}")
+                return "Sorry, I can't connect to the AI backend right now."
+            except requests.exceptions.HTTPError as e:
+                print(f"[API] HTTP error {response.status_code}: {e}")
+                if response.status_code == 422:
+                    print(f"[API] Validation error - check if parameters are supported")
+                return f"Sorry, there was an API error (status {response.status_code})."
+            except Exception as e:
+                print(f"[API] Unexpected error during request: {e}")
+                return "Sorry, something unexpected went wrong with the request."
+                
     except requests.exceptions.RequestException as e:
-        zw_logging.log_error(f"Oobabooga API request failed: {e}")
-        return "Sorry, I'm having connection issues right now." if not streaming else []
+        print(f"[API] Request failed: {e}")
+        zw_logging.log_error(f"API request failed: {e}")
+        return "Sorry, I'm having connection issues right now."
     except Exception as e:
-        zw_logging.log_error(f"Unexpected error in Oobabooga API: {e}")
-        return "Sorry, I'm having trouble responding right now." if not streaming else []
+        print(f"[API] Unexpected error: {e}")
+        zw_logging.log_error(f"Unexpected API error: {e}")
+        return "I'm having trouble responding right now."
 
 def extract_streaming_chunk(event):
     """

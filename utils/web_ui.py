@@ -106,6 +106,9 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     # Check the current state of the sending message variable
                     current_sending = API.api_controller.currently_sending_message
                     
+                    # Debug logging (always show for troubleshooting)
+                    # print(f"[Web-UI] update_chat: currently_sending='{current_sending}', history_length={len(API.api_controller.ooga_history)}")
+                    
                     # Return whole chat, plus the one currently being sent
                     if current_sending != "":
                         # Prep for viewing without metadata
@@ -123,8 +126,13 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                         # Return last 30 messages of chat history
                         chat_combine = API.api_controller.ooga_history[-30:]
                         result = [chat[:2] for chat in chat_combine]  # Take only first two elements
+                        
+                        # Debug: Show what we're returning
+                        # print(f"[Web-UI] Returning {len(result)} chat entries")
+                        
                         return result
                 except Exception as e:
+                    print(f"[Web-UI] Error updating chat: {str(e)}")
                     zw_logging.log_error(f"Error updating chat: {str(e)}")
                     return []
 
