@@ -206,22 +206,29 @@ def print_console_help():
 def clear_conversation_history():
     """Clear conversation history and reset to fresh start"""
     try:
-        # Reset the history to just the default greeting
+        # Reset the old history system to just the default greeting
         fresh_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
         
-        # Save to LiveLog.json
+        # Save to LiveLog.json (old system)
         import json
         with open("LiveLog.json", 'w') as outfile:
             json.dump(fresh_history, outfile, indent=4)
         
-        # Clear the in-memory history
+        # Clear the in-memory old history
         API.api_controller.ooga_history = fresh_history
         
+        # Clear the new platform-separated chat histories
+        from utils.chat_history import clear_all_histories
+        clear_all_histories()
+        
         print(f"{colorama.Fore.GREEN}✅ Conversation history cleared successfully!")
-        print(f"🔄 Chat has been reset to fresh start{colorama.Fore.RESET}")
+        print(f"🔄 Chat has been reset to fresh start")
+        print(f"🗑️ Cleared both old and platform-separated histories{colorama.Fore.RESET}")
         
     except Exception as e:
         print(f"{colorama.Fore.RED}❌ Error clearing history: {e}{colorama.Fore.RESET}")
+        import traceback
+        traceback.print_exc()
 
 
 def toggle_debug_mode():

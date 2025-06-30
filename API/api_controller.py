@@ -141,13 +141,71 @@ def run(user_input, temp_level):
     # We are starting our API request!
     is_in_api_request = True
     
+    # Extract platform from user input to get the correct conversation history
+    platform = "personal"
+    user_id = "default"
+    
+    if "[Platform: Twitch Chat]" in original_user_input:
+        platform = "twitch"
+        user_id = "twitch_user"
+    elif "[Platform: Discord]" in original_user_input:
+        platform = "discord"
+        user_id = "discord_user"
+    elif "[Platform: Web Interface" in original_user_input:
+        platform = "webui"
+        user_id = "webui_user"
+    elif "[Platform: Command Line" in original_user_input:
+        platform = "cmd"
+        user_id = "cmd_user"
+    elif "[Platform: Voice Chat" in original_user_input:
+        platform = "voice"
+        user_id = "voice_user"
+    elif "[Platform: Minecraft" in original_user_input:
+        platform = "minecraft"
+        user_id = "minecraft_user"
+    elif "[Platform: Hangout" in original_user_input:
+        platform = "hangout"
+        user_id = "hangout_user"
+    
+    # Load platform-specific conversation history instead of old LiveLog.json
     try:
-        # Load the history from JSON
-        with open("LiveLog.json", 'r') as openfile:
-            ooga_history = json.load(openfile)
-    except Exception as e:
-        zw_logging.log_error(f"Failed to load LiveLog.json: {e}")
+        from utils.chat_history import get_chat_history
+        platform_history = get_chat_history(user_id, platform, limit=20)  # Get last 20 messages
+        
+        # Convert platform history to old format for backward compatibility
         ooga_history = []
+        current_pair = [None, None]
+        
+        for msg in platform_history:
+            if msg["role"] == "user":
+                if current_pair[0] is not None:
+                    # Save incomplete pair and start new one
+                    ooga_history.append([current_pair[0], current_pair[1] or ""])
+                current_pair = [msg["content"], None]
+            elif msg["role"] == "assistant":
+                current_pair[1] = msg["content"]
+                ooga_history.append([current_pair[0] or "", current_pair[1]])
+                current_pair = [None, None]
+        
+        # Add any incomplete pair
+        if current_pair[0] is not None:
+            ooga_history.append([current_pair[0], current_pair[1] or ""])
+        
+        # Ensure we have at least the default greeting if history is empty
+        if not ooga_history:
+            ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+            
+        print(f"[API] Loaded {len(ooga_history)} conversation pairs from platform-separated history ({platform})")
+        
+    except Exception as e:
+        print(f"[API] Warning: Could not load platform history, falling back to LiveLog.json: {e}")
+        # Fallback to old method
+        try:
+            with open("LiveLog.json", 'r') as openfile:
+                ooga_history = json.load(openfile)
+        except Exception as e2:
+            zw_logging.log_error(f"Failed to load LiveLog.json: {e2}")
+            ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
 
     # Debug: Check character card status
     try:
@@ -224,57 +282,20 @@ def run(user_input, temp_level):
         if settings.supress_rp:
             received_message = supress_rp_as_others(received_message)
         
-        # Speak the response aloud (like in streaming mode)
-        if not settings.live_pipe_no_speak:
-            import emoji
-            from utils import voice_splitter
-            
-            # Clean response for speaking
-            s_received_message = emoji.replace_emoji(received_message, replace='')
-            sentence_list = voice_splitter.split_into_sentences(s_received_message)
-            
-            # Speak the response
-            if len(sentence_list) > 0:
-                voice.set_speaking(True)
-                for sentence in sentence_list:
-                    voice.speak_line(sentence, refuse_pause=False)
-                    
-            # Reset volume cooldown to prevent AI from picking up on its own voice
-            try:
-                hotkeys.cooldown_listener_timer()
-            except AttributeError:
-                pass  # Function might not exist in some configurations
+        # Note: Don't speak here in non-streaming mode - let the calling code handle speech
+        # to prevent double speaking. The calling functions (main_web_ui_chat_worker, etc.)
+        # will handle speaking appropriately for their context.
+        
+        # Reset volume cooldown to prevent AI from picking up on its own voice
+        try:
+            hotkeys.cooldown_listener_timer()
+        except AttributeError:
+            pass  # Function might not exist in some configurations
     else:
         received_message = "I'm having trouble responding right now."
 
-    # Save to platform-separated history instead of shared LiveLog.json
+    # Save to platform-separated history (already extracted platform info above)
     try:
-        # Extract platform from user input for platform-separated conversation history
-        platform = "personal"
-        user_id = "default"
-        
-        if "[Platform: Twitch Chat]" in original_user_input:
-            platform = "twitch"
-            user_id = "twitch_user"
-        elif "[Platform: Discord]" in original_user_input:
-            platform = "discord"
-            user_id = "discord_user"
-        elif "[Platform: Web Interface" in original_user_input:
-            platform = "webui"
-            user_id = "webui_user"
-        elif "[Platform: Command Line" in original_user_input:
-            platform = "cmd"
-            user_id = "cmd_user"
-        elif "[Platform: Voice Chat" in original_user_input:
-            platform = "voice"
-            user_id = "voice_user"
-        elif "[Platform: Minecraft" in original_user_input:
-            platform = "minecraft"
-            user_id = "minecraft_user"
-        elif "[Platform: Hangout" in original_user_input:
-            platform = "hangout"
-            user_id = "hangout_user"
-        
         # Save to platform-separated history
         from utils.chat_history import add_message_to_history
         
@@ -288,6 +309,10 @@ def run(user_input, temp_level):
         add_message_to_history(user_id, "assistant", received_message, platform)
         
         print(f"[API] Saved conversation to platform-separated history: {platform}")
+        
+        # Also save to old format for backward compatibility (but use the new data)
+        ooga_history.append([original_user_input, received_message])
+        save_histories()
         
     except Exception as e:
         print(f"[API] Error saving to platform history: {e}")
@@ -815,6 +840,18 @@ def soft_reset():
     if len(ooga_history) > 5:
         ooga_history = ooga_history[-5:]
         print("Pruned old conversation history for fresh context")
+
+    # Also clear platform-separated chat histories for a complete reset
+    try:
+        from utils.chat_history import chat_histories, save_chat_histories
+        # Clear all platform histories except keep the last few messages for context
+        for user_key in chat_histories:
+            if len(chat_histories[user_key]) > 5:
+                chat_histories[user_key] = chat_histories[user_key][-5:]
+        save_chat_histories()
+        print("Pruned platform-separated histories for fresh context")
+    except Exception as e:
+        print(f"Warning: Could not prune platform histories: {e}")
 
     # Add in the soft reset messages
     # Cycle through all the configed messages and add them. Allows for (mostly) variable length

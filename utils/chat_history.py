@@ -204,5 +204,12 @@ def get_platform_stats(platform: str) -> Dict[str, Any]:
         "avg_messages_per_user": total_messages / len(platform_users) if platform_users else 0
     }
 
+def clear_all_histories():
+    """Clear all chat histories and start fresh"""
+    global chat_histories
+    chat_histories.clear()
+    save_chat_histories()
+    log_info("All chat histories cleared")
+
 # Load histories on module import
 load_chat_histories() 

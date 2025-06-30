@@ -103,37 +103,58 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             def update_chat():
                 """Update the chat display"""
                 try:
-                    # Check the current state of the sending message variable
+                    # Use platform-separated chat history instead of ooga_history
+                    from utils.chat_history import get_chat_history
+                    
+                    # Get webui platform chat history
+                    webui_history = get_chat_history("webui_user", "webui", limit=30)
+                    
+                    # Convert to the format expected by Gradio chatbot
+                    chat_pairs = []
+                    current_pair = [None, None]
+                    
+                    for msg in webui_history:
+                        if msg["role"] == "user":
+                            # Start a new pair or complete an incomplete one
+                            if current_pair[0] is None:
+                                current_pair[0] = msg["content"]
+                            else:
+                                # Save previous incomplete pair and start new one
+                                if current_pair[0] is not None:
+                                    chat_pairs.append([current_pair[0], current_pair[1] or ""])
+                                current_pair = [msg["content"], None]
+                        elif msg["role"] == "assistant":
+                            # Complete the current pair
+                            current_pair[1] = msg["content"]
+                            chat_pairs.append([current_pair[0] or "", current_pair[1]])
+                            current_pair = [None, None]
+                    
+                    # Add any incomplete pair
+                    if current_pair[0] is not None:
+                        chat_pairs.append([current_pair[0], current_pair[1] or ""])
+                    
+                    # Check if there's a message currently being sent/streamed
                     current_sending = API.api_controller.currently_sending_message
+                    current_streaming = API.api_controller.currently_streaming_message
                     
-                    # Debug logging (always show for troubleshooting)
-                    # print(f"[Web-UI] update_chat: currently_sending='{current_sending}', history_length={len(API.api_controller.ooga_history)}")
-                    
-                    # Return whole chat, plus the one currently being sent
                     if current_sending != "":
-                        # Prep for viewing without metadata
-                        chat_combine = API.api_controller.ooga_history[-30:]
-                        chat_combine = [chat[:2] for chat in chat_combine]  # Take only first two elements
+                        # Clean the platform marker from the display
+                        display_sending = current_sending
+                        if "[Platform:" in display_sending:
+                            import re
+                            display_sending = re.sub(r'\[Platform:[^\]]*\]\s*', '', display_sending).strip()
                         
-                        # Add current message if it exists
-                        current_msg = API.api_controller.currently_sending_message
-                        current_response = API.api_controller.currently_streaming_message
-                        if current_msg or current_response:
-                            chat_combine.append([current_msg, current_response])
-                        
-                        return chat_combine[-30:]
-                    else:
-                        # Return last 30 messages of chat history
-                        chat_combine = API.api_controller.ooga_history[-30:]
-                        result = [chat[:2] for chat in chat_combine]  # Take only first two elements
-                        
-                        # Debug: Show what we're returning
-                        # print(f"[Web-UI] Returning {len(result)} chat entries")
-                        
-                        return result
+                        # Add current message being processed
+                        chat_pairs.append([display_sending, current_streaming])
+                    
+                    # Debug logging
+                    # print(f"[Web-UI] Returning {len(chat_pairs)} chat pairs from platform history")
+                    
+                    return chat_pairs
                 except Exception as e:
                     print(f"[Web-UI] Error updating chat: {str(e)}")
                     zw_logging.log_error(f"Error updating chat: {str(e)}")
+                    # Fallback to empty chat
                     return []
 
             msg.submit(respond, [msg, chatbot], [msg])
@@ -183,40 +204,61 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 return
 
             def undo():
-                print("Undoing last action (Web UI)")
-                main.main_undo()
-                return
+                """Undo last message from web UI"""
+                try:
+                    # Clear from platform-separated history first
+                    from utils.chat_history import chat_histories, save_chat_histories
+                    user_key = "webui_webui_user"  # Web UI user key
+                    
+                    if user_key in chat_histories and len(chat_histories[user_key]) >= 2:
+                        # Remove the last user and assistant messages
+                        chat_histories[user_key] = chat_histories[user_key][:-2]
+                        save_chat_histories()
+                    
+                    # Also handle old system for backward compatibility
+                    API.api_controller.undo_message()
+                    
+                    return "✅ Last message undone successfully!\n🔄 Conversation reverted to previous state"
+                except Exception as e:
+                    return f"❌ Error during undo: {e}"
+
+            def clear_history():
+                """Clear conversation history from web UI"""
+                try:
+                    # Clear platform-separated history for web UI user
+                    from utils.chat_history import clear_all_histories
+                    clear_all_histories()
+                    
+                    # Also clear old system for backward compatibility
+                    fresh_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+                    import json
+                    with open("LiveLog.json", 'w') as outfile:
+                        json.dump(fresh_history, outfile, indent=4)
+                    API.api_controller.ooga_history = fresh_history
+                    
+                    return "✅ Conversation history cleared successfully!\n🔄 Chat has been reset to fresh start\n🗑️ All conversation data cleared"
+                except Exception as e:
+                    return f"❌ Error clearing history: {e}"
 
             def soft_reset():
-                """Trigger a soft reset of the chat system"""
-                print("Performing chat soft reset (Web UI)")
+                """Perform soft reset from web UI"""
                 try:
-                    # Perform the soft reset
+                    # Use the API controller's soft reset which now handles both systems
                     API.api_controller.soft_reset()
-                    
-                    # Force an immediate chat update by triggering the update function
-                    # The soft reset adds system messages to guide the AI back to normal behavior
-                    print("✅ Chat soft reset completed successfully!")
-                    print("🔄 System reset messages added to conversation")
-                    print("💬 The AI will now respond with refreshed context")
-                    
-                    # Small delay to ensure the reset is processed
-                    import time
-                    time.sleep(0.1)
-                    
+                    return "✅ Chat soft reset completed successfully!\n🔄 System reset messages added to conversation\n💬 The AI will now respond with refreshed context"
                 except Exception as e:
-                    print(f"❌ Error during soft reset: {e}")
-                    zw_logging.log_error(f"Web UI soft reset error: {e}")
-                return
+                    return f"❌ Error during soft reset: {e}"
 
             button_regen = gr.Button(value="Reroll")
             button_blank = gr.Button(value="Send Blank")
             button_undo = gr.Button(value="Undo")
+            button_clear_history = gr.Button(value="Clear History")
             button_soft_reset = gr.Button(value="Chat Soft Reset")
 
             button_regen.click(fn=regenerate)
             button_blank.click(fn=send_blank)
             button_undo.click(fn=undo)
+            button_clear_history.click(fn=clear_history)
             button_soft_reset.click(fn=soft_reset)
 
 
