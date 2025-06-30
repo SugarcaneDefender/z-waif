@@ -19,7 +19,6 @@ from ollama import chat, ChatResponse
 
 # Local imports - API modules
 import API.character_card
-from API.character_card import character_card
 
 # Dynamic API import based on API_TYPE
 load_dotenv()  # Load environment variables first
@@ -154,8 +153,7 @@ def run(user_input, temp_level):
     try:
         import main
         if main.debug_mode:
-            from API.character_card import character_card
-            zw_logging.update_debug_log(f"Character card status: {character_card[:100]}...")
+            zw_logging.update_debug_log(f"Character card status: {API.character_card.character_card[:100]}...")
             zw_logging.update_debug_log(f"API_TYPE: {API_TYPE}")
             zw_logging.update_debug_log(f"Using API module: {API}")
     except (ImportError, AttributeError):
@@ -1523,7 +1521,7 @@ def _encode_new_api_deprecated(user_input):
     
     # Add character card
     if CHARACTER_CARD:
-        messages.append(character_card)
+        messages.append(API.character_card.character_card)
     
     # Add history
     history_start = max(0, len(ooga_history) - marker_length)
@@ -1579,8 +1577,8 @@ def encode_new_api_ollama(user_input):
         platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
     
     # Simple system prompt - character card with platform context
-    if character_card and isinstance(character_card, str):
-        enhanced_character_card = character_card.strip() + platform_context
+    if API.character_card.character_card and isinstance(API.character_card.character_card, str):
+        enhanced_character_card = API.character_card.character_card.strip() + platform_context
         messages_to_send.append({"role": "system", "content": enhanced_character_card})
         
         # Debug: Show platform detection
@@ -1644,8 +1642,8 @@ def encode_for_oobabooga_chat(user_input):
         platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
     
     # Add character card as system message with platform context
-    if character_card and isinstance(character_card, str):
-        enhanced_character_card = character_card.strip() + platform_context
+    if API.character_card.character_card and isinstance(API.character_card.character_card, str):
+        enhanced_character_card = API.character_card.character_card.strip() + platform_context
         messages.append({"role": "system", "content": enhanced_character_card})
         
         # Debug: Show platform detection

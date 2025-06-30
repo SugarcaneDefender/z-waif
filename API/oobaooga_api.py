@@ -349,17 +349,68 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
     Unified API call function for Oobabooga that handles both simple and streaming requests.
     This consolidates the API logic that was previously scattered in api_controller.py.
     """
-    from API.api_controller import encode_for_oobabooga_chat, max_context, HOST, headers
     import requests
     import sseclient
     from utils import zw_logging
+    import API.character_card
     
     # Always log API calls regardless of debug mode
     print(f"[API] api_call() invoked with user_input: {repr(user_input[:50])}...")
     
     try:
-        # Encode messages for oobabooga chat format - this includes conversation history + user input
-        messages = encode_for_oobabooga_chat(user_input)
+        # Load the history from JSON to get conversation context
+        try:
+            with open("LiveLog.json", 'r') as openfile:
+                import json
+                ooga_history = json.load(openfile)
+        except Exception as e:
+            ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+        
+        # Build messages array with character card and history
+        messages = []
+        
+        # Detect platform from user input for context
+        platform_context = ""
+        if "[Platform: Web Interface - Personal Chat]" in user_input:
+            platform_context = "\n\nCONTEXT: This is a personal one-on-one conversation through a web interface. Be warm, caring, and authentic. Focus on meaningful personal interaction."
+        elif "[Platform: Twitch Chat]" in user_input:
+            platform_context = "\n\nCONTEXT: You are chatting on Twitch. Keep responses casual, engaging, and chat-friendly. Avoid streaming references but maintain a conversational tone. Be authentic and relatable."
+        elif "[Platform: Discord]" in user_input:
+            platform_context = "\n\nCONTEXT: You are chatting on Discord. Be casual, fun, and engaging. You can use emojis and informal language. Keep the social energy up."
+        elif "[Platform: Command Line - Personal Chat]" in user_input:
+            platform_context = "\n\nCONTEXT: This is a personal conversation through command line. Be direct but friendly. Keep responses clear and engaging."
+        elif "[Platform: Voice Chat - Personal Conversation]" in user_input:
+            platform_context = "\n\nCONTEXT: This is a voice conversation. Be natural and conversational as if speaking aloud. Use natural speech patterns and be expressive."
+        elif "[Platform: Minecraft Game Chat]" in user_input:
+            platform_context = "\n\nCONTEXT: You are chatting in Minecraft. Keep responses short, game-appropriate, and fun. Be supportive of gameplay activities."
+        elif "[Platform: Alarm/Reminder System]" in user_input:
+            platform_context = "\n\nCONTEXT: This is an alarm or reminder. Be helpful, direct, and supportive. Focus on being encouraging and useful."
+        elif "[Platform: Hangout Mode - Casual Conversation]" in user_input:
+            platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
+        
+        # Add character card as system message with platform context
+        if API.character_card.character_card and isinstance(API.character_card.character_card, str):
+            enhanced_character_card = API.character_card.character_card.strip() + platform_context
+            messages.append({"role": "system", "content": enhanced_character_card})
+            print(f"[API] Platform detected: {platform_context.split(':')[1].split('.')[0] if platform_context else 'Personal'}")
+
+        # Add recent history (last 10 exchanges like release version)
+        recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
+        
+        for entry in recent_history:
+            # Handle both old format (2 elements) and new format (4+ elements)
+            if len(entry) >= 2:
+                user_msg = entry[0]
+                assistant_msg = entry[1]
+                
+                if user_msg:
+                    messages.append({"role": "user", "content": str(user_msg)})
+                if assistant_msg:
+                    messages.append({"role": "assistant", "content": str(assistant_msg)})
+
+        # Add current user input
+        if user_input:
+            messages.append({"role": "user", "content": str(user_input)})
         
         # Always show what we're sending
         print(f"[API] Sending {len(messages)} messages to backend")
@@ -368,7 +419,11 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
             print(f"[API] Message {i+1} ({msg.get('role', 'unknown')}): {content_preview}")
         
         # Build the request - Keep full functionality but use supported parameters only
-        uri = f'http://{HOST}/v1/chat/completions'
+        HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
+        if HOST.startswith("http://"):
+            uri = f'{HOST}/v1/chat/completions'
+        else:
+            uri = f'http://{HOST}/v1/chat/completions'
         request = {
             "messages": messages,
             "mode": "chat",
@@ -392,6 +447,9 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
         
         # Add debugging for request content
         print(f"[API] Request JSON size: {len(str(request))} characters")
+        
+        # Define headers
+        headers = {"Content-Type": "application/json"}
         
         if streaming:
             # Handle streaming request
