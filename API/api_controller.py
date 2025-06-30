@@ -200,7 +200,7 @@ def run(user_input, temp_level):
             received_message = API.ollama_api.api_call(
                 user_input=user_input,
                 temp_level=temp_level,
-                max_tokens=150,
+                max_tokens=settings.max_tokens,
                 streaming=False
             )
         else:  # Default to Oobabooga
@@ -208,7 +208,7 @@ def run(user_input, temp_level):
             received_message = API.oobaooga_api.api_call(
                 user_input=user_input,
                 temp_level=temp_level,
-                max_tokens=150,
+                max_tokens=settings.max_tokens,
                 streaming=False
             )
         
