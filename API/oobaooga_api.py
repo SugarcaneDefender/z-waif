@@ -415,7 +415,7 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
         if "[Platform: Web Interface - Personal Chat]" in user_input:
             platform_context = "\n\nCONTEXT: This is a personal one-on-one conversation through a web interface. Be warm, caring, and authentic. Focus on meaningful personal interaction."
         elif "[Platform: Twitch Chat]" in user_input:
-            platform_context = "\n\nCONTEXT: You are chatting on Twitch. Keep responses casual, engaging, and chat-friendly. Avoid streaming references but maintain a conversational tone. Be authentic and relatable."
+            platform_context = "\n\nCONTEXT: You are chatting on Twitch. Keep responses casual, engaging, and chat-friendly. Avoid streaming references but maintain a conversational tone. Be authentic and relatable. IMPORTANT: Respond with actual words and sentences, not just emoji. Have real conversations with people."
         elif "[Platform: Discord]" in user_input:
             platform_context = "\n\nCONTEXT: You are chatting on Discord. Be casual, fun, and engaging. You can use emojis and informal language. Keep the social energy up."
         elif "[Platform: Command Line - Personal Chat]" in user_input:
@@ -459,6 +459,11 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
             content_preview = msg.get('content', '')[:100] + ('...' if len(msg.get('content', '')) > 100 else '')
             print(f"[API] Message {i+1} ({msg.get('role', 'unknown')}): {content_preview}")
         
+        # Debug: Show the full system message to verify character card content
+        if messages and messages[0].get('role') == 'system':
+            print(f"[API] DEBUG: System message length: {len(messages[0]['content'])} characters")
+            print(f"[API] DEBUG: System message preview: {messages[0]['content'][:200]}...")
+        
         # Build the request - Keep full functionality but use supported parameters only
         HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
         if HOST.startswith("http://"):
@@ -470,10 +475,15 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
             "mode": "chat",
             "character": None,  # Disable character to use our system messages
             "max_tokens": max_tokens,
-            "temperature": temp_level,
+            "temperature": max(temp_level, 0.7),  # Ensure minimum temperature for creativity
+            "top_p": 0.9,  # Add top_p for better generation
+            "top_k": 40,   # Add top_k to prevent repetitive responses
+            "repetition_penalty": 1.1,  # Prevent repetitive emoji responses
             "do_sample": True,
             "stream": streaming,
             "truncation_length": 4096,  # Keep context length
+            "min_length": 10,  # Force minimum response length
+            "no_repeat_ngram_size": 2,  # Prevent immediate repetition
         }
         
         # Add preset if specified
@@ -516,6 +526,22 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
                     if 'message' in choice and 'content' in choice['message']:
                         response_content = choice['message']['content']
                         print(f"[API] Extracted response content: {repr(response_content[:100])}...")
+                        
+                        # Check for emoji-only responses and provide fallback
+                        import re
+                        # Remove common emoji and check if anything substantial remains
+                        text_only = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001F900-\U0001F9FF]+', '', response_content).strip()
+                        
+                        if len(text_only) < 3:  # If response is mostly/only emoji
+                            print(f"[API] Warning: Detected emoji-only response '{response_content}', providing fallback")
+                            # Provide contextual fallback based on platform
+                            if "[Platform: Twitch Chat]" in str(messages):
+                                response_content = "Hey! How's it going? What's up?"
+                            elif "[Platform: Discord]" in str(messages):
+                                response_content = "Hey there! What's on your mind?"
+                            else:
+                                response_content = "Hi! How are you doing today?"
+                        
                         return response_content
                     elif 'text' in choice:
                         response_content = choice['text']
