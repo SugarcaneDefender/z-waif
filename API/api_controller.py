@@ -223,6 +223,27 @@ def run(user_input, temp_level):
         received_message = html.unescape(received_message)
         if settings.supress_rp:
             received_message = supress_rp_as_others(received_message)
+        
+        # Speak the response aloud (like in streaming mode)
+        if not settings.live_pipe_no_speak:
+            import emoji
+            from utils import voice_splitter
+            
+            # Clean response for speaking
+            s_received_message = emoji.replace_emoji(received_message, replace='')
+            sentence_list = voice_splitter.split_into_sentences(s_received_message)
+            
+            # Speak the response
+            if len(sentence_list) > 0:
+                voice.set_speaking(True)
+                for sentence in sentence_list:
+                    voice.speak_line(sentence, refuse_pause=False)
+                    
+            # Reset volume cooldown to prevent AI from picking up on its own voice
+            try:
+                hotkeys.cooldown_listener_timer()
+            except AttributeError:
+                pass  # Function might not exist in some configurations
     else:
         received_message = "I'm having trouble responding right now."
 
