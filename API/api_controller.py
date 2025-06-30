@@ -203,11 +203,53 @@ def run(user_input, temp_level):
     else:
         received_message = "I'm having trouble responding right now."
 
-    # Log it to our history - simplified format like release version (use original input, not converted)
-    ooga_history.append([original_user_input, received_message])
-    
-    # Save history
-    save_histories()
+    # Save to platform-separated history instead of shared LiveLog.json
+    try:
+        # Extract platform from user input for platform-separated conversation history
+        platform = "personal"
+        user_id = "default"
+        
+        if "[Platform: Twitch Chat]" in original_user_input:
+            platform = "twitch"
+            user_id = "twitch_user"
+        elif "[Platform: Discord]" in original_user_input:
+            platform = "discord"
+            user_id = "discord_user"
+        elif "[Platform: Web Interface" in original_user_input:
+            platform = "webui"
+            user_id = "webui_user"
+        elif "[Platform: Command Line" in original_user_input:
+            platform = "cmd"
+            user_id = "cmd_user"
+        elif "[Platform: Voice Chat" in original_user_input:
+            platform = "voice"
+            user_id = "voice_user"
+        elif "[Platform: Minecraft" in original_user_input:
+            platform = "minecraft"
+            user_id = "minecraft_user"
+        elif "[Platform: Hangout" in original_user_input:
+            platform = "hangout"
+            user_id = "hangout_user"
+        
+        # Save to platform-separated history
+        from utils.chat_history import add_message_to_history
+        
+        # Clean the user input by removing platform markers for cleaner history
+        clean_user_input = original_user_input
+        if "[Platform:" in clean_user_input:
+            import re
+            clean_user_input = re.sub(r'\[Platform:[^\]]*\]\s*', '', clean_user_input).strip()
+        
+        add_message_to_history(user_id, "user", clean_user_input, platform)
+        add_message_to_history(user_id, "assistant", received_message, platform)
+        
+        print(f"[API] Saved conversation to platform-separated history: {platform}")
+        
+    except Exception as e:
+        print(f"[API] Error saving to platform history: {e}")
+        # Fallback to original method if platform history fails
+        ooga_history.append([original_user_input, received_message])
+        save_histories()
     
     # We are done with our API request!
     is_in_api_request = False
@@ -318,7 +360,7 @@ def run_streaming(user_input, temp_level):
     vtube_studio.clear_streaming_emote_list()
 
     # Enhanced Contextual Chatpop Check
-    if settings.use_chatpops and not main.live_pipe_no_speak:
+    if settings.use_chatpops and not settings.live_pipe_no_speak:
         voice.set_speaking(True)
         # Determine platform context from the currently sending message
         platform_context = {"platform": "personal"}  # Default
@@ -1314,7 +1356,7 @@ def view_image_streaming(direct_talk_transcript):
     vtube_studio.clear_streaming_emote_list()
 
     # Enhanced Contextual Chatpop Check for Image Processing
-    if settings.use_chatpops and not main.live_pipe_no_speak:
+    if settings.use_chatpops and not settings.live_pipe_no_speak:
         voice.set_speaking(True)
         # Special context for image processing - more thoughtful responses
         platform_context = {"platform": "vision"}

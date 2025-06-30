@@ -358,12 +358,53 @@ def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=Non
     print(f"[API] api_call() invoked with user_input: {repr(user_input[:50])}...")
     
     try:
-        # Load the history from JSON to get conversation context
+        # Load platform-separated conversation history
         try:
-            with open("LiveLog.json", 'r') as openfile:
-                import json
-                ooga_history = json.load(openfile)
+            # Extract platform from user input for context separation
+            platform = "personal"  # Default
+            user_id = "default"    # Default user ID
+            
+            if "[Platform: Twitch Chat]" in user_input:
+                platform = "twitch"
+                user_id = "twitch_user"  # Could be extracted from user_input if needed
+            elif "[Platform: Discord]" in user_input:
+                platform = "discord"
+                user_id = "discord_user"
+            elif "[Platform: Web Interface" in user_input:
+                platform = "webui"
+                user_id = "webui_user"
+            elif "[Platform: Command Line" in user_input:
+                platform = "cmd"
+                user_id = "cmd_user"
+            elif "[Platform: Voice Chat" in user_input:
+                platform = "voice"
+                user_id = "voice_user"
+            elif "[Platform: Minecraft" in user_input:
+                platform = "minecraft"
+                user_id = "minecraft_user"
+            elif "[Platform: Hangout" in user_input:
+                platform = "hangout"
+                user_id = "hangout_user"
+            
+            # Get platform-specific conversation history
+            from utils.chat_history import get_chat_history
+            chat_history = get_chat_history(user_id, platform, limit=10)  # Last 10 exchanges
+            
+            # Convert to the format expected by the API (list of [user, assistant] pairs)
+            ooga_history = []
+            for i in range(0, len(chat_history), 2):
+                if i + 1 < len(chat_history):
+                    user_msg = chat_history[i].get('content', '') if chat_history[i].get('role') == 'user' else ''
+                    assistant_msg = chat_history[i + 1].get('content', '') if chat_history[i + 1].get('role') == 'assistant' else ''
+                    if user_msg and assistant_msg:
+                        ooga_history.append([user_msg, assistant_msg])
+            
+            # If no platform-specific history, use minimal default
+            if not ooga_history:
+                ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+                
         except Exception as e:
+            print(f"[API] Error loading platform history: {e}")
             ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
         
         # Build messages array with character card and history
