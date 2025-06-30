@@ -162,6 +162,29 @@ def run(user_input, temp_level):
     # Check for name in message
     check_for_name_in_message(user_input)
     
+    # Enhanced Contextual Chatpop Check for non-streaming mode
+    if settings.use_chatpops and not settings.live_pipe_no_speak:
+        voice.set_speaking(True)
+        # Determine platform context from the currently sending message
+        platform_context = {"platform": "personal"}  # Default
+        if "[Platform: Twitch Chat]" in user_input:
+            platform_context["platform"] = "twitch"
+        elif "[Platform: Discord]" in user_input:
+            platform_context["platform"] = "discord"
+        elif "[Platform: Minecraft Game Chat]" in user_input:
+            platform_context["platform"] = "minecraft"
+        elif "[Platform: Voice Chat" in user_input:
+            platform_context["platform"] = "voice"
+        elif "[Platform: Web Interface" in user_input:
+            platform_context["platform"] = "webui"
+        elif "[Platform: Command Line" in user_input:
+            platform_context["platform"] = "cmd"
+        
+        # Get contextual chatpop based on user input and platform
+        this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
+        print(f"[API] Playing chatpop: '{this_chatpop}'")
+        voice.speak_line(this_chatpop, refuse_pause=True)
+    
     # Debug: Show connection info
     print(f"[API] HOST: {HOST}")
     print(f"[API] API_TYPE: {API_TYPE}")
