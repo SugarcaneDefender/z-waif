@@ -542,7 +542,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
             asterisk_ban_checkbox_view = gr.Checkbox(label="Ban Asterisks", interactive=False)
 
         with gr.Row():
-            max_tokens_slider = gr.Slider(minimum=20, maximum=500, value=300, label="Max Tokens", interactive=True)
+            max_tokens_slider = gr.Slider(minimum=20, maximum=800, value=450, label="Max Tokens", interactive=True)
             max_tokens_slider.change(fn=change_max_tokens, inputs=max_tokens_slider)
         
         with gr.Row():

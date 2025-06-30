@@ -344,7 +344,7 @@ def api_standard(request):
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return "Error: An unexpected error occurred while processing the API response."
 
-def api_call(user_input, temp_level, max_tokens=150, streaming=False, preset=None, char_send=None, stop=None):
+def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=None, char_send=None, stop=None):
     """
     Unified API call function for Oobabooga that handles both simple and streaming requests.
     This consolidates the API logic that was previously scattered in api_controller.py.

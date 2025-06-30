@@ -258,7 +258,7 @@ def get_temperature_options(temp_level, stop, max_tokens):
         "presence_penalty": model_configs[temp_level]['presence_penalty']
     }
 
-def api_call(user_input, temp_level, max_tokens=150, streaming=False, stop=None, preset=None, char_send=None):
+def api_call(user_input, temp_level, max_tokens=450, streaming=False, stop=None, preset=None, char_send=None):
     """
     Unified API call function for Ollama that handles both simple and streaming requests.
     This consolidates the API logic that was previously scattered in api_controller.py.

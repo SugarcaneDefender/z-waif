@@ -673,9 +673,9 @@ def main_twitch_chat(message):
             except Exception as e:
                 print(f"[Twitch] Could not log assistant response to chat history: {e}")
             
-            # Run message checks and speak if enabled
+            # Run message checks which handles speaking automatically
             message_checks(clean_reply)
-            main_message_speak()
+            # Note: Removed main_message_speak() call to prevent double speaking
             
             print(f"[Twitch Response] {clean_reply}")
             return clean_reply  # Return the cleaned response for Twitch bot to send
@@ -690,8 +690,9 @@ def main_twitch_chat(message):
                 API.api_controller.ooga_history[-1][1] = clean_reply
                 API.api_controller.save_histories()
             
+            # Run message checks which handles speaking automatically  
             message_checks(clean_reply)
-            main_message_speak()
+            # Note: Removed main_message_speak() call to prevent double speaking
             return clean_reply  # Return the cleaned response for Twitch bot to send
         return ""  # Return empty string if no response
 

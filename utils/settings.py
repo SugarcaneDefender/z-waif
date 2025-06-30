@@ -19,7 +19,7 @@ hotkeys_locked = False
 speak_shadowchats = True
 speak_only_spokento = False
 
-max_tokens = 300
+max_tokens = 450
 stream_chats = True
 newline_cut = True
 asterisk_ban = False

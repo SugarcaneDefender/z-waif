@@ -258,7 +258,7 @@ def run(user_input, temp_level):
             received_message = API.ollama_api.api_call(
                 user_input=user_input,
                 temp_level=temp_level,
-                max_tokens=settings.max_tokens,
+                max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
                 streaming=False
             )
         else:  # Default to Oobabooga
@@ -266,7 +266,7 @@ def run(user_input, temp_level):
             received_message = API.oobaooga_api.api_call(
                 user_input=user_input,
                 temp_level=temp_level,
-                max_tokens=settings.max_tokens,
+                max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
                 streaming=False
             )
         
@@ -663,7 +663,7 @@ def send_via_oogabooga(user_input):
     if settings.stream_chats and not force_skip_streaming:
         print(f"[API] Using streaming mode")
         # Attempt streaming first
-        local_stream_result = run_streaming(user_input, 0.7)
+        local_stream_result = run_streaming(user_input, 0.8)  # Slightly higher temp for more engaging responses
 
         # `run_streaming` updates the module-level `received_message` variable but does
         # not always return it.  Prefer the global value if the direct return is None.
@@ -673,12 +673,12 @@ def send_via_oogabooga(user_input):
         # Fallback: if no message was produced at all, retry with a standard request
         if not received_message or len(str(received_message).strip()) == 0:
             zw_logging.update_debug_log("Streaming response was empty – retrying with standard (non-streaming) request…")
-            received_message = run(user_input, 0.7)
+            received_message = run(user_input, 0.8)  # Slightly higher temp for more engaging responses
             print(f"[API] Fallback non-streaming call finished. Received message: '{received_message}'")
     else:
         print(f"[API] Using non-streaming mode")
         try:
-            received_message = run(user_input, 0.7)
+            received_message = run(user_input, 0.8)  # Slightly higher temp for more engaging responses
             print(f"[API] Non-streaming call finished. Received message: '{received_message}'")
         except Exception as e:
             print(f"[API] Exception in run() function: {e}")
