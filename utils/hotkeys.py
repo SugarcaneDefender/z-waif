@@ -503,6 +503,12 @@ def listener_timer():
         time.sleep(0.02)
 
 
+def cooldown_listener_timer():
+    """Reset the volume cooldown so the AI doesn't pick up on its own voice"""
+    global SPEAKING_TIMER_COOLDOWN
+    SPEAKING_TIMER_COOLDOWN = 140  # Set cooldown to prevent self-pickup
+
+
 def get_sensitivity_input():
     global SPEAKING_VOLUME_SENSITIVITY
     from utils import console_input
