@@ -218,9 +218,15 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     # Also handle old system for backward compatibility
                     API.api_controller.undo_message()
                     
-                    return "✅ Last message undone successfully!\n🔄 Conversation reverted to previous state"
+                    # Update the chat display after undo
+                    updated_chat = update_chat()
+                    status_message = "✅ Last message undone successfully!\n🔄 Conversation reverted to previous state"
+                    print(f"[Web-UI] {status_message}")
+                    return updated_chat, status_message
                 except Exception as e:
-                    return f"❌ Error during undo: {e}"
+                    error_msg = f"❌ Error during undo: {e}"
+                    print(f"[Web-UI] {error_msg}")
+                    return update_chat(), error_msg
 
             def clear_history():
                 """Clear conversation history from web UI"""
@@ -236,18 +242,31 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                         json.dump(fresh_history, outfile, indent=4)
                     API.api_controller.ooga_history = fresh_history
                     
-                    return "✅ Conversation history cleared successfully!\n🔄 Chat has been reset to fresh start\n🗑️ All conversation data cleared"
+                    # Update the chat display after clearing (should be empty now)
+                    updated_chat = []  # Empty chat after clearing
+                    status_message = "✅ Conversation history cleared successfully!\n🔄 Chat has been reset to fresh start\n🗑️ All conversation data cleared"
+                    print(f"[Web-UI] {status_message}")
+                    return updated_chat, status_message
                 except Exception as e:
-                    return f"❌ Error clearing history: {e}"
+                    error_msg = f"❌ Error clearing history: {e}"
+                    print(f"[Web-UI] {error_msg}")
+                    return update_chat(), error_msg
 
             def soft_reset():
                 """Perform soft reset from web UI"""
                 try:
                     # Use the API controller's soft reset which now handles both systems
                     API.api_controller.soft_reset()
-                    return "✅ Chat soft reset completed successfully!\n🔄 System reset messages added to conversation\n💬 The AI will now respond with refreshed context"
+                    
+                    # Update the chat display after soft reset
+                    updated_chat = update_chat()
+                    status_message = "✅ Chat soft reset completed successfully!\n🔄 System reset messages added to conversation\n💬 The AI will now respond with refreshed context"
+                    print(f"[Web-UI] {status_message}")
+                    return updated_chat, status_message
                 except Exception as e:
-                    return f"❌ Error during soft reset: {e}"
+                    error_msg = f"❌ Error during soft reset: {e}"
+                    print(f"[Web-UI] {error_msg}")
+                    return update_chat(), error_msg
 
             button_regen = gr.Button(value="Reroll")
             button_blank = gr.Button(value="Send Blank")
@@ -257,9 +276,15 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             button_regen.click(fn=regenerate)
             button_blank.click(fn=send_blank)
-            button_undo.click(fn=undo)
-            button_clear_history.click(fn=clear_history)
-            button_soft_reset.click(fn=soft_reset)
+            
+        # Add a status display for operations feedback
+        with gr.Row():
+            status_display = gr.Textbox(label="Status", interactive=False, lines=3, placeholder="Operation status will appear here...")
+            
+        # Connect buttons with proper outputs to update chat and show status
+        button_undo.click(fn=undo, outputs=[chatbot, status_display])
+        button_clear_history.click(fn=clear_history, outputs=[chatbot, status_display])
+        button_soft_reset.click(fn=soft_reset, outputs=[chatbot, status_display])
 
 
         #
