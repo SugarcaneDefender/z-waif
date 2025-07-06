@@ -223,7 +223,6 @@ def run(user_input, temp_level):
         # Enhanced Contextual Chatpop Check for non-streaming mode
         chatpop_prefix = ""  # Store chatpop to include in response text
         if settings.use_chatpops and not settings.live_pipe_no_speak:
-            voice.set_speaking(True)
             # Determine platform context from the currently sending message
             platform_context = {"platform": "personal"}  # Default
             if "[Platform: Twitch Chat]" in user_input:
@@ -243,11 +242,10 @@ def run(user_input, temp_level):
             this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
             print(f"[API] Generated chatpop: '{this_chatpop}'")
             
-            # Store chatpop to include in response text
+            # Store chatpop to include in response text (but don't speak it immediately)
             chatpop_prefix = this_chatpop
             
-            # Still speak it for voice output
-            voice.speak_line(this_chatpop, refuse_pause=True)
+            # REMOVED: voice.speak_line(this_chatpop, refuse_pause=True) - Let calling code handle speech
         
         # Debug: Show connection info
         print(f"[API] HOST: {HOST}")
@@ -462,11 +460,10 @@ def run_streaming(user_input, temp_level, recursion_depth=0):
             this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
             print(f"[API] Generated streaming chatpop: '{this_chatpop}'")
             
-            # Store chatpop to include in response text
+            # Store chatpop to include in response text (but don't speak it immediately)
             streaming_chatpop_prefix = this_chatpop
             
-            # Still speak it for voice output
-            voice.speak_line(this_chatpop, refuse_pause=True)
+            # REMOVED: voice.speak_line(this_chatpop, refuse_pause=True) - Let calling code handle speech
 
 
         assistant_message = ''
