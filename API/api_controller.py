@@ -129,14 +129,13 @@ def run(user_input, temp_level):
 
     # Force character card reload before each API call
     print("[API] Checking character card status...")
-    import API.character_card
     API.character_card.load_char_card()
     
     # Handle blank input - allow blank messages to be sent as blank messages
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
         zw_logging.update_debug_log("API 'run' received blank input. Sending blank message.")
-        # Allow blank messages to be processed normally - don't convert to "*listens attentively*"
+        # Allow blank messages to be processed normally 
 
     # We are starting our API request!
     is_in_api_request = True
@@ -345,7 +344,7 @@ def run_streaming(user_input, temp_level):
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
         zw_logging.update_debug_log("API 'run_streaming' received blank input. Sending blank message.")
-        # Allow blank messages to be processed normally - don't convert to "*listens attentively*"
+        # Allow blank messages to be processed normally 
 
     # We are starting our API request!
     is_in_api_request = True
