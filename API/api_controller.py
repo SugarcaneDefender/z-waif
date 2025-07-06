@@ -132,11 +132,11 @@ def run(user_input, temp_level):
     import API.character_card
     API.character_card.load_char_card()
     
-    # Handle blank input by converting to meaningful prompt for AI while preserving original
+    # Handle blank input - allow blank messages to be sent as blank messages
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
-        zw_logging.update_debug_log("API 'run' received blank input. Converting to listening prompt.")
-        user_input = "*listens attentively*"  # Convert for API processing
+        zw_logging.update_debug_log("API 'run' received blank input. Sending blank message.")
+        # Allow blank messages to be processed normally - don't convert to "*listens attentively*"
 
     # We are starting our API request!
     is_in_api_request = True
@@ -341,11 +341,11 @@ def run_streaming(user_input, temp_level):
     global force_skip_streaming
     global is_in_api_request
 
-    # Handle blank input by converting to meaningful prompt for AI while preserving original
+    # Handle blank input - allow blank messages to be sent as blank messages
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
-        zw_logging.update_debug_log("API 'run_streaming' received blank input. Converting to listening prompt.")
-        user_input = "*listens attentively*"  # Convert for AI processing
+        zw_logging.update_debug_log("API 'run_streaming' received blank input. Sending blank message.")
+        # Allow blank messages to be processed normally - don't convert to "*listens attentively*"
 
     # We are starting our API request!
     is_in_api_request = True

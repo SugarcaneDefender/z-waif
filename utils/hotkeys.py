@@ -390,7 +390,7 @@ def chat_input_await():
         elif settings.hangout_mode:
             return "Hangout"
 
-        time.sleep(0.01)
+        time.sleep(0.1)  # Increased from 0.01s to 0.1s to reduce CPU usage
 
 def get_command_nonblocking():
     """Check for hotkey presses without blocking."""

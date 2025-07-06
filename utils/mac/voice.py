@@ -1,5 +1,6 @@
 import time
 import os
+import subprocess
 
 from utils import hotkeys
 from utils import voice_splitter
@@ -37,12 +38,13 @@ def speak_line(s_message: str, refuse_pause: bool):
         pure_chunk = pure_chunk.replace("!!!!", "!")
         pure_chunk = pure_chunk.replace("!!!!!", "!")
         
-        # Escape the chunk
-        banned_char_list = ["\"", "'", "\\", "`", "$", "{", "}", "[", "]", "(", ")", "<", ">", "|"]
-        for char in banned_char_list:
-            pure_chunk = pure_chunk.replace(char, "\\" + char)
-        
-        os.system(f"say {pure_chunk} &") # TODO: Use a real tts engine (piper?) instead of system tts
+        # Use subprocess.run for safer command execution instead of os.system
+        # This prevents command injection vulnerabilities
+        try:
+            subprocess.run(["say", pure_chunk], check=False)
+        except Exception as e:
+            print(f"Error executing TTS command: {e}")
+            continue
 
         if not refuse_pause:
             time.sleep(0.05)    # IMPORTANT: Mini-rests between chunks for other calculations in the program to run.
