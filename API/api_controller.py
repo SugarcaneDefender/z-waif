@@ -1814,6 +1814,22 @@ def encode_for_oobabooga_chat(user_input):
     # Add character card as system message with platform context
     if character_card.character_card and isinstance(character_card.character_card, str):
         enhanced_character_card = character_card.character_card.strip() + platform_context
+        
+        # Add extra emphasis on avoiding formal language
+        anti_formal_instruction = """
+
+CRITICAL: NEVER use formal or customer-service language. NEVER say phrases like:
+- "How can I assist you"
+- "to be of service" 
+- "to assist"
+- "What can I do for you"
+- "How can I help you today"
+- "How may I help you"
+- Any variation of "assist", "help", "support", "service" in formal context
+
+ALWAYS respond like a real friend having a casual conversation. Use natural, friendly language."""
+        
+        enhanced_character_card = enhanced_character_card + anti_formal_instruction
         messages.append({"role": "system", "content": enhanced_character_card})
         
         # Debug: Show platform detection

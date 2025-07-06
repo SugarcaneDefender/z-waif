@@ -488,11 +488,57 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
         # Add character card as system message with platform context
         if character_card.character_card and isinstance(character_card.character_card, str):
             enhanced_character_card = character_card.character_card.strip() + platform_context
+            
+            # Add extra emphasis on avoiding formal language
+            anti_formal_instruction = """
+
+CRITICAL: NEVER use formal or customer-service language. NEVER say phrases like:
+- "How can I assist you"
+- "to be of service" 
+- "to assist"
+- "What can I do for you"
+- "How can I help you today"
+- "How may I help you"
+- Any variation of "assist", "help", "support", "service" in formal context
+
+ALWAYS respond like a real friend having a casual conversation. Use natural, friendly language."""
+            
+            enhanced_character_card = enhanced_character_card + anti_formal_instruction
             messages.append({"role": "system", "content": enhanced_character_card})
             print(f"[API] Platform detected: {platform_context.split(':')[1].split('.')[0] if platform_context else 'Personal'}")
 
         # Add recent history (last 10 exchanges like release version)
         recent_history = ooga_history[-10:] if len(ooga_history) > 10 else ooga_history
+        
+        # Clean history of formal responses to prevent reinforcement
+        def is_formal_response(text):
+            """Check if a response contains formal language"""
+            if not text:
+                return False
+            
+            text_lower = text.lower()
+            formal_indicators = [
+                "how can i assist", "how may i help", "to be of service", "to assist",
+                "what can i do for you", "how can i be of assistance", "to see you again",
+                "how can i help you today", "what can i help you with", "how can i support"
+            ]
+            
+            for indicator in formal_indicators:
+                if indicator in text_lower:
+                    return True
+            
+            # Check for formal patterns
+            formal_patterns = [
+                r'\bto\s+(?:be\s+of\s+)?(?:service|assist|help)\b',
+                r'\bhow\s+can\s+i\s+(?:assist|help|support)\b',
+                r'\bwhat\s+can\s+i\s+(?:do|assist|help)\b'
+            ]
+            
+            for pattern in formal_patterns:
+                if re.search(pattern, text_lower):
+                    return True
+            
+            return False
         
         for entry in recent_history:
             # Handle both old format (2 elements) and new format (4+ elements)
@@ -502,8 +548,14 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
                 
                 if user_msg:
                     messages.append({"role": "user", "content": str(user_msg)})
-                if assistant_msg:
+                if assistant_msg and not is_formal_response(assistant_msg):
+                    # Only include non-formal assistant responses in history
                     messages.append({"role": "assistant", "content": str(assistant_msg)})
+                elif assistant_msg and is_formal_response(assistant_msg):
+                    # Replace formal responses with natural ones
+                    print(f"[API] Filtering formal response from history: '{assistant_msg[:50]}...'")
+                    natural_fallback = "Hey! How are you doing?"
+                    messages.append({"role": "assistant", "content": natural_fallback})
 
         # Add current user input
         if user_input:
@@ -612,25 +664,119 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
                             "how can i support you",
                             "what would you like me to help you with",
                             "how can i be of service",
-                            "to see you again! how can i assist you today"
+                            "to see you again! how can i assist you today",
+                            "to be of service",
+                            "to assist",
+                            "how can i assist",
+                            "how may i assist",
+                            "what can i assist you with",
+                            "how can i help",
+                            "how may i help",
+                            "what can i help you with",
+                            "how can i support",
+                            "what can i do",
+                            "is there anything i can do",
+                            "how can i be of help",
+                            "what would you like me to do",
+                            "how can i serve you",
+                            "what can i do for you today",
+                            "how can i be of assistance today",
+                            "what would you like assistance with",
+                            "how can i be helpful",
+                            "what can i help you with today"
                         ]
                         
                         response_lower = response_content.lower()
+                        formal_detected = False
                         for phrase in formal_phrases:
                             if phrase in response_lower:
                                 print(f"[API] Warning: Detected formal response '{response_content}', providing natural fallback")
-                                # Provide natural, casual responses based on platform
-                                if "[Platform: Twitch Chat]" in str(messages):
-                                    response_content = "Hey! How's it going? What's up?"
-                                elif "[Platform: Discord]" in str(messages):
-                                    response_content = "Hey there! What's on your mind? 😊"
-                                elif "[Platform: Command Line - Personal Chat]" in str(messages):
-                                    response_content = "Hey! How are you doing? What's on your mind?"
-                                elif "[Platform: Web Interface - Personal Chat]" in str(messages):
-                                    response_content = "Hi there! How are you feeling today?"
-                                else:
-                                    response_content = "Hey! How's it going?"
+                                formal_detected = True
                                 break
+                        
+                        # Also check for incomplete formal responses (like "to be of service! What can")
+                        if not formal_detected:
+                            # Check for patterns that suggest formal language
+                            formal_patterns = [
+                                r'\bto\s+(?:be\s+of\s+)?(?:service|assist|help)\b',
+                                r'\bhow\s+can\s+i\s+(?:assist|help|support)\b',
+                                r'\bwhat\s+can\s+i\s+(?:do|assist|help)\b',
+                                r'\bis\s+there\s+anything\s+i\s+can\b',
+                                r'\bhow\s+may\s+i\s+(?:assist|help)\b',
+                                r'\bto\s+(?:assist|help|support)\b',
+                                r'\b(?:assist|help|support)\s+you\b',
+                                r'\bwhat\s+can\s+i\b',
+                                r'\bhow\s+can\s+i\b'
+                            ]
+                            
+                            for pattern in formal_patterns:
+                                if re.search(pattern, response_lower):
+                                    print(f"[API] Warning: Detected formal pattern in response '{response_content}', providing natural fallback")
+                                    formal_detected = True
+                                    break
+                        
+                        # Additional check for responses that start with formal language
+                        if not formal_detected and len(response_content.strip()) > 0:
+                            # Check if response starts with formal language
+                            response_start = response_content.strip().lower()
+                            formal_starts = [
+                                "to be of service",
+                                "to assist",
+                                "to help",
+                                "how can i",
+                                "what can i",
+                                "how may i",
+                                "is there anything",
+                                "to see you again"
+                            ]
+                            
+                            for start_phrase in formal_starts:
+                                if response_start.startswith(start_phrase):
+                                    print(f"[API] Warning: Detected formal start in response '{response_content}', providing natural fallback")
+                                    formal_detected = True
+                                    break
+                        
+                        if formal_detected:
+                            # Provide natural, casual responses based on platform
+                            import random
+                            
+                            if "[Platform: Twitch Chat]" in str(messages):
+                                fallbacks = [
+                                    "Hey! How's it going? What's up?",
+                                    "Hi there! What's on your mind?",
+                                    "Hey! How are you doing?",
+                                    "What's up? How's your day going?"
+                                ]
+                            elif "[Platform: Discord]" in str(messages):
+                                fallbacks = [
+                                    "Hey there! What's on your mind? 😊",
+                                    "Hi! How are you doing today?",
+                                    "Hey! What's up?",
+                                    "How's it going? 😊"
+                                ]
+                            elif "[Platform: Command Line - Personal Chat]" in str(messages):
+                                fallbacks = [
+                                    "Hey! How are you doing? What's on your mind?",
+                                    "Hi there! How's your day going?",
+                                    "Hey! What's up?",
+                                    "How are you feeling today?"
+                                ]
+                            elif "[Platform: Web Interface - Personal Chat]" in str(messages):
+                                fallbacks = [
+                                    "Hi there! How are you feeling today?",
+                                    "Hey! How's it going?",
+                                    "Hi! What's on your mind?",
+                                    "How are you doing today?"
+                                ]
+                            else:
+                                fallbacks = [
+                                    "Hey! How's it going?",
+                                    "Hi there! What's up?",
+                                    "Hey! How are you doing?",
+                                    "What's on your mind?"
+                                ]
+                            
+                            response_content = random.choice(fallbacks)
                         
                         return response_content
                     elif 'text' in choice:
