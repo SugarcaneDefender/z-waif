@@ -916,7 +916,7 @@ def prune_deletables():
 #   Other API Access
 #
 
-def summary_memory_run(messages_input, user_sent_message):
+def summary_memory_run(messages_input, user_sent_message, recursion_depth=0):
     global received_message
     global ooga_history
     global forced_token_level
@@ -926,119 +926,138 @@ def summary_memory_run(messages_input, user_sent_message):
     global currently_streaming_message
     global is_in_api_request
 
+    # SAFETY: Prevent infinite recursion
+    MAX_RECURSION_DEPTH = 3
+    if recursion_depth >= MAX_RECURSION_DEPTH:
+        print(f"[API] WARNING: Maximum recursion depth ({MAX_RECURSION_DEPTH}) reached in summary_memory_run, using fallback message")
+        zw_logging.log_error(f"Maximum recursion depth reached in summary_memory_run: {recursion_depth}")
+        is_in_api_request = False
+        return "Summary processing encountered issues, but memories have been processed."
+
     # We are starting our API request!
     is_in_api_request = True
 
-    # Set the currently sending message
-    currently_sending_message = user_sent_message
+    try:
+        # Set the currently sending message
+        currently_sending_message = user_sent_message
 
-    # Clear the old streaming message, also we are not streaming so set it so
-    currently_streaming_message = ""
-    last_message_streamed = False
+        # Clear the old streaming message, also we are not streaming so set it so
+        currently_streaming_message = ""
+        last_message_streamed = False
 
-    # Load the history from JSON, to clean up the quotation marks
-    #
-    # with open("LiveLog.json", 'r') as openfile:
-    #     ooga_history = json.load(openfile)
+        # Load the history from JSON, to clean up the quotation marks
+        #
+        # with open("LiveLog.json", 'r') as openfile:
+        #     ooga_history = json.load(openfile)
 
-    # Determine what preset we want to load in with
+        # Determine what preset we want to load in with
 
-    preset = 'Z-Waif-ADEF-Standard'
+        preset = 'Z-Waif-ADEF-Standard'
 
-    if settings.model_preset != "Default":
-        preset = settings.model_preset
+        if settings.model_preset != "Default":
+            preset = settings.model_preset
 
-    zw_logging.kelvin_log = preset
-    cur_tokens_required = retrospect.summary_tokens_count
+        zw_logging.kelvin_log = preset
+        cur_tokens_required = retrospect.summary_tokens_count
 
-    #
-    # NOTE: Does not use the character-task at the moment, be aware.
-    #
+        #
+        # NOTE: Does not use the character-task at the moment, be aware.
+        #
 
-    # Set the stop right
-    stop = settings.stopping_strings
+        # Set the stop right
+        stop = settings.stopping_strings
 
-    # Encode
-    messages_to_send = messages_input
-
-
-    # Send the actual API Request
-    if API_TYPE == "Oobabooga":
-        request = {
-            "messages": messages_to_send,
-            'max_tokens': cur_tokens_required,
-            'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
-            'character': CHARACTER_CARD,
-            'truncation_length': max_context,
-            'stop': stop,
-
-            'preset': preset
-        }
-
-        try:
-            received_message = API.oobaooga_api.api_standard(request)
-        except Exception as e:
-            zw_logging.log_error(f"Oobabooga API request failed in summary_memory_run: {e}")
-            received_message = f"Error: {e}"
-
-    elif API_TYPE == "Ollama":
-        try:
-            received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
-        except Exception as e:
-            zw_logging.log_error(f"Ollama API request failed in summary_memory_run: {e}")
-            received_message = f"Error: {e}"
-    
-    else:
-        zw_logging.log_error(f"Unknown API_TYPE in summary_memory_run: {API_TYPE}")
-        received_message = f"Error: Unknown API type '{API_TYPE}'. Please check your configuration."
+        # Encode
+        messages_to_send = messages_input
 
 
-    # Translate issues with the received message
-    received_message = html.unescape(received_message)
+        # Send the actual API Request
+        if API_TYPE == "Oobabooga":
+            request = {
+                "messages": messages_to_send,
+                'max_tokens': cur_tokens_required,
+                'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+                'character': CHARACTER_CARD,
+                'truncation_length': max_context,
+                'stop': stop,
 
-    # If her reply contains RP-ing as other people, supress it form the message
-    if settings.supress_rp:
-        received_message = supress_rp_as_others(received_message)
+                'preset': preset
+            }
 
-    # If her reply is the same as the last stored one, run another request
-    global stored_received_message
+            try:
+                received_message = API.oobaooga_api.api_standard(request)
+            except Exception as e:
+                zw_logging.log_error(f"Oobabooga API request failed in summary_memory_run: {e}")
+                received_message = f"Error: {e}"
 
-    if received_message == stored_received_message:
-        summary_memory_run(messages_input, user_sent_message)
-        return
+        elif API_TYPE == "Ollama":
+            try:
+                received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+            except Exception as e:
+                zw_logging.log_error(f"Ollama API request failed in summary_memory_run: {e}")
+                received_message = f"Error: {e}"
+        
+        else:
+            zw_logging.log_error(f"Unknown API_TYPE in summary_memory_run: {API_TYPE}")
+            received_message = f"Error: Unknown API type '{API_TYPE}'. Please check your configuration."
 
-    # If her reply is the same as any in the past 20 chats, run another request
-    if check_if_in_history(received_message):
-        summary_memory_run(messages_input, user_sent_message)
-        return
 
-    # If her reply is blank, request another run, clearing the previous history add, and escape
-    if len(received_message) < 3:
-        summary_memory_run(messages_input, user_sent_message)
-        return
+        # Translate issues with the received message
+        received_message = html.unescape(received_message)
 
-    stored_received_message = received_message
+        # If her reply contains RP-ing as other people, supress it form the message
+        if settings.supress_rp:
+            received_message = supress_rp_as_others(received_message)
 
-    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
-    log_user_input = "{0}".format(user_sent_message)
-    log_received_message = "{0}".format(received_message)
+        # If her reply is the same as the last stored one, run another request
+        global stored_received_message
 
-    ooga_history.append([log_user_input, log_received_message, settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+        if received_message == stored_received_message:
+            if recursion_depth < MAX_RECURSION_DEPTH - 1:
+                return summary_memory_run(messages_input, user_sent_message, recursion_depth + 1)
+            else:
+                print(f"[API] WARNING: Cannot retry summary_memory_run, max recursion depth reached")
+                received_message = "Memory summary generated with limitations."
 
-    # Run a pruning of the deletables
-    prune_deletables()
+        # If her reply is the same as any in the past 20 chats, run another request
+        if check_if_in_history(received_message):
+            if recursion_depth < MAX_RECURSION_DEPTH - 1:
+                return summary_memory_run(messages_input, user_sent_message, recursion_depth + 1)
+            else:
+                print(f"[API] WARNING: Cannot retry summary_memory_run, max recursion depth reached")
+                received_message = "Memory summary generated with limitations."
 
-    # Clear the currently sending message variable
-    currently_sending_message = ""
+        # If her reply is blank, request another run, clearing the previous history add, and escape
+        if len(received_message) < 3:
+            if recursion_depth < MAX_RECURSION_DEPTH - 1:
+                return summary_memory_run(messages_input, user_sent_message, recursion_depth + 1)
+            else:
+                print(f"[API] WARNING: Cannot retry summary_memory_run, max recursion depth reached")
+                received_message = "Memory summary processed."
 
-    # Clear any token forcing
-    force_token_count = False
+        stored_received_message = received_message
 
-    # Save
-    save_histories()
+        # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively
+        log_user_input = "{0}".format(user_sent_message)
+        log_received_message = "{0}".format(received_message)
 
-    # We are ending our API request!
-    is_in_api_request = False
+        ooga_history.append([log_user_input, log_received_message, settings.cur_tags, "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+
+        # Run a pruning of the deletables
+        prune_deletables()
+
+        # Clear the currently sending message variable
+        currently_sending_message = ""
+
+        # Clear any token forcing
+        force_token_count = False
+
+        # Save
+        save_histories()
+
+    finally:
+        # CRITICAL: Always reset the flag, even if exceptions occur
+        is_in_api_request = False
 
 
 

@@ -545,9 +545,12 @@ def message_checks(message, skip_print=False):
 
     if settings.vtube_enabled and not API.api_controller.last_message_streamed:
         vtube_studio.set_emote_string(message)
-        vtube_thread = threading.Thread(target=vtube_studio.check_emote_string)
-        vtube_thread.daemon = True
-        vtube_thread.start()
+        # Use thread pool to prevent thread leak - only start if no emote processing is active
+        if not hasattr(vtube_studio, '_emote_thread_active') or not vtube_studio._emote_thread_active:
+            vtube_studio._emote_thread_active = True
+            vtube_thread = threading.Thread(target=_safe_vtube_emote_check)
+            vtube_thread.daemon = True
+            vtube_thread.start()
 
     if settings.gaming_enabled:
         gaming_control.message_inputs(message)
@@ -564,6 +567,18 @@ def message_checks(message, skip_print=False):
     # Allow undo
     global undo_allowed
     undo_allowed = True
+
+
+def _safe_vtube_emote_check():
+    """Thread-safe wrapper for vtube emote checking to prevent thread leaks"""
+    try:
+        vtube_studio.check_emote_string()
+    except Exception as e:
+        print(f"Error in vtube emote check: {e}")
+        zw_logging.log_error(f"VTube emote check error: {e}")
+    finally:
+        # Always reset the flag to allow future threads
+        vtube_studio._emote_thread_active = False
 
 
 def main_rate():

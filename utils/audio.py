@@ -246,28 +246,52 @@ def autochat_audio_buffer_record():
 
     global chat_buffer_frames
 
-    # Main recording buffer
-    p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+    # Main recording buffer with proper resource management
+    p = None
+    stream = None
+    
+    try:
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
-    while True:
+        while True:
 
-        # If there is no autochat, or we are actively in the middle of a chat, clear it
-        if hotkeys.get_autochat_toggle() == False:
-            time.sleep(0.002)     # Rest here a bit, no need to hotloop it
-            chat_buffer_frames = []
+            # If there is no autochat, or we are actively in the middle of a chat, clear it
+            if hotkeys.get_autochat_toggle() == False:
+                time.sleep(0.002)     # Rest here a bit, no need to hotloop it
+                chat_buffer_frames = []
 
 
-        # If there is autochat, and no active chat, record it
-        elif hotkeys.get_autochat_toggle() == True:
+            # If there is autochat, and no active chat, record it
+            elif hotkeys.get_autochat_toggle() == True:
 
-            # Record
-            data = stream.read(CHUNK)
-            chat_buffer_frames.append(data)
+                try:
+                    # Record
+                    data = stream.read(CHUNK)
+                    chat_buffer_frames.append(data)
 
-            # Clearing anything over the buffer
-            if len(chat_buffer_frames) > 91:
-                chat_buffer_frames.pop(0)
+                    # Clearing anything over the buffer
+                    if len(chat_buffer_frames) > 91:
+                        chat_buffer_frames.pop(0)
+                except Exception as e:
+                    print(f"Audio buffer recording error: {e}")
+                    time.sleep(0.1)  # Brief pause on error
+                    
+    except Exception as e:
+        print(f"Failed to initialize audio buffer recording: {e}")
+    finally:
+        # Clean up audio resources
+        if stream is not None:
+            try:
+                stream.stop_stream()
+                stream.close()
+            except:
+                pass
+        if p is not None:
+            try:
+                p.terminate()
+            except:
+                pass
 
 def record_vad_loop():
     global vad_voice_detected
@@ -286,46 +310,68 @@ def record_vad_loop():
             vad_voice_detected = False
             time.sleep(0.01)
 
+        p = None
+        stream = None
+        wf = None
+        
+        try:
+            p = pyaudio.PyAudio()
+            stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+            frames = []
+            vad_loop_frames_limit = 32
+            vad_loop_cur_frames = 0
 
-        p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        frames = []
-        vad_loop_frames_limit = 32
-        vad_loop_cur_frames = 0
+            while vad_loop_cur_frames <= vad_loop_frames_limit:
+                data = stream.read(CHUNK)
+                frames.append(data)
+                vad_loop_cur_frames += 1
 
-        while vad_loop_cur_frames <= vad_loop_frames_limit:
-            data = stream.read(CHUNK)
-            frames.append(data)
-            vad_loop_cur_frames += 1
+            wf = wave.open(SAVE_PATH_VAD, 'wb')
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
 
-        stream.stop_stream()
-        stream.close()
+            time.sleep(0.01)    # Rest to write the file and do system I/O (also slight delay)
 
-        p.terminate()
+            # Now that we have written, look for voice activity!
+            try:
+                model = load_silero_vad()
+                wav = read_audio(SAVE_PATH_VAD)
+                speech_timestamps = get_speech_timestamps(
+                    wav,
+                    model,
+                    return_seconds=True,  # Return speech timestamps in seconds (default is samples)
+                )
 
+                # If we have voice activity, flag it as valid
+                if len(speech_timestamps) > 0:
+                    vad_voice_detected = True
+                else:
+                    vad_voice_detected = False
+            except Exception as e:
+                print(f"VAD processing error: {e}")
+                vad_voice_detected = False
 
-        wf = wave.open(SAVE_PATH_VAD, 'wb')
-
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-        wf.close()
-
-        time.sleep(0.01)    # Rest to write the file and do system I/O (also slight delay)
-
-        # Now that we have written, look for voice activity!
-        model = load_silero_vad()
-        wav = read_audio(SAVE_PATH_VAD)
-        speech_timestamps = get_speech_timestamps(
-            wav,
-            model,
-            return_seconds=True,  # Return speech timestamps in seconds (default is samples)
-        )
-
-        # If we have voice activity, flag it as valid
-        if len(speech_timestamps) > 0:
-            vad_voice_detected = True
-        else:
+        except Exception as e:
+            print(f"Audio recording error in VAD loop: {e}")
             vad_voice_detected = False
+        finally:
+            # Always clean up resources
+            if stream is not None:
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                except:
+                    pass
+            if p is not None:
+                try:
+                    p.terminate()
+                except:
+                    pass
+            if wf is not None:
+                try:
+                    wf.close()
+                except:
+                    pass
 
