@@ -475,7 +475,7 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
         elif "[Platform: Discord]" in user_input:
             platform_context = "\n\nCONTEXT: You are chatting on Discord. Be casual, fun, and engaging. You can use emojis and informal language. Keep the social energy up."
         elif "[Platform: Command Line - Personal Chat]" in user_input:
-            platform_context = "\n\nCONTEXT: This is a personal conversation through command line. Be direct but friendly. Keep responses clear and engaging."
+            platform_context = "\n\nCONTEXT: This is a personal conversation through command line. Be natural, friendly, and conversational. Use casual language and be yourself."
         elif "[Platform: Voice Chat - Personal Conversation]" in user_input:
             platform_context = "\n\nCONTEXT: This is a voice conversation. Be natural and conversational as if speaking aloud. Use natural speech patterns and be expressive."
         elif "[Platform: Minecraft Game Chat]" in user_input:
@@ -599,6 +599,38 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
                                 response_content = "Hey there! What's on your mind?"
                             else:
                                 response_content = "Hi! How are you doing today?"
+                        
+                        # Check for formal/customer-service responses and replace them
+                        formal_phrases = [
+                            "how can i assist you",
+                            "how may i help you", 
+                            "how can i help you today",
+                            "how may i assist you today",
+                            "what can i do for you",
+                            "how can i be of assistance",
+                            "is there anything i can help you with",
+                            "how can i support you",
+                            "what would you like me to help you with",
+                            "how can i be of service",
+                            "to see you again! how can i assist you today"
+                        ]
+                        
+                        response_lower = response_content.lower()
+                        for phrase in formal_phrases:
+                            if phrase in response_lower:
+                                print(f"[API] Warning: Detected formal response '{response_content}', providing natural fallback")
+                                # Provide natural, casual responses based on platform
+                                if "[Platform: Twitch Chat]" in str(messages):
+                                    response_content = "Hey! How's it going? What's up?"
+                                elif "[Platform: Discord]" in str(messages):
+                                    response_content = "Hey there! What's on your mind? 😊"
+                                elif "[Platform: Command Line - Personal Chat]" in str(messages):
+                                    response_content = "Hey! How are you doing? What's on your mind?"
+                                elif "[Platform: Web Interface - Personal Chat]" in str(messages):
+                                    response_content = "Hi there! How are you feeling today?"
+                                else:
+                                    response_content = "Hey! How's it going?"
+                                break
                         
                         return response_content
                     elif 'text' in choice:
