@@ -140,194 +140,196 @@ def run(user_input, temp_level):
     # We are starting our API request!
     is_in_api_request = True
     
-    # Extract platform from user input to get the correct conversation history
-    platform = "personal"
-    user_id = "default"
-    
-    if "[Platform: Twitch Chat]" in original_user_input:
-        platform = "twitch"
-        user_id = "twitch_user"
-    elif "[Platform: Discord]" in original_user_input:
-        platform = "discord"
-        user_id = "discord_user"
-    elif "[Platform: Web Interface" in original_user_input:
-        platform = "webui"
-        user_id = "webui_user"
-    elif "[Platform: Command Line" in original_user_input:
-        platform = "cmd"
-        user_id = "cmd_user"
-    elif "[Platform: Voice Chat" in original_user_input:
-        platform = "voice"
-        user_id = "voice_user"
-    elif "[Platform: Minecraft" in original_user_input:
-        platform = "minecraft"
-        user_id = "minecraft_user"
-    elif "[Platform: Hangout" in original_user_input:
-        platform = "hangout"
-        user_id = "hangout_user"
-    
-    # Load platform-specific conversation history instead of old LiveLog.json
     try:
-        from utils.chat_history import get_chat_history
-        platform_history = get_chat_history(user_id, platform, limit=20)  # Get last 20 messages
+        # Extract platform from user input to get the correct conversation history
+        platform = "personal"
+        user_id = "default"
         
-        # Convert platform history to old format for backward compatibility
-        ooga_history = []
-        current_pair = [None, None]
+        if "[Platform: Twitch Chat]" in original_user_input:
+            platform = "twitch"
+            user_id = "twitch_user"
+        elif "[Platform: Discord]" in original_user_input:
+            platform = "discord"
+            user_id = "discord_user"
+        elif "[Platform: Web Interface" in original_user_input:
+            platform = "webui"
+            user_id = "webui_user"
+        elif "[Platform: Command Line" in original_user_input:
+            platform = "cmd"
+            user_id = "cmd_user"
+        elif "[Platform: Voice Chat" in original_user_input:
+            platform = "voice"
+            user_id = "voice_user"
+        elif "[Platform: Minecraft" in original_user_input:
+            platform = "minecraft"
+            user_id = "minecraft_user"
+        elif "[Platform: Hangout" in original_user_input:
+            platform = "hangout"
+            user_id = "hangout_user"
         
-        for msg in platform_history:
-            if msg["role"] == "user":
-                if current_pair[0] is not None:
-                    # Save incomplete pair and start new one
-                    ooga_history.append([current_pair[0], current_pair[1] or ""])
-                current_pair = [msg["content"], None]
-            elif msg["role"] == "assistant":
-                current_pair[1] = msg["content"]
-                ooga_history.append([current_pair[0] or "", current_pair[1]])
-                current_pair = [None, None]
-        
-        # Add any incomplete pair
-        if current_pair[0] is not None:
-            ooga_history.append([current_pair[0], current_pair[1] or ""])
-        
-        # Ensure we have at least the default greeting if history is empty
-        if not ooga_history:
-            ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+        # Load platform-specific conversation history instead of old LiveLog.json
+        try:
+            from utils.chat_history import get_chat_history
+            platform_history = get_chat_history(user_id, platform, limit=20)  # Get last 20 messages
             
-        print(f"[API] Loaded {len(ooga_history)} conversation pairs from platform-separated history ({platform})")
-        
-    except Exception as e:
-        print(f"[API] Warning: Could not load platform history, falling back to LiveLog.json: {e}")
-        # Fallback to old method
+            # Convert platform history to old format for backward compatibility
+            ooga_history = []
+            current_pair = [None, None]
+            
+            for msg in platform_history:
+                if msg["role"] == "user":
+                    if current_pair[0] is not None:
+                        # Save incomplete pair and start new one
+                        ooga_history.append([current_pair[0], current_pair[1] or ""])
+                    current_pair = [msg["content"], None]
+                elif msg["role"] == "assistant":
+                    current_pair[1] = msg["content"]
+                    ooga_history.append([current_pair[0] or "", current_pair[1]])
+                    current_pair = [None, None]
+            
+            # Add any incomplete pair
+            if current_pair[0] is not None:
+                ooga_history.append([current_pair[0], current_pair[1] or ""])
+            
+            # Ensure we have at least the default greeting if history is empty
+            if not ooga_history:
+                ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+                
+            print(f"[API] Loaded {len(ooga_history)} conversation pairs from platform-separated history ({platform})")
+            
+        except Exception as e:
+            print(f"[API] Warning: Could not load platform history, falling back to LiveLog.json: {e}")
+            # Fallback to old method
+            try:
+                with open("LiveLog.json", 'r') as openfile:
+                    ooga_history = json.load(openfile)
+            except Exception as e2:
+                zw_logging.log_error(f"Failed to load LiveLog.json: {e2}")
+                ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+
+        # Debug: Check character card status
         try:
-            with open("LiveLog.json", 'r') as openfile:
-                ooga_history = json.load(openfile)
-        except Exception as e2:
-            zw_logging.log_error(f"Failed to load LiveLog.json: {e2}")
-            ooga_history = [["Hello, I am back!", "Welcome back! *smiles*"]]
+            import main
+            if main.debug_mode:
+                zw_logging.update_debug_log(f"Character card status: {API.character_card.character_card[:100]}...")
+                zw_logging.update_debug_log(f"API_TYPE: {API_TYPE}")
+                zw_logging.update_debug_log(f"Using API module: {API}")
+        except (ImportError, AttributeError):
+            pass
 
-    # Debug: Check character card status
-    try:
-        import main
-        if main.debug_mode:
-            zw_logging.update_debug_log(f"Character card status: {API.character_card.character_card[:100]}...")
-            zw_logging.update_debug_log(f"API_TYPE: {API_TYPE}")
-            zw_logging.update_debug_log(f"Using API module: {API}")
-    except (ImportError, AttributeError):
-        pass
-
-    # Check for name in message
-    check_for_name_in_message(user_input)
-    
-    # Enhanced Contextual Chatpop Check for non-streaming mode
-    if settings.use_chatpops and not settings.live_pipe_no_speak:
-        voice.set_speaking(True)
-        # Determine platform context from the currently sending message
-        platform_context = {"platform": "personal"}  # Default
-        if "[Platform: Twitch Chat]" in user_input:
-            platform_context["platform"] = "twitch"
-        elif "[Platform: Discord]" in user_input:
-            platform_context["platform"] = "discord"
-        elif "[Platform: Minecraft Game Chat]" in user_input:
-            platform_context["platform"] = "minecraft"
-        elif "[Platform: Voice Chat" in user_input:
-            platform_context["platform"] = "voice"
-        elif "[Platform: Web Interface" in user_input:
-            platform_context["platform"] = "webui"
-        elif "[Platform: Command Line" in user_input:
-            platform_context["platform"] = "cmd"
+        # Check for name in message
+        check_for_name_in_message(user_input)
         
-        # Get contextual chatpop based on user input and platform
-        this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
-        print(f"[API] Playing chatpop: '{this_chatpop}'")
-        voice.speak_line(this_chatpop, refuse_pause=True)
-    
-    # Debug: Show connection info
-    print(f"[API] HOST: {HOST}")
-    print(f"[API] API_TYPE: {API_TYPE}")
-    print(f"[API] URI would be: http://{HOST}/v1/chat/completions")
-    
-    # Simple API call using unified interface
-    try:
-        print(f"[API] About to call API.api_call with user_input: '{user_input[:50]}...'")
+        # Enhanced Contextual Chatpop Check for non-streaming mode
+        if settings.use_chatpops and not settings.live_pipe_no_speak:
+            voice.set_speaking(True)
+            # Determine platform context from the currently sending message
+            platform_context = {"platform": "personal"}  # Default
+            if "[Platform: Twitch Chat]" in user_input:
+                platform_context["platform"] = "twitch"
+            elif "[Platform: Discord]" in user_input:
+                platform_context["platform"] = "discord"
+            elif "[Platform: Minecraft Game Chat]" in user_input:
+                platform_context["platform"] = "minecraft"
+            elif "[Platform: Voice Chat" in user_input:
+                platform_context["platform"] = "voice"
+            elif "[Platform: Web Interface" in user_input:
+                platform_context["platform"] = "webui"
+            elif "[Platform: Command Line" in user_input:
+                platform_context["platform"] = "cmd"
+            
+            # Get contextual chatpop based on user input and platform
+            this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
+            print(f"[API] Playing chatpop: '{this_chatpop}'")
+            voice.speak_line(this_chatpop, refuse_pause=True)
         
-        # Call the correct API based on API_TYPE
-        if API_TYPE == "Ollama":
-            import API.ollama_api
-            received_message = API.ollama_api.api_call(
-                user_input=user_input,
-                temp_level=temp_level,
-                max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
-                streaming=False
-            )
-        else:  # Default to Oobabooga
-            import API.oobaooga_api
-            received_message = API.oobaooga_api.api_call(
-                user_input=user_input,
-                temp_level=temp_level,
-                max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
-                streaming=False
-            )
+        # Debug: Show connection info
+        print(f"[API] HOST: {HOST}")
+        print(f"[API] API_TYPE: {API_TYPE}")
+        print(f"[API] URI would be: http://{HOST}/v1/chat/completions")
         
-        print(f"[API] API.api_call returned: '{received_message[:50] if received_message else 'None'}...'")
-    except Exception as e:
-        print(f"[API] Exception in API.api_call: {e}")
-        zw_logging.log_error(f"API request failed: {e}")
-        received_message = "Sorry, I'm having connection issues right now."
-
-    # Simple post-processing
-    if received_message:
-        received_message = html.unescape(received_message)
-        if settings.supress_rp:
-            received_message = supress_rp_as_others(received_message)
-        
-        # Note: Don't speak here in non-streaming mode - let the calling code handle speech
-        # to prevent double speaking. The calling functions (main_web_ui_chat_worker, etc.)
-        # will handle speaking appropriately for their context.
-        
-        # Reset volume cooldown to prevent AI from picking up on its own voice
+        # Simple API call using unified interface
         try:
-            hotkeys.cooldown_listener_timer()
-        except AttributeError:
-            pass  # Function might not exist in some configurations
-    else:
-        received_message = "I'm having trouble responding right now."
+            print(f"[API] About to call API.api_call with user_input: '{user_input[:50]}...'")
+            
+            # Call the correct API based on API_TYPE
+            if API_TYPE == "Ollama":
+                import API.ollama_api
+                received_message = API.ollama_api.api_call(
+                    user_input=user_input,
+                    temp_level=temp_level,
+                    max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
+                    streaming=False
+                )
+            else:  # Default to Oobabooga
+                import API.oobaooga_api
+                received_message = API.oobaooga_api.api_call(
+                    user_input=user_input,
+                    temp_level=temp_level,
+                    max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
+                    streaming=False
+                )
+            
+            print(f"[API] API.api_call returned: '{received_message[:50] if received_message else 'None'}...'")
+        except Exception as e:
+            print(f"[API] Exception in API.api_call: {e}")
+            zw_logging.log_error(f"API request failed: {e}")
+            received_message = "Sorry, I'm having connection issues right now."
 
-    # Save to platform-separated history (already extracted platform info above)
-    try:
-        # Save to platform-separated history
-        from utils.chat_history import add_message_to_history
-        
-        # Clean the user input by removing platform markers for cleaner history
-        clean_user_input = original_user_input
-        if "[Platform:" in clean_user_input:
-            import re
-            clean_user_input = re.sub(r'\[Platform:[^\]]*\]\s*', '', clean_user_input).strip()
-        
-        add_message_to_history(user_id, "user", clean_user_input, platform)
-        add_message_to_history(user_id, "assistant", received_message, platform)
-        
-        print(f"[API] Saved conversation to platform-separated history: {platform}")
-        
-        # Also save to old format for backward compatibility (but use the new data)
-        ooga_history.append([original_user_input, received_message])
-        save_histories()
-        
-    except Exception as e:
-        print(f"[API] Error saving to platform history: {e}")
-        # Fallback to original method if platform history fails
-        ooga_history.append([original_user_input, received_message])
-        save_histories()
+        # Simple post-processing
+        if received_message:
+            received_message = html.unescape(received_message)
+            if settings.supress_rp:
+                received_message = supress_rp_as_others(received_message)
+            
+            # Note: Don't speak here in non-streaming mode - let the calling code handle speech
+            # to prevent double speaking. The calling functions (main_web_ui_chat_worker, etc.)
+            # will handle speaking appropriately for their context.
+            
+            # Reset volume cooldown to prevent AI from picking up on its own voice
+            try:
+                hotkeys.cooldown_listener_timer()
+            except AttributeError:
+                pass  # Function might not exist in some configurations
+        else:
+            received_message = "I'm having trouble responding right now."
+
+        # Save to platform-separated history (already extracted platform info above)
+        try:
+            # Save to platform-separated history
+            from utils.chat_history import add_message_to_history
+            
+            # Clean the user input by removing platform markers for cleaner history
+            clean_user_input = original_user_input
+            if "[Platform:" in clean_user_input:
+                import re
+                clean_user_input = re.sub(r'\[Platform:[^\]]*\]\s*', '', clean_user_input).strip()
+            
+            add_message_to_history(user_id, "user", clean_user_input, platform)
+            add_message_to_history(user_id, "assistant", received_message, platform)
+            
+            print(f"[API] Saved conversation to platform-separated history: {platform}")
+            
+            # Also save to old format for backward compatibility (but use the new data)
+            ooga_history.append([original_user_input, received_message])
+            save_histories()
+            
+        except Exception as e:
+            print(f"[API] Error saving to platform history: {e}")
+            # Fallback to original method if platform history fails
+            ooga_history.append([original_user_input, received_message])
+            save_histories()
     
-    # We are done with our API request!
-    is_in_api_request = False
+    finally:
+        # CRITICAL: Always reset the flag, even if exceptions occur
+        is_in_api_request = False
 
     return received_message
 
 #
 # For the new streaming chats, runs it continually to grab data as it comes in from Oobabooga. Should run faster
 #
-def run_streaming(user_input, temp_level):
+def run_streaming(user_input, temp_level, recursion_depth=0):
 
     global received_message
     global ooga_history
@@ -340,6 +342,14 @@ def run_streaming(user_input, temp_level):
     global force_skip_streaming
     global is_in_api_request
 
+    # SAFETY: Prevent infinite recursion
+    MAX_RECURSION_DEPTH = 3
+    if recursion_depth >= MAX_RECURSION_DEPTH:
+        print(f"[API] WARNING: Maximum recursion depth ({MAX_RECURSION_DEPTH}) reached, stopping recursion")
+        zw_logging.log_error(f"Maximum streaming recursion depth reached: {recursion_depth}")
+        is_in_api_request = False
+        return "I'm having trouble generating a response right now."
+
     # Handle blank input - allow blank messages to be sent as blank messages
     original_user_input = user_input
     if not user_input or user_input.strip() == "":
@@ -349,254 +359,263 @@ def run_streaming(user_input, temp_level):
     # We are starting our API request!
     is_in_api_request = True
 
-    # Ensure the streamed_api_stringpuller variable exists even if the API request fails to initialize.
-    streamed_api_stringpuller = []
+    try:
+        # Ensure the streamed_api_stringpuller variable exists even if the API request fails to initialize.
+        streamed_api_stringpuller = []
 
-    # Clear possible streaming endflag
-    global flag_end_streaming
-    flag_end_streaming = False
+        # Clear possible streaming endflag
+        global flag_end_streaming
+        flag_end_streaming = False
 
-    # Message that is currently being sent
-    currently_sending_message = user_input
+        # Message that is currently being sent
+        currently_sending_message = user_input
 
-    # Clear the old streaming message
-    currently_streaming_message = ""
-    last_message_streamed = True
+        # Clear the old streaming message
+        currently_streaming_message = ""
+        last_message_streamed = True
 
-    # Did the last message we got contain our name?
-    check_for_name_in_message(user_input)
+        # Did the last message we got contain our name?
+        check_for_name_in_message(user_input)
 
-    # Load the history from JSON, to clean up the quotation marks
-    with open("LiveLog.json", 'r') as openfile:
-        ooga_history = json.load(openfile)
+        # Load the history from JSON, to clean up the quotation marks
+        with open("LiveLog.json", 'r') as openfile:
+            ooga_history = json.load(openfile)
 
-    # Determine what preset we want to load in with
-    preset = 'Z-Waif-ADEF-Standard'
-    if random.random() > 0.77:
-        preset = 'Z-Waif-ADEF-Tempered'
-    if random.random() > 0.99:
-        preset = 'Z-Waif-ADEF-Blazing'
-
-    if temp_level == 1:
-        preset = 'Z-Waif-ADEF-Tempered'
-        if random.random() > 0.7:
+        # Determine what preset we want to load in with
+        preset = 'Z-Waif-ADEF-Standard'
+        if random.random() > 0.77:
+            preset = 'Z-Waif-ADEF-Tempered'
+        if random.random() > 0.99:
             preset = 'Z-Waif-ADEF-Blazing'
-    if temp_level == 2:
-        preset = 'Z-Waif-ADEF-Blazing'
 
-    if settings.model_preset != "Default":
-        preset = settings.model_preset
+        if temp_level == 1:
+            preset = 'Z-Waif-ADEF-Tempered'
+            if random.random() > 0.7:
+                preset = 'Z-Waif-ADEF-Blazing'
+        if temp_level == 2:
+            preset = 'Z-Waif-ADEF-Blazing'
 
-    zw_logging.kelvin_log = preset
+        if settings.model_preset != "Default":
+            preset = settings.model_preset
 
-    # Set what char/task we are sending to - force None to use our character card
-    char_send = settings.cur_task_char
-    if char_send == "None":
-        char_send = None  # Don't use backend character, use our system messages
+        zw_logging.kelvin_log = preset
 
-    # Forced tokens check
-    cur_tokens_required = settings.max_tokens
-    if force_token_count:
-        cur_tokens_required = forced_token_level
+        # Set what char/task we are sending to - force None to use our character card
+        char_send = settings.cur_task_char
+        if char_send == "None":
+            char_send = None  # Don't use backend character, use our system messages
 
-    # Set the stop right
-    stop = settings.stopping_strings.copy()
-    if settings.newline_cut:
-        stop.append("\n")
-    if settings.asterisk_ban:
-        stop.append("*")
+        # Forced tokens check
+        cur_tokens_required = settings.max_tokens
+        if force_token_count:
+            cur_tokens_required = forced_token_level
 
-    # We will print the header only when we receive the first chunk,
-    # avoiding an empty name banner if the request fails.
-    header_printed = False
+        # Set the stop right
+        stop = settings.stopping_strings.copy()
+        if settings.newline_cut:
+            stop.append("\n")
+        if settings.asterisk_ban:
+            stop.append("*")
 
-    # Reset the ticker (starts counting at 1)
-    streaming_sentences_ticker = 1
+        # We will print the header only when we receive the first chunk,
+        # avoiding an empty name banner if the request fails.
+        header_printed = False
 
-    # Send the actual API Request using unified interface
-    streamed_api_stringpuller = API.api_call(
-        user_input=user_input,
-        temp_level=temp_level,
-        max_tokens=cur_tokens_required,
-        streaming=True,
-        preset=preset,
-        char_send=char_send,
-        stop=stop
-    )
+        # Reset the ticker (starts counting at 1)
+        streaming_sentences_ticker = 1
 
-    # Clear streamed emote list
-    vtube_studio.clear_streaming_emote_list()
+        # Send the actual API Request using unified interface
+        streamed_api_stringpuller = API.api_call(
+            user_input=user_input,
+            temp_level=temp_level,
+            max_tokens=cur_tokens_required,
+            streaming=True,
+            preset=preset,
+            char_send=char_send,
+            stop=stop
+        )
 
-    # Enhanced Contextual Chatpop Check
-    if settings.use_chatpops and not settings.live_pipe_no_speak:
-        voice.set_speaking(True)
-        # Determine platform context from the currently sending message
-        platform_context = {"platform": "personal"}  # Default
-        if "[Platform: Twitch Chat]" in user_input:
-            platform_context["platform"] = "twitch"
-        elif "[Platform: Discord]" in user_input:
-            platform_context["platform"] = "discord"
-        elif "[Platform: Minecraft Game Chat]" in user_input:
-            platform_context["platform"] = "minecraft"
-        elif "[Platform: Voice Chat" in user_input:
-            platform_context["platform"] = "voice"
-        elif "[Platform: Web Interface" in user_input:
-            platform_context["platform"] = "webui"
-        elif "[Platform: Command Line" in user_input:
-            platform_context["platform"] = "cmd"
-        
-        # Get contextual chatpop based on user input and platform
-        this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
-        voice.speak_line(this_chatpop, refuse_pause=True)
+        # Clear streamed emote list
+        vtube_studio.clear_streaming_emote_list()
 
-
-    assistant_message = ''
-    supressed_rp = False
-    force_skip_streaming = False
-    for event in streamed_api_stringpuller:
-        # Extract chunk using unified API interface
-        chunk = API.extract_streaming_chunk(event)
-
-        # On first chunk, print the speaker header so output isn't blank beforehand
-        if not header_printed:
-            print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
-                  + "----" + settings.char_name + "----"
-                  + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
-            header_printed = True
-
-        assistant_message += chunk
-        streamed_response_check = streamed_update_handler(chunk, assistant_message)
-
-        # IF we break out, then make sure we cancel out properly
-        if streamed_response_check == "Cut":
-            # Clear the currently sending message variable
-            currently_sending_message = ""
-
-            # We are ending our API request!
-            is_in_api_request = False
-
-            return
-
-        # Cut for the hangout name being said
-        if streamed_response_check == "Hangout-Name-Cut" and settings.hangout_mode:
-            # Add any existing stuff to our actual chat history (use original input, not converted)
-            ooga_history.append([original_user_input, assistant_message, settings.cur_tags,
-                                 "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
-            save_histories()
-
-            # Remove flag
-            flag_end_streaming = False
-
-            # Clear the currently sending message variable
-            currently_sending_message = ""
-
-            # We are ending our API request!
-            is_in_api_request = False
-
-            return
-
-        # Check if we need to force skip the stream (hotkey or manually)
-        if hotkeys.pull_next_press_input() or force_skip_streaming:
-            force_skip_streaming = True
-            break
-
-        # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
-        if settings.supress_rp and (supress_rp_as_others(assistant_message) != assistant_message):
-            assistant_message = supress_rp_as_others(assistant_message)
-            supressed_rp = True
-            break
-
-    # Redo it and skip
-    if force_skip_streaming:
-        force_skip_streaming = False
-        print("\nSkipping message, redoing!\n")
-        zw_logging.update_debug_log("Got an input to regenerate! Re-generating the reply...")
-        run_streaming(user_input, 1)
-        return
-
-    # Read the final sentence aloud (if it wasn't suppressed because of anti-RP rules)
-    if not supressed_rp:
-        s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
-        sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
-
-        # Emotes
-        if settings.vtube_enabled:
-            vtube_studio.set_emote_string(s_assistant_message)
-            vtube_studio.check_emote_string_streaming()
-
-        # Speaking
-        if not settings.live_pipe_no_speak and len(sentence_list) > 0:
+        # Enhanced Contextual Chatpop Check
+        if settings.use_chatpops and not settings.live_pipe_no_speak:
             voice.set_speaking(True)
-            voice.speak_line(sentence_list[-1], refuse_pause=True)
+            # Determine platform context from the currently sending message
+            platform_context = {"platform": "personal"}  # Default
+            if "[Platform: Twitch Chat]" in user_input:
+                platform_context["platform"] = "twitch"
+            elif "[Platform: Discord]" in user_input:
+                platform_context["platform"] = "discord"
+            elif "[Platform: Minecraft Game Chat]" in user_input:
+                platform_context["platform"] = "minecraft"
+            elif "[Platform: Voice Chat" in user_input:
+                platform_context["platform"] = "voice"
+            elif "[Platform: Web Interface" in user_input:
+                platform_context["platform"] = "webui"
+            elif "[Platform: Command Line" in user_input:
+                platform_context["platform"] = "cmd"
+            
+            # Get contextual chatpop based on user input and platform
+            this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
+            voice.speak_line(this_chatpop, refuse_pause=True)
 
-    # Print Newline
-    print("\n")
 
-    #
-    # Set it to the assistant message (streamed response)
-    received_message = assistant_message
+        assistant_message = ''
+        supressed_rp = False
+        force_skip_streaming = False
+        for event in streamed_api_stringpuller:
+            # Extract chunk using unified API interface
+            chunk = API.extract_streaming_chunk(event)
 
-    # Translate issues with the received message
-    received_message = html.unescape(received_message)
+            # On first chunk, print the speaker header so output isn't blank beforehand
+            if not header_printed:
+                print(colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--" + colorama.Fore.RESET
+                      + "----" + settings.char_name + "----"
+                      + colorama.Fore.MAGENTA + colorama.Style.BRIGHT + "--\n" + colorama.Fore.RESET)
+                header_printed = True
 
-    # If her reply is the same as the last stored one, run another request
-    global stored_received_message
-    global regenerate_requests_count
+            assistant_message += chunk
+            streamed_response_check = streamed_update_handler(chunk, assistant_message)
 
-    if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad message, will retry via fallback!\n")
-        zw_logging.update_debug_log("Bad message received; same as last attempted generation. Delegating retry to caller...")
-        regenerate_requests_count += 1
-        # We are ending our API request!
+            # IF we break out, then make sure we cancel out properly
+            if streamed_response_check == "Cut":
+                # Clear the currently sending message variable
+                currently_sending_message = ""
+
+                # We are ending our API request!
+                is_in_api_request = False
+
+                return
+
+            # Cut for the hangout name being said
+            if streamed_response_check == "Hangout-Name-Cut" and settings.hangout_mode:
+                # Add any existing stuff to our actual chat history (use original input, not converted)
+                ooga_history.append([original_user_input, assistant_message, settings.cur_tags,
+                                     "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+                save_histories()
+
+                # Remove flag
+                flag_end_streaming = False
+
+                # Clear the currently sending message variable
+                currently_sending_message = ""
+
+                # We are ending our API request!
+                is_in_api_request = False
+
+                return
+
+            # Check if we need to force skip the stream (hotkey or manually)
+            if hotkeys.pull_next_press_input() or force_skip_streaming:
+                force_skip_streaming = True
+                break
+
+            # Check if we need to break out due to RP suppression (if it different, then there is a suppression)
+            if settings.supress_rp and (supress_rp_as_others(assistant_message) != assistant_message):
+                assistant_message = supress_rp_as_others(assistant_message)
+                supressed_rp = True
+                break
+
+        # Redo it and skip - FIXED: Add recursion depth check
+        if force_skip_streaming:
+            force_skip_streaming = False
+            print("\nSkipping message, redoing!\n")
+            zw_logging.update_debug_log("Got an input to regenerate! Re-generating the reply...")
+            # SAFETY: Check recursion depth before recursive call
+            if recursion_depth < MAX_RECURSION_DEPTH - 1:
+                return run_streaming(user_input, 1, recursion_depth + 1)
+            else:
+                print(f"[API] WARNING: Cannot retry, max recursion depth reached")
+                is_in_api_request = False
+                return "I'm having trouble generating a response right now."
+
+        # Read the final sentence aloud (if it wasn't suppressed because of anti-RP rules)
+        if not supressed_rp:
+            s_assistant_message = emoji.replace_emoji(assistant_message, replace='')
+            sentence_list = voice_splitter.split_into_sentences(s_assistant_message)
+
+            # Emotes
+            if settings.vtube_enabled:
+                vtube_studio.set_emote_string(s_assistant_message)
+                vtube_studio.check_emote_string_streaming()
+
+            # Speaking
+            if not settings.live_pipe_no_speak and len(sentence_list) > 0:
+                voice.set_speaking(True)
+                voice.speak_line(sentence_list[-1], refuse_pause=True)
+
+        # Print Newline
+        print("\n")
+
+        #
+        # Set it to the assistant message (streamed response)
+        received_message = assistant_message
+
+        # Translate issues with the received message
+        received_message = html.unescape(received_message)
+
+        # If her reply is the same as the last stored one, run another request
+        global stored_received_message
+        global regenerate_requests_count
+
+        if received_message == stored_received_message and regenerate_requests_count < regenerate_requests_limit:
+            print("\nBad message, will retry via fallback!\n")
+            zw_logging.update_debug_log("Bad message received; same as last attempted generation. Delegating retry to caller...")
+            regenerate_requests_count += 1
+            # We are ending our API request!
+            is_in_api_request = False
+            return ""
+
+        stored_received_message = received_message
+
+        # If her reply is the same as any in the past 20 chats, run another request
+        if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
+            print("\nBad message matches recent chat, delegating retry to caller!\n")
+            zw_logging.update_debug_log("Bad message received; same as a recent chat. Delegating retry to caller...")
+            regenerate_requests_count += 1
+            is_in_api_request = False
+            return ""
+
+        # If her reply is blank, request another run, clearing the previous history add, and escape - FIXED: Add recursion depth check
+        if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
+            print("\nBad (blank) message, delegating retry to caller!\n")
+            zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Delegating retry to caller...")
+            regenerate_requests_count += 1
+            # SAFETY: Check recursion depth before recursive call
+            if recursion_depth < MAX_RECURSION_DEPTH - 1:
+                return run_streaming((user_input + " Hmm."), 1, recursion_depth + 1)
+            else:
+                print(f"[API] WARNING: Cannot retry blank message, max recursion depth reached")
+                is_in_api_request = False
+                return "I'm having trouble generating a response right now."
+
+        # Clear our regen requests count, we have hit our limit
+        regenerate_requests_count = 0
+
+        # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively (use original input, not converted)
+        log_user_input = "{0}".format(original_user_input)
+        log_received_message = "{0}".format(received_message)
+
+        ooga_history.append([log_user_input, log_received_message, tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
+
+        # Run a pruning of the deletables
+        prune_deletables()
+
+        # Clear the currently sending message variable
+        currently_sending_message = ""
+
+        # Clear any token forcing
+        force_token_count = False
+
+        # Save
+        save_histories()
+
+    finally:
+        # CRITICAL: Always reset the flag, even if exceptions occur
         is_in_api_request = False
-        return ""
 
-    stored_received_message = received_message
 
-    # If her reply is the same as any in the past 20 chats, run another request
-    if check_if_in_history(received_message) and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad message matches recent chat, delegating retry to caller!\n")
-        zw_logging.update_debug_log("Bad message received; same as a recent chat. Delegating retry to caller...")
-        regenerate_requests_count += 1
-        is_in_api_request = False
-        return ""
-
-    # If her reply is blank, request another run, clearing the previous history add, and escape
-    if len(received_message) < 3 and regenerate_requests_count < regenerate_requests_limit:
-        print("\nBad (blank) message, delegating retry to caller!\n")
-        zw_logging.update_debug_log("Bad message received; chat is a runt or blank entirely. Delegating retry to caller...")
-        regenerate_requests_count += 1
-        run_streaming((user_input + " Hmm."), 1)
-
-        is_in_api_request = False
-        return ""
-
-    # Clear our regen requests count, we have hit our limit
-    regenerate_requests_count = 0
-
-    # Log it to our history. Ensure it is in double quotes, that is how OOBA stores it natively (use original input, not converted)
-    log_user_input = "{0}".format(original_user_input)
-    log_received_message = "{0}".format(received_message)
-
-    ooga_history.append([log_user_input, log_received_message, tag_task_controller.apply_tags(), "{:%Y-%m-%d %H:%M:%S}".format(datetime.datetime.now())])
-
-    # Run a pruning of the deletables
-    prune_deletables()
-
-    # Clear the currently sending message variable
-    currently_sending_message = ""
-
-    # Clear any token forcing
-    force_token_count = False
-
-    # Save
-    save_histories()
-
-    # We are ending our API request!
-    is_in_api_request = False
-
-#
-# Handles all changes in the streamed updates
 def streamed_update_handler(chunk, assistant_message):
     global currently_streaming_message
     global streaming_sentences_ticker

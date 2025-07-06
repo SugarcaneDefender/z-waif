@@ -1996,10 +1996,23 @@ def run_program():
         main()
     except KeyboardInterrupt:
         print(f"\n{colorama.Fore.YELLOW}Shutdown requested by user{colorama.Fore.RESET}")
+        # Cleanup HTTP sessions to prevent resource leaks
+        try:
+            from API.oobaooga_api import close_http_session
+            close_http_session()
+            print("HTTP sessions closed cleanly")
+        except ImportError:
+            pass  # Module might not be available
         sys.exit(0)
     except Exception as e:
         print(f"{colorama.Fore.RED}Critical error in main loop: {e}{colorama.Fore.RESET}")
         zw_logging.log_error(f"Main loop critical error: {e}")
+        # Cleanup HTTP sessions even on error
+        try:
+            from API.oobaooga_api import close_http_session
+            close_http_session()
+        except ImportError:
+            pass  # Module might not be available
         print("Check log.txt for details")
         input("Press Enter to exit...")
         sys.exit(1)

@@ -8,6 +8,8 @@ import re
 import requests
 import yaml
 import sseclient
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Local imports - Utils modules
 from utils.conversation_analysis import analyze_conversation_style
@@ -30,6 +32,59 @@ else:
 headers = {
     "Content-Type": "application/json"
 }
+
+# CRITICAL FIX: Create a persistent HTTP session with connection pooling and retry strategy
+def create_http_session():
+    """Create an HTTP session with connection pooling, keep-alive, and retry strategy"""
+    session = requests.Session()
+    
+    # Configure retry strategy
+    retry_strategy = Retry(
+        total=3,  # Total number of retries
+        status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
+        method_whitelist=["HEAD", "GET", "POST"],  # HTTP methods to retry
+        backoff_factor=1,  # Wait time between retries (1, 2, 4 seconds)
+        raise_on_status=False  # Don't raise exception on HTTP errors
+    )
+    
+    # Configure HTTP adapter with connection pooling
+    adapter = HTTPAdapter(
+        max_retries=retry_strategy,
+        pool_connections=10,  # Number of connection pools to cache
+        pool_maxsize=20,      # Maximum number of connections to save in the pool
+        pool_block=False      # Don't block when pool is full, just create new connection
+    )
+    
+    # Mount adapter for both HTTP and HTTPS
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    # Set keep-alive and connection timeout settings
+    session.headers.update({
+        'Connection': 'keep-alive',
+        'Keep-Alive': 'timeout=30, max=100'
+    })
+    
+    return session
+
+# Global session instance for connection reuse
+_http_session = None
+
+def get_http_session():
+    """Get or create the global HTTP session"""
+    global _http_session
+    if _http_session is None:
+        _http_session = create_http_session()
+        logger.info("Created new HTTP session with connection pooling")
+    return _http_session
+
+def close_http_session():
+    """Close the global HTTP session (for cleanup)"""
+    global _http_session
+    if _http_session is not None:
+        _http_session.close()
+        _http_session = None
+        logger.info("Closed HTTP session")
 
 def load_model_preset():
     """Load the model preset parameters"""
@@ -306,8 +361,9 @@ def api_standard(request):
         logger.info(f"Sending request to {BASE_URI}{endpoint}")
         logger.debug(f"Request payload: {json.dumps(formatted_request, indent=2)}")
 
-        # Make the API call
-        response = requests.post(
+        # Make the API call using persistent session
+        session = get_http_session()
+        response = session.post(
             BASE_URI + endpoint,
             headers=headers,
             json=formatted_request,
@@ -503,17 +559,19 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
         headers = {"Content-Type": "application/json"}
         
         if streaming:
-            # Handle streaming request
+            # Handle streaming request using persistent session
             print(f"[API] Making streaming request to {uri}")
-            response = requests.post(uri, headers=headers, json=request, stream=True, verify=False, timeout=30)
+            session = get_http_session()
+            response = session.post(uri, headers=headers, json=request, stream=True, verify=False, timeout=30)
             response.raise_for_status()
             return sseclient.SSEClient(response)
         else:
-            # Make direct API call for non-streaming with the proper conversation context
+            # Make direct API call for non-streaming with the proper conversation context using persistent session
             print(f"[API] Making non-streaming request to {uri}")
             
             try:
-                response = requests.post(uri, headers=headers, json=request, verify=False, timeout=30)
+                session = get_http_session()
+                response = session.post(uri, headers=headers, json=request, verify=False, timeout=30)
                 print(f"[API] Response status code: {response.status_code}")
                 response.raise_for_status()
                 
