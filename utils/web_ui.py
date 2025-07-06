@@ -9,6 +9,7 @@ from utils import settings
 from utils import hotkeys
 from utils import tag_task_controller
 from utils import voice
+from utils import chat_history  # Initialize chat history module early
 import json
 
 #from API.api_controller import soft_reset
@@ -101,13 +102,10 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                 return ""
 
             def update_chat():
-                """Update the chat display"""
+                """Update the chat display with stable, reliable loading"""
                 try:
-                    # Use platform-separated chat history instead of ooga_history
-                    from utils.chat_history import get_chat_history
-                    
-                    # Get webui platform chat history
-                    webui_history = get_chat_history("webui_user", "webui", limit=30)
+                    # Get webui platform chat history - correct parameter order
+                    webui_history = chat_history.get_chat_history("webui_user", "webui", limit=30)
                     
                     # Convert to the format expected by Gradio chatbot
                     chat_pairs = []
@@ -133,36 +131,24 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
                     if current_pair[0] is not None:
                         chat_pairs.append([current_pair[0], current_pair[1] or ""])
                     
-                    # Check if there's a message currently being sent/streamed
-                    current_sending = API.api_controller.currently_sending_message
-                    current_streaming = API.api_controller.currently_streaming_message
-                    
-                    if current_sending != "":
-                        # Clean the platform marker from the display
-                        display_sending = current_sending
-                        if "[Platform:" in display_sending:
-                            import re
-                            display_sending = re.sub(r'\[Platform:[^\]]*\]\s*', '', display_sending).strip()
-                        
-                        # Add current message being processed
-                        chat_pairs.append([display_sending, current_streaming])
-                    
-                    # Debug logging
-                    # print(f"[Web-UI] Returning {len(chat_pairs)} chat pairs from platform history")
-                    
                     return chat_pairs
+                    
+                except ImportError as e:
+                    print(f"[Web-UI] Chat history module not available: {str(e)}")
+                    # Return stable fallback instead of empty array to prevent flashing
+                    return [["Hello!", "Hi there! How can I help you today?"]]
                 except Exception as e:
                     print(f"[Web-UI] Error updating chat: {str(e)}")
                     zw_logging.log_error(f"Error updating chat: {str(e)}")
-                    # Fallback to empty chat
-                    return []
+                    # Return stable fallback to prevent flashing
+                    return [["Hello!", "Hi there! How can I help you today?"]]
 
             msg.submit(respond, [msg, chatbot], [msg])
 
             send_button = gr.Button(variant="primary", value="Send")
             send_button.click(respond, inputs=[msg, chatbot], outputs=[msg])
 
-        demo.load(update_chat, every=0.05, outputs=[chatbot])
+        demo.load(update_chat, every=2.0, outputs=[chatbot])
 
         #
         # Basic Mic Chat

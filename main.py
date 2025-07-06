@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 # Local imports - API modules
 import API.api_controller
-import API.character_card
+import API.character_card as character_card
 import API.task_profiles
 
 # Local imports - Utils modules
@@ -1784,7 +1784,7 @@ def run_program():
     #
 
     # Load any available character cards
-    API.character_card.load_char_card()
+    character_card.load_char_card()
 
     # Load any available task profiles
     API.task_profiles.load_task_profiles()
@@ -1977,7 +1977,7 @@ def run_program():
     # calculated_test = 0 / 0
 
     # Load our character card and task files (for Ollama)
-    API.character_card.load_char_card()
+    character_card.load_char_card()
     API.task_profiles.load_task_profiles()
 
     # Handle command line arguments for message input

@@ -42,7 +42,7 @@ def create_http_session():
     retry_strategy = Retry(
         total=3,  # Total number of retries
         status_forcelist=[429, 500, 502, 503, 504],  # HTTP status codes to retry on
-        method_whitelist=["HEAD", "GET", "POST"],  # HTTP methods to retry
+        allowed_methods=["HEAD", "GET", "POST"],  # HTTP methods to retry (updated from method_whitelist)
         backoff_factor=1,  # Wait time between retries (1, 2, 4 seconds)
         raise_on_status=False  # Don't raise exception on HTTP errors
     )
@@ -408,7 +408,7 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
     import requests
     import sseclient
     from utils import zw_logging
-    import API.character_card
+    import API.character_card as character_card
     
     # Always log API calls regardless of debug mode
     print(f"[API] api_call() invoked with user_input: {repr(user_input[:50])}...")
@@ -486,8 +486,8 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
             platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
         
         # Add character card as system message with platform context
-        if API.character_card.character_card and isinstance(API.character_card.character_card, str):
-            enhanced_character_card = API.character_card.character_card.strip() + platform_context
+        if character_card.character_card and isinstance(character_card.character_card, str):
+            enhanced_character_card = character_card.character_card.strip() + platform_context
             messages.append({"role": "system", "content": enhanced_character_card})
             print(f"[API] Platform detected: {platform_context.split(':')[1].split('.')[0] if platform_context else 'Personal'}")
 

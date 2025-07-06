@@ -79,9 +79,19 @@ ZW_OLLAMA_MODEL=llama2
 ZW_OLLAMA_MODEL_VISUAL=llava
 
 # Twitch Configuration
+# Option 1: Personal Channel (Simple Setup - Recommended)
 TWITCH_TOKEN=your_twitch_oauth_token_here
-TWITCH_CLIENT_ID=your_twitch_client_id_here
 TWITCH_CHANNEL=your_channel_name
+TWITCH_BOT_NAME=z_waif_bot
+
+# Option 2: Multiple Channels (Use instead of TWITCH_CHANNEL)
+# TWITCH_CHANNELS=channel1,channel2,channel3
+
+# Option 3: Full Bot App (Advanced - only if using dedicated bot application)
+# TWITCH_CLIENT_ID=your_twitch_client_id_here
+# TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
+
+# Twitch Bot Behavior (Optional - has sensible defaults)
 TWITCH_PERSONALITY=friendly
 TWITCH_AUTO_RESPOND=ON
 TWITCH_RESPONSE_CHANCE=0.8

@@ -285,49 +285,30 @@ class AIHandler:
     async def generate_contextual_response(
         self, message: str, user_context: Dict[str, Any], memories: List[str] = None
     ) -> str:
-        """Generate response with full context"""
-        # Build comprehensive context
-        context_parts = []
-
-        # Add user context
-        if user_context:
-            username = user_context.get("username", "User")
-            relationship = user_context.get("relationship_level", "stranger")
-            platform = user_context.get("platform", "unknown")
-
-            context_parts.append(f"User: {username} (relationship: {relationship})")
-
-            if user_context.get("interests"):
-                interests = ", ".join(
-                    user_context["interests"][-3:]
-                )  # Last 3 interests
-                context_parts.append(f"Their interests: {interests}")
-
-            if user_context.get("personality_traits"):
-                traits = ", ".join(user_context["personality_traits"])
-                context_parts.append(f"Their style: {traits}")
-
-        # Add relevant memories
-        if memories:
-            memory_context = "Previous relevant conversations:\n" + "\n".join(
-                memories[-3:]
-            )
-            context_parts.append(memory_context)
-
-        # Build full prompt
-        context_string = "\n".join(context_parts) if context_parts else ""
-        full_prompt = f"{context_string}\n\nCurrent message: {message}"
-
+        """Generate response with full context - simplified for natural conversation"""
+        
+        # Use a natural approach for all platforms
+        # Let the character card and main system handle the personality
+        platform = user_context.get("platform", "unknown")
+        username = user_context.get("username", "")
+        
+        # Create a natural conversational prompt without formal structure
+        if username and username.lower() not in message.lower():
+            # Only add name context if it's not already in the message
+            natural_prompt = f"{username} says: {message}"
+        else:
+            natural_prompt = message
+        
         # Determine personality based on relationship
         personality = self._get_personality_for_relationship(
             user_context.get("relationship_level", "stranger")
         )
 
         return await self.generate_response(
-            full_prompt,
+            natural_prompt,
             personality=personality,
             context={
-                "platform": user_context.get("platform"),
+                "platform": platform,
                 "user_relationship": user_context.get("relationship_level"),
             },
         )

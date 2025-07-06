@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from ollama import chat, ChatResponse
 
 # Local imports - API modules
-import API.character_card
+import API.character_card as character_card
 
 # Dynamic API import based on API_TYPE
 load_dotenv()  # Load environment variables first
@@ -129,7 +129,7 @@ def run(user_input, temp_level):
 
     # Force character card reload before each API call
     print("[API] Checking character card status...")
-    API.character_card.load_char_card()
+    character_card.load_char_card()
     
     # Handle blank input - allow blank messages to be sent as blank messages
     original_user_input = user_input
@@ -211,9 +211,9 @@ def run(user_input, temp_level):
         try:
             import main
             if main.debug_mode:
-                zw_logging.update_debug_log(f"Character card status: {API.character_card.character_card[:100]}...")
+                zw_logging.update_debug_log(f"Character card status: {character_card.character_card[:100]}...")
                 zw_logging.update_debug_log(f"API_TYPE: {API_TYPE}")
-                zw_logging.update_debug_log(f"Using API module: {API}")
+                zw_logging.update_debug_log(f"Using API module: {API.__name__}")
         except (ImportError, AttributeError):
             pass
 
@@ -221,6 +221,7 @@ def run(user_input, temp_level):
         check_for_name_in_message(user_input)
         
         # Enhanced Contextual Chatpop Check for non-streaming mode
+        chatpop_prefix = ""  # Store chatpop to include in response text
         if settings.use_chatpops and not settings.live_pipe_no_speak:
             voice.set_speaking(True)
             # Determine platform context from the currently sending message
@@ -240,7 +241,12 @@ def run(user_input, temp_level):
             
             # Get contextual chatpop based on user input and platform
             this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
-            print(f"[API] Playing chatpop: '{this_chatpop}'")
+            print(f"[API] Generated chatpop: '{this_chatpop}'")
+            
+            # Store chatpop to include in response text
+            chatpop_prefix = this_chatpop
+            
+            # Still speak it for voice output
             voice.speak_line(this_chatpop, refuse_pause=True)
         
         # Debug: Show connection info
@@ -252,23 +258,13 @@ def run(user_input, temp_level):
         try:
             print(f"[API] About to call API.api_call with user_input: '{user_input[:50]}...'")
             
-            # Call the correct API based on API_TYPE
-            if API_TYPE == "Ollama":
-                import API.ollama_api
-                received_message = API.ollama_api.api_call(
-                    user_input=user_input,
-                    temp_level=temp_level,
-                    max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
-                    streaming=False
-                )
-            else:  # Default to Oobabooga
-                import API.oobaooga_api
-                received_message = API.oobaooga_api.api_call(
-                    user_input=user_input,
-                    temp_level=temp_level,
-                    max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
-                    streaming=False
-                )
+            # Use the module-level API import directly
+            received_message = API.api_call(
+                user_input=user_input,
+                temp_level=temp_level,
+                max_tokens=settings.max_tokens,  # Use configurable value instead of hard-coding
+                streaming=False
+            )
             
             print(f"[API] API.api_call returned: '{received_message[:50] if received_message else 'None'}...'")
         except Exception as e:
@@ -281,6 +277,11 @@ def run(user_input, temp_level):
             received_message = html.unescape(received_message)
             if settings.supress_rp:
                 received_message = supress_rp_as_others(received_message)
+            
+            # Add chatpop prefix to the response if we generated one
+            if chatpop_prefix:
+                received_message = f"{chatpop_prefix} {received_message}"
+                print(f"[API] Added chatpop prefix to response: '{received_message[:100]}...'")
             
             # Note: Don't speak here in non-streaming mode - let the calling code handle speech
             # to prevent double speaking. The calling functions (main_web_ui_chat_worker, etc.)
@@ -296,7 +297,7 @@ def run(user_input, temp_level):
 
         # Save to platform-separated history (already extracted platform info above)
         try:
-            # Save to platform-separated history
+            # Save to platform-separated history (save the full response with chatpop)
             from utils.chat_history import add_message_to_history
             
             # Clean the user input by removing platform markers for cleaner history
@@ -439,6 +440,7 @@ def run_streaming(user_input, temp_level, recursion_depth=0):
         vtube_studio.clear_streaming_emote_list()
 
         # Enhanced Contextual Chatpop Check
+        streaming_chatpop_prefix = ""  # Store chatpop to include in response text
         if settings.use_chatpops and not settings.live_pipe_no_speak:
             voice.set_speaking(True)
             # Determine platform context from the currently sending message
@@ -458,6 +460,12 @@ def run_streaming(user_input, temp_level, recursion_depth=0):
             
             # Get contextual chatpop based on user input and platform
             this_chatpop = ai_handler.get_contextual_chatpop(platform_context, user_input)
+            print(f"[API] Generated streaming chatpop: '{this_chatpop}'")
+            
+            # Store chatpop to include in response text
+            streaming_chatpop_prefix = this_chatpop
+            
+            # Still speak it for voice output
             voice.speak_line(this_chatpop, refuse_pause=True)
 
 
@@ -554,6 +562,11 @@ def run_streaming(user_input, temp_level, recursion_depth=0):
 
         # Translate issues with the received message
         received_message = html.unescape(received_message)
+        
+        # Add streaming chatpop prefix to the response if we generated one
+        if streaming_chatpop_prefix:
+            received_message = f"{streaming_chatpop_prefix} {received_message}"
+            print(f"[API] Added streaming chatpop prefix to response: '{received_message[:100]}...'")
 
         # If her reply is the same as the last stored one, run another request
         global stored_received_message
@@ -985,14 +998,14 @@ def summary_memory_run(messages_input, user_sent_message, recursion_depth=0):
             }
 
             try:
-                received_message = API.oobaooga_api.api_standard(request)
+                received_message = API.api_standard(request)
             except Exception as e:
                 zw_logging.log_error(f"Oobabooga API request failed in summary_memory_run: {e}")
                 received_message = f"Error: {e}"
 
         elif API_TYPE == "Ollama":
             try:
-                received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+                received_message = API.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
             except Exception as e:
                 zw_logging.log_error(f"Ollama API request failed in summary_memory_run: {e}")
                 received_message = f"Error: {e}"
@@ -1168,10 +1181,10 @@ def view_image(direct_talk_transcript):
             system_message += vision_guidance_message + "\n\n"
 
         if OLLAMA_VISUAL_CARD == "BASE":
-            system_message += API.character_card.character_card
+            system_message += character_card.character_card
 
         if OLLAMA_VISUAL_CARD == "VISUAL":
-            system_message += API.character_card.visual_character_card
+            system_message += character_card.visual_character_card
 
         # If we have any visual message to append, go for it!
         if system_message != "":
@@ -1249,7 +1262,7 @@ def view_image(direct_talk_transcript):
             img_str = str(os.path.abspath('LiveImage.png'))
             past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-            received_cam_message = API.ollama_api.api_standard_image(history=past_messages)
+            received_cam_message = API.api_standard_image(history=past_messages)
         except Exception as e:
             zw_logging.log_error(f"Ollama image API request failed: {e}")
             received_cam_message = f"Error processing image: {e}"
@@ -1364,10 +1377,10 @@ def view_image_streaming(direct_talk_transcript):
             system_message += vision_guidance_message + "\n\n"
 
         if OLLAMA_VISUAL_CARD == "BASE":
-            system_message += API.character_card.character_card
+            system_message += character_card.character_card
 
         if OLLAMA_VISUAL_CARD == "VISUAL":
-            system_message += API.character_card.visual_character_card
+            system_message += character_card.visual_character_card
 
         # If we have any visual message to append, go for it!
         if system_message != "":
@@ -1460,7 +1473,7 @@ def view_image_streaming(direct_talk_transcript):
             img_str = str(os.path.abspath('LiveImage.png'))
             past_messages.append({"role": "user", "content": base_prompt, "images": [img_str]})
 
-            streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
+            streamed_api_stringpuller = API.api_stream_image(history=past_messages)
         except Exception as e:
             zw_logging.log_error(f"Ollama streaming image API request failed: {e}")
             streamed_api_stringpuller = []
@@ -1681,7 +1694,7 @@ def _encode_new_api_deprecated(user_input):
     
     # Add character card
     if CHARACTER_CARD:
-        messages.append(API.character_card.character_card)
+        messages.append(character_card.character_card)
     
     # Add history
     history_start = max(0, len(ooga_history) - marker_length)
@@ -1737,8 +1750,8 @@ def encode_new_api_ollama(user_input):
         platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
     
     # Simple system prompt - character card with platform context
-    if API.character_card.character_card and isinstance(API.character_card.character_card, str):
-        enhanced_character_card = API.character_card.character_card.strip() + platform_context
+    if character_card.character_card and isinstance(character_card.character_card, str):
+        enhanced_character_card = character_card.character_card.strip() + platform_context
         messages_to_send.append({"role": "system", "content": enhanced_character_card})
         
         # Debug: Show platform detection
@@ -1802,8 +1815,8 @@ def encode_for_oobabooga_chat(user_input):
         platform_context = "\n\nCONTEXT: This is casual hangout mode. Be relaxed, fun, and spontaneous. Focus on creating a comfortable, enjoyable atmosphere."
     
     # Add character card as system message with platform context
-    if API.character_card.character_card and isinstance(API.character_card.character_card, str):
-        enhanced_character_card = API.character_card.character_card.strip() + platform_context
+    if character_card.character_card and isinstance(character_card.character_card, str):
+        enhanced_character_card = character_card.character_card.strip() + platform_context
         messages.append({"role": "system", "content": enhanced_character_card})
         
         # Debug: Show platform detection
