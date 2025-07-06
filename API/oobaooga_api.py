@@ -466,7 +466,7 @@ def api_call(user_input, temp_level, max_tokens=450, streaming=False, preset=Non
         
         # Build the request - Keep full functionality but use supported parameters only
         HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
-        if HOST.startswith("http://"):
+        if HOST.startswith("http"):
             uri = f'{HOST}/v1/chat/completions'
         else:
             uri = f'http://{HOST}/v1/chat/completions'
