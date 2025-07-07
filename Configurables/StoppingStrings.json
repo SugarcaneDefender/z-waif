@@ -1,5 +1,8 @@
 [
-	"[System D]", 
+	"[System", 
+	"[SYSTEM", 
+	"[End",
+	"[END",
 	"\nUser:", 
 	"\nHuman:",
 	"</s>",
