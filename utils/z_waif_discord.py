@@ -18,14 +18,16 @@ intents.message_content = True
 client = discord.Client(intents=intents)
 
 # Get Discord token from environment variable
+discord_enabled_string = os.environ.get("MODULE_DISCORD")
 DISCORD_TOKEN = os.environ.get("DISCORD_TOKEN")
 DISCORD_CHANNEL = os.environ.get("DISCORD_CHANNEL", None)  # Optional specific channel
 
-if not DISCORD_TOKEN:
-    print("[DISCORD] Error: DISCORD_TOKEN not found in environment variables!")
-    print("[DISCORD] Please set DISCORD_TOKEN in your .env file")
-else:
-    print("[DISCORD] Discord token loaded successfully")
+if discord_enabled_string == "ON":
+    if not DISCORD_TOKEN:
+        print("[DISCORD] Error: DISCORD_TOKEN not found in environment variables!")
+        print("[DISCORD] Please set DISCORD_TOKEN in your .env file")
+    else:
+        print("[DISCORD] Discord token loaded successfully")
 
 @client.event
 async def on_ready():
