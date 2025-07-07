@@ -638,7 +638,6 @@ ALWAYS respond like a real friend having a casual conversation. Use natural, fri
                         print(f"[API] Extracted response content: {repr(response_content[:100])}...")
                         
                         # Check for emoji-only responses and provide fallback
-                        import re
                         # Remove common emoji and check if anything substantial remains
                         text_only = re.sub(r'[\U0001F600-\U0001F64F\U0001F300-\U0001F5FF\U0001F680-\U0001F6FF\U0001F1E0-\U0001F1FF\U00002702-\U000027B0\U000024C2-\U0001F251\U0001F900-\U0001F9FF]+', '', response_content).strip()
                         
