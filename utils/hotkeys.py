@@ -33,7 +33,8 @@ general_listener_speaking_detected = False
 FULL_AUTO_TOGGLED = False
 SPEAKING_TIMER = 0
 SPEAKING_TIMER_COOLDOWN = 0
-SPEAKING_VOLUME_SENSITIVITY = 16
+# Initialize sensitivity from environment or use default
+SPEAKING_VOLUME_SENSITIVITY = int(os.environ.get("AUTOCHAT_SENSITIVITY", "16"))
 SPEAKING_VOLUME_SENSITIVITY_PRESSED = False
 
 
@@ -318,11 +319,21 @@ def input_toggle_autochat():
 def input_toggle_autochat_from_ui():
     global FULL_AUTO_TOGGLED
 
+    # Don't allow autochat in hangout mode
+    if settings.hangout_mode:
+        print("Auto-Chat cannot be enabled in Hangout Mode")
+        return
+
     FULL_AUTO_TOGGLED = not FULL_AUTO_TOGGLED
 
     # Log the toggle for UI tracking
     if FULL_AUTO_TOGGLED:
         print("Auto-Chat toggled ON (Web UI)")
+        # Ensure mic is also toggled on for autochat to work
+        global SPEAK_TOGGLED
+        if not SPEAK_TOGGLED:
+            SPEAK_TOGGLED = True
+            print("Microphone automatically enabled for Auto-Chat")
     else:
         print("Auto-Chat toggled OFF (Web UI)")
 
@@ -349,7 +360,13 @@ def input_change_listener_sensitivity():
 def input_change_listener_sensitivity_from_ui(sensitivity_level):
     global SPEAKING_VOLUME_SENSITIVITY
 
-    SPEAKING_VOLUME_SENSITIVITY = sensitivity_level
+    # Ensure sensitivity is within valid range (4-144)
+    if isinstance(sensitivity_level, (int, float)):
+        sensitivity_level = max(4, min(144, int(sensitivity_level)))
+        SPEAKING_VOLUME_SENSITIVITY = sensitivity_level
+        print(f"Auto-Chat sensitivity changed to: {sensitivity_level}")
+    else:
+        print(f"Invalid sensitivity level: {sensitivity_level}")
 
 
 def chat_input_await():

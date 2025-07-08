@@ -1842,7 +1842,7 @@ def run_program():
     # Other settings
 
     settings.eyes_follow = os.environ.get("EYES_FOLLOW")
-    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH", "400"))
+    settings.autochat_mininum_chat_frames = int(os.environ.get("AUTOCHAT_MIN_LENGTH", "100"))
 
     silero_string = os.environ.get("SILERO_VAD")
     if silero_string == "ON":

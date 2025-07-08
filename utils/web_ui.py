@@ -278,13 +278,11 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
         #
 
         def autochat_button_click():
-
             # No toggle in hangout mode
             if settings.hangout_mode:
                 return
 
             hotkeys.input_toggle_autochat_from_ui()
-
             return
 
 
@@ -304,7 +302,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 
             autochat_checkbox_view = gr.Checkbox(label="Auto-Chat Enabled")
 
-            autochat_sensitivity_slider = gr.Slider(minimum=4, maximum=144, value=16, label="Auto-Chat Sensitivity")
+            autochat_sensitivity_slider = gr.Slider(minimum=4, maximum=144, value=hotkeys.get_autochat_sensitivity(), label="Auto-Chat Sensitivity")
             autochat_sensitivity_slider.change(fn=change_autochat_sensitivity, inputs=autochat_sensitivity_slider)
 
 
@@ -651,7 +649,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 def launch_demo():
     # Launch Gradio with error handling and optional shareability
     try:
-        demo.launch(inbrowser=True, share=False, server_port=7864)
+        demo.launch(inbrowser=True, share=False)
     except Exception as e:
         if "conflict" in str(e).lower():
             print("Gradio server is already running. Please close the other instance.")
