@@ -473,6 +473,10 @@ def listener_timer():
 
     while True:
 
+        # Update volume_listener states
+        volume_listener.update_vad_result()
+        volume_listener.update_speaking_state()
+
         # Check for sensitivity button, start a listener if so
         if SPEAKING_VOLUME_SENSITIVITY_PRESSED:
             SPEAKING_VOLUME_SENSITIVITY_PRESSED = False

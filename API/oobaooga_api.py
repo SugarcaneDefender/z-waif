@@ -652,6 +652,7 @@ ALWAYS respond like a real friend having a casual conversation. Use natural, fri
                                 response_content = "Hi! How are you doing today?"
                         
                         # Check for formal/customer-service responses and replace them
+                        # Only catch the most obvious formal phrases, not legitimate conversational responses
                         formal_phrases = [
                             "how can i assist you",
                             "how may i help you", 
@@ -665,20 +666,6 @@ ALWAYS respond like a real friend having a casual conversation. Use natural, fri
                             "how can i be of service",
                             "to see you again! how can i assist you today",
                             "to be of service",
-                            "to assist",
-                            "how can i assist",
-                            "how may i assist",
-                            "what can i assist you with",
-                            "how can i help",
-                            "how may i help",
-                            "what can i help you with",
-                            "how can i support",
-                            "what can i do",
-                            "is there anything i can do",
-                            "how can i be of help",
-                            "what would you like me to do",
-                            "how can i serve you",
-                            "what can i do for you today",
                             "how can i be of assistance today",
                             "what would you like assistance with",
                             "how can i be helpful",
@@ -696,16 +683,14 @@ ALWAYS respond like a real friend having a casual conversation. Use natural, fri
                         # Also check for incomplete formal responses (like "to be of service! What can")
                         if not formal_detected:
                             # Check for patterns that suggest formal language
+                            # Only catch the most obvious formal patterns, not legitimate conversational responses
                             formal_patterns = [
-                                r'\bto\s+(?:be\s+of\s+)?(?:service|assist|help)\b',
-                                r'\bhow\s+can\s+i\s+(?:assist|help|support)\b',
-                                r'\bwhat\s+can\s+i\s+(?:do|assist|help)\b',
-                                r'\bis\s+there\s+anything\s+i\s+can\b',
-                                r'\bhow\s+may\s+i\s+(?:assist|help)\b',
-                                r'\bto\s+(?:assist|help|support)\b',
-                                r'\b(?:assist|help|support)\s+you\b',
-                                r'\bwhat\s+can\s+i\b',
-                                r'\bhow\s+can\s+i\b'
+                                r'\bto\s+be\s+of\s+service\b',
+                                r'\bhow\s+can\s+i\s+assist\s+you\b',
+                                r'\bhow\s+may\s+i\s+assist\s+you\b',
+                                r'\bwhat\s+can\s+i\s+do\s+for\s+you\b',
+                                r'\bis\s+there\s+anything\s+i\s+can\s+help\s+you\s+with\b',
+                                r'\bhow\s+can\s+i\s+be\s+of\s+assistance\b'
                             ]
                             
                             for pattern in formal_patterns:
@@ -720,13 +705,11 @@ ALWAYS respond like a real friend having a casual conversation. Use natural, fri
                             response_start = response_content.strip().lower()
                             formal_starts = [
                                 "to be of service",
-                                "to assist",
-                                "to help",
-                                "how can i",
-                                "what can i",
-                                "how may i",
-                                "is there anything",
-                                "to see you again"
+                                "how can i assist you",
+                                "how may i assist you",
+                                "what can i do for you",
+                                "is there anything i can help you with",
+                                "to see you again! how can i assist you today"
                             ]
                             
                             for start_phrase in formal_starts:

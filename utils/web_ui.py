@@ -651,7 +651,7 @@ with gr.Blocks(theme=based_theme, title="Z-Waif UI") as demo:
 def launch_demo():
     # Launch Gradio with error handling and optional shareability
     try:
-        demo.launch(inbrowser=True, share=False)
+        demo.launch(inbrowser=True, share=False, server_port=7864)
     except Exception as e:
         if "conflict" in str(e).lower():
             print("Gradio server is already running. Please close the other instance.")
