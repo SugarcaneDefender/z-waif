@@ -1,10 +1,16 @@
+# Standard library imports
+import asyncio
+import json
+import os
+import threading
 import time
 
-import utils.cane_lib
-import asyncio,os,threading
+# Third-party imports
 import pyvts
-import json
 from dotenv import load_dotenv
+
+# Local imports - Utils modules
+from utils import cane_lib
 
 VTS = pyvts.vts(
     plugin_info={
@@ -31,7 +37,7 @@ emote_request_list = []
 
 CUR_LOOK = 0
 LOOK_LEVEL_ID = 1
-look_start_id = int(os.environ.get("EYES_START_ID"))
+look_start_id = int(os.environ.get("EYES_START_ID", "0"))
 
 
 # Load in the EmoteLib from configurables
@@ -82,7 +88,7 @@ def check_emote_string():
     # Run through emotes, using OOP to only run one at a time (last = most prominent)
 
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]):
+        if cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not emote_list.__contains__(emote_page[1]):
             EMOTE_ID = emote_page[1]
             emote_list.append(emote_page[1])
 
@@ -109,7 +115,7 @@ def check_emote_string_streaming():
 
     # Check if there is an emote that we DON'T have in the streaming one!
     for emote_page in emote_lib:
-        if utils.cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]):
+        if cane_lib.keyword_check(clean_emote_text, emote_page[0]) and not streaming_emote_list.__contains__(emote_page[1]):
             emote_list.append(emote_page[1])
             streaming_emote_list.append(emote_page[1])
 
@@ -144,8 +150,8 @@ def run_emote(inlist_emote):
 
     try:
         asyncio.run(emote(inlist_emote))
-
-    except:
+    except Exception as e:
+        print(f"Error running VTube Studio emote {inlist_emote}: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest
@@ -213,8 +219,8 @@ def run_clear_look():
 
     try:
         asyncio.run(clear_look())
-
-    except:
+    except Exception as e:
+        print(f"Error clearing VTube Studio look: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest
@@ -224,8 +230,8 @@ def run_set_look():
 
     try:
         asyncio.run(set_look())
-
-    except:
+    except Exception as e:
+        print(f"Error setting VTube Studio look: {e}")
         time.sleep(0.002)
 
     # ^^^ Runs the emote, if there is an error allow a small rest

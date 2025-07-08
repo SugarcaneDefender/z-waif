@@ -1,24 +1,25 @@
 import time
+import threading
 
 import pyaudio
 import wave
 
 from pydub import AudioSegment
-import utils.hotkeys
+from utils import hotkeys
 import os, audioop
 
 import sounddevice as sd
 
-import utils.volume_listener
-import utils.transcriber_translate
-import utils.settings
-import utils.voice
+from utils import volume_listener
+from utils import transcriber_translate
+from utils import settings
+from utils import voice
 
 from silero_vad import load_silero_vad, read_audio, get_speech_timestamps
 
 CHUNK = 1024
-CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE")
-MAX_CHUNKS = int(os.environ.get("WHISPER_CHUNKS_MAX"))
+CHUNKY_TRANSCRIPTION_RATE = os.environ.get("WHISPER_CHUNKY_RATE", "1000")
+MAX_CHUNKS = int(os.environ.get("WHISPER_CHUNKS_MAX", "10"))
 
 FORMAT = pyaudio.paInt16
 
@@ -32,12 +33,64 @@ SAVE_PATH = os.path.join(current_directory, "resource", "voice_in", FILENAME)
 SAVE_PATH_ORDUS = os.path.join(current_directory, "resource", "voice_in", "interrupt_voice.wav")
 SAVE_PATH_VAD = os.path.join(current_directory, "resource", "voice_in", "vad_voice.wav")
 
+# Thread-safe global variables with locks
 chat_buffer_frames = []
+_chat_buffer_lock = threading.Lock()
 
 latest_chat_frame_count = 0
+_frame_count_lock = threading.Lock()
 
 vad_voice_detected = False
+_vad_lock = threading.Lock()
 
+# Thread-safe accessor functions
+def get_chat_buffer_frames():
+    """Thread-safe getter for chat buffer frames"""
+    with _chat_buffer_lock:
+        return chat_buffer_frames.copy()
+
+def set_chat_buffer_frames(frames):
+    """Thread-safe setter for chat buffer frames"""
+    with _chat_buffer_lock:
+        global chat_buffer_frames
+        chat_buffer_frames = frames
+
+def append_chat_buffer_frame(frame):
+    """Thread-safe append to chat buffer frames"""
+    with _chat_buffer_lock:
+        global chat_buffer_frames
+        chat_buffer_frames.append(frame)
+        # Clearing anything over the buffer
+        if len(chat_buffer_frames) > 91:
+            chat_buffer_frames.pop(0)
+
+def clear_chat_buffer_frames():
+    """Thread-safe clear of chat buffer frames"""
+    with _chat_buffer_lock:
+        global chat_buffer_frames
+        chat_buffer_frames = []
+
+def get_latest_chat_frame_count():
+    """Thread-safe getter for latest chat frame count"""
+    with _frame_count_lock:
+        return latest_chat_frame_count
+
+def set_latest_chat_frame_count(count):
+    """Thread-safe setter for latest chat frame count"""
+    with _frame_count_lock:
+        global latest_chat_frame_count
+        latest_chat_frame_count = count
+
+def get_vad_voice_detected():
+    """Thread-safe getter for VAD voice detection"""
+    with _vad_lock:
+        return vad_voice_detected
+
+def set_vad_voice_detected(detected):
+    """Thread-safe setter for VAD voice detection"""
+    with _vad_lock:
+        global vad_voice_detected
+        vad_voice_detected = detected
 
 def play_mp3(path, audio_level_callback=None):
     audio_file = AudioSegment.from_file(path, format="mp3")
@@ -105,7 +158,7 @@ def play_wav(path, audio_level_callback=None):
 
 def record():
     # Breaker for if we are doing chunky transcription, go do that instead!
-    if utils.transcriber_translate.CHUNKY_TRANSCRIPTION == "ON":
+    if transcriber_translate.CHUNKY_TRANSCRIPTION == "ON":
         return record_chunky()
 
     #
@@ -115,11 +168,11 @@ def record():
     frames = []
 
     # Check for if we want to add our audio buffer
-    global chat_buffer_frames
-    if len(chat_buffer_frames) > 1:
-        frames = chat_buffer_frames.copy()
+    buffer_frames = get_chat_buffer_frames()
+    if len(buffer_frames) > 1:
+        frames = buffer_frames
 
-    while utils.hotkeys.get_speak_input():
+    while hotkeys.get_speak_input():
         data = stream.read(CHUNK)
         frames.append(data)
 
@@ -141,8 +194,7 @@ def record():
     # play_wav(SAVE_PATH)
 
     # Write out our frame count
-    global latest_chat_frame_count
-    latest_chat_frame_count = len(frames)
+    set_latest_chat_frame_count(len(frames))
 
     return SAVE_PATH
 
@@ -152,9 +204,9 @@ def record_ordus():
     frames = []
 
     # Check for if we want to add our audio buffer
-    global chat_buffer_frames
-    if len(chat_buffer_frames) > 1:
-        frames = chat_buffer_frames.copy()
+    buffer_frames = get_chat_buffer_frames()
+    if len(buffer_frames) > 1:
+        frames = buffer_frames
 
     while len(frames) < 150:
         data = stream.read(CHUNK)
@@ -178,8 +230,7 @@ def record_ordus():
     # play_wav(SAVE_PATH)
 
     # Write out our frame count
-    global latest_chat_frame_count
-    latest_chat_frame_count = len(frames)
+    set_latest_chat_frame_count(len(frames))
 
     return SAVE_PATH_ORDUS
 
@@ -188,52 +239,80 @@ def record_ordus():
 def record_chunky():
     frames = []
     all_frames = []
-    utils.transcriber_translate.clear_transcription_chunks()    # Clear old chunks
+    transcriber_translate.clear_transcription_chunks()    # Clear old chunks
 
     # Check for if we want to add our audio buffer
-    global chat_buffer_frames
-    if len(chat_buffer_frames) > 1:
-        frames = chat_buffer_frames.copy()
+    buffer_frames = get_chat_buffer_frames()
+    if len(buffer_frames) > 1:
+        frames = buffer_frames
 
-    # Loop through until done recording, and limit it to X frames
-    while utils.hotkeys.get_speak_input() and (1 + len(utils.transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
+    # Initialize PyAudio once outside the loop for better resource management
+    p = None
+    stream = None
+    
+    try:
         p = pyaudio.PyAudio()
         stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        
+        # Loop through until done recording, and limit it to X frames
+        while hotkeys.get_speak_input() and (1 + len(transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
+            
+            # Record audio chunk
+            while len(frames) < int(CHUNKY_TRANSCRIPTION_RATE) and hotkeys.get_speak_input():
+                try:
+                    data = stream.read(CHUNK)
+                    frames.append(data)
+                    all_frames.append(data)
+                except Exception as e:
+                    print(f"Audio recording error in chunky mode: {e}")
+                    break
 
-        while len(frames) < int(CHUNKY_TRANSCRIPTION_RATE) and utils.hotkeys.get_speak_input():
-            data = stream.read(CHUNK)
-            frames.append(data)
-            all_frames.append(data)
+            # Wait for another opening to transcribe, we are still transcribing the last chunk!
+            # NOTE: If this happens to you, that is bad! It can't even keep up to realtime!
+            while transcriber_translate.chunky_request != None:
+                time.sleep(0.01)
 
-        # Wait for another opening to transcribe, we are still transcribing the last chunk!
-        # NOTE: If this happens to you, that is bad! It can't even keep up to realtime!
-        while utils.transcriber_translate.chunky_request != None:
-            time.sleep(0.01)
+            # Write the audio chunk to file
+            wf = None
+            try:
+                wf = wave.open(SAVE_PATH, 'wb')
+                wf.setnchannels(CHANNELS)
+                wf.setsampwidth(p.get_sample_size(FORMAT))
+                wf.setframerate(RATE)
+                wf.writeframes(b''.join(frames))
+            except Exception as e:
+                print(f"Error writing audio chunk: {e}")
+            finally:
+                if wf is not None:
+                    try:
+                        wf.close()
+                    except:
+                        pass
 
-        stream.stop_stream()
-        stream.close()
+            # Transcribe this chunk in another thread!
+            transcriber_translate.give_chunky_request(SAVE_PATH)
 
-        p.terminate()
+            # Clear frames for next loop (keep latest one for quality)
+            frames = [frames[-1]] if frames else []
 
-        wf = wave.open(SAVE_PATH, 'wb')
-
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-        wf.close()
-
-        # Transcribe this chunk in another thread!
-        utils.transcriber_translate.give_chunky_request(SAVE_PATH)
-
-        # Clear frames for next loop (keep latest one for quality)
-        frames = [frames[-1]]
-
-
+    except Exception as e:
+        print(f"Error in chunky recording: {e}")
+    finally:
+        # Always clean up audio resources
+        if stream is not None:
+            try:
+                stream.stop_stream()
+                stream.close()
+            except:
+                pass
+        if p is not None:
+            try:
+                p.terminate()
+            except:
+                pass
 
     # Write out our frame count
-    global latest_chat_frame_count
-    latest_chat_frame_count = len(all_frames)
+    set_latest_chat_frame_count(len(all_frames))
 
     return "CHUNKY" # faker so we have something for the return
 
@@ -241,40 +320,57 @@ def record_chunky():
 def autochat_audio_buffer_record():
 
     # Make sure we have an actual audio device, return otherwise
-    if utils.volume_listener.no_mic:
+    if volume_listener.no_mic:
         return
 
-    global chat_buffer_frames
+    # Main recording buffer with proper resource management
+    p = None
+    stream = None
+    
+    try:
+        p = pyaudio.PyAudio()
+        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
-    # Main recording buffer
-    p = pyaudio.PyAudio()
-    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        while True:
 
-    while True:
-
-        # If there is no autochat, or we are actively in the middle of a chat, clear it
-        if utils.hotkeys.get_autochat_toggle() == False:
-            time.sleep(0.002)     # Rest here a bit, no need to hotloop it
-            chat_buffer_frames = []
+            # If there is no autochat, or we are actively in the middle of a chat, clear it
+            if hotkeys.get_autochat_toggle() == False:
+                time.sleep(0.002)     # Rest here a bit, no need to hotloop it
+                clear_chat_buffer_frames()
 
 
-        # If there is autochat, and no active chat, record it
-        elif utils.hotkeys.get_autochat_toggle() == True:
+            # If there is autochat, and no active chat, record it
+            elif hotkeys.get_autochat_toggle() == True:
 
-            # Record
-            data = stream.read(CHUNK)
-            chat_buffer_frames.append(data)
-
-            # Clearing anything over the buffer
-            if len(chat_buffer_frames) > 91:
-                chat_buffer_frames.pop(0)
+                try:
+                    # Record
+                    data = stream.read(CHUNK)
+                    append_chat_buffer_frame(data)
+                except Exception as e:
+                    print(f"Audio buffer recording error: {e}")
+                    time.sleep(0.1)  # Brief pause on error
+                    
+    except Exception as e:
+        print(f"Failed to initialize audio buffer recording: {e}")
+    finally:
+        # Clean up audio resources
+        if stream is not None:
+            try:
+                stream.stop_stream()
+                stream.close()
+            except:
+                pass
+        if p is not None:
+            try:
+                p.terminate()
+            except:
+                pass
 
 def record_vad_loop():
-    global vad_voice_detected
     time.sleep(7)   # 7 second rest to ensure there is time to boot up
 
     # Close out if we are to not use Silero VAD
-    if utils.settings.use_silero_vad == False:
+    if settings.use_silero_vad == False:
         return
 
     #
@@ -282,50 +378,72 @@ def record_vad_loop():
     while True:
 
         # Breaker here to sleep if our VAD/Autochat/Whatever is not running
-        while utils.hotkeys.get_autochat_toggle() == False or utils.hotkeys.SPEAKING_TIMER_COOLDOWN > 0:
-            vad_voice_detected = False
+        while hotkeys.get_autochat_toggle() == False or hotkeys.SPEAKING_TIMER_COOLDOWN > 0:
+            set_vad_voice_detected(False)
             time.sleep(0.01)
 
+        p = None
+        stream = None
+        wf = None
+        
+        try:
+            p = pyaudio.PyAudio()
+            stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+            frames = []
+            vad_loop_frames_limit = 32
+            vad_loop_cur_frames = 0
 
-        p = pyaudio.PyAudio()
-        stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
-        frames = []
-        vad_loop_frames_limit = 32
-        vad_loop_cur_frames = 0
+            while vad_loop_cur_frames <= vad_loop_frames_limit:
+                data = stream.read(CHUNK)
+                frames.append(data)
+                vad_loop_cur_frames += 1
 
-        while vad_loop_cur_frames <= vad_loop_frames_limit:
-            data = stream.read(CHUNK)
-            frames.append(data)
-            vad_loop_cur_frames += 1
+            wf = wave.open(SAVE_PATH_VAD, 'wb')
+            wf.setnchannels(CHANNELS)
+            wf.setsampwidth(p.get_sample_size(FORMAT))
+            wf.setframerate(RATE)
+            wf.writeframes(b''.join(frames))
 
-        stream.stop_stream()
-        stream.close()
+            time.sleep(0.01)    # Rest to write the file and do system I/O (also slight delay)
 
-        p.terminate()
+            # Now that we have written, look for voice activity!
+            try:
+                model = load_silero_vad()
+                wav = read_audio(SAVE_PATH_VAD)
+                speech_timestamps = get_speech_timestamps(
+                    wav,
+                    model,
+                    return_seconds=True,  # Return speech timestamps in seconds (default is samples)
+                )
 
+                # If we have voice activity, flag it as valid
+                if len(speech_timestamps) > 0:
+                    set_vad_voice_detected(True)
+                else:
+                    set_vad_voice_detected(False)
+            except Exception as e:
+                print(f"VAD processing error: {e}")
+                set_vad_voice_detected(False)
 
-        wf = wave.open(SAVE_PATH_VAD, 'wb')
-
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-        wf.close()
-
-        time.sleep(0.01)    # Rest to write the file and do system I/O (also slight delay)
-
-        # Now that we have written, look for voice activity!
-        model = load_silero_vad()
-        wav = read_audio(SAVE_PATH_VAD)
-        speech_timestamps = get_speech_timestamps(
-            wav,
-            model,
-            return_seconds=True,  # Return speech timestamps in seconds (default is samples)
-        )
-
-        # If we have voice activity, flag it as valid
-        if len(speech_timestamps) > 0:
-            vad_voice_detected = True
-        else:
-            vad_voice_detected = False
+        except Exception as e:
+            print(f"Audio recording error in VAD loop: {e}")
+            set_vad_voice_detected(False)
+        finally:
+            # Always clean up resources
+            if stream is not None:
+                try:
+                    stream.stop_stream()
+                    stream.close()
+                except:
+                    pass
+            if p is not None:
+                try:
+                    p.terminate()
+                except:
+                    pass
+            if wf is not None:
+                try:
+                    wf.close()
+                except:
+                    pass
 

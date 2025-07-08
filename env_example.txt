@@ -1,0 +1,128 @@
+# Z-Waif Environment Configuration
+# Copy this file to .env and modify the values as needed
+
+# API Configuration
+HOST_PORT=127.0.0.1:5000
+API_TYPE=Oobabooga
+MODEL_TYPE=chatml
+OOGABOOGA_SUPPORT_HOST=127.0.0.1:5000
+TOKEN_LIMIT=4096
+MESSAGE_PAIR_LIMIT=40
+
+# Character Configuration
+CHAR_NAME=YourCharacterName
+PARTNER_NAME=PartnerName
+CHARACTER_CARD=
+YOUR_NAME=YourUsername
+CHARACTER_CONTEXT=You are a caring AI companion having a personal conversation. You are warm, friendly, and supportive. Focus on having meaningful one-on-one conversations. Never call yourself a bot, chatbot, assistant or AI. You are not streaming or talking to viewers - this is a private conversation.
+
+# Whisper/Audio Configuration
+WHISPER_MODEL=base.en
+WHISPER_CHOICE=faster-whisper
+WHISPER_CHUNKS_MAX=14
+WHISPER_CHUNKY_RATE=1000
+WHISPER_CHUNKY=OFF
+FASTER_WHISPER=OFF
+FASTER_WHISPER_CPU_TRANSCRIPTION=OFF
+
+# Module Toggles
+MODULE_MINECRAFT=OFF
+MODULE_ALARM=ON
+MODULE_VTUBE=OFF
+MODULE_DISCORD=OFF
+MODULE_TWITCH=ON
+MODULE_RAG=ON
+MODULE_VISUAL=OFF
+MODULE_GAMING=OFF
+
+# Audio Settings
+AUTOCHAT_MIN_LENGTH=10
+SILERO_VAD=ON
+
+# Boot Settings
+HOTKEYS_BOOT=OFF
+NEWLINE_CUT_BOOT=ON
+RP_SUP_BOOT=OFF
+API_STREAM_CHATS=OFF
+
+# Visual/VTube Configuration
+VTUBE_STUDIO_API_HOST=127.0.0.1
+EYES_START_ID=14
+EYES_FOLLOW=None
+IMG_PORT=127.0.0.1:5007
+IMG_SCALE=1.0
+
+# RVC Configuration
+USE_RVC=true
+RVC_HOST=127.0.0.1
+RVC_PORT=7897
+RVC_MODEL=default
+RVC_SPEAKER=0
+RVC_PITCH=0.0
+RVC_SPEED=1.0
+
+# Model Configuration
+MODEL_NAME=Noromaid-7B-0.4-DPO
+MODEL_TEMPLATE=chatml
+
+# Time Encoding
+TIME_IN_ENCODING=OFF
+
+# Visual Configuration
+VISUAL_CHARACTER_NAME=Z-WAIF-VisualAssist
+VISUAL_PRESET_NAME=Z-WAIF-VisualPreset
+OLLAMA_VISUAL_ENCODE_GUIDANCE=Describe what you see in detail
+OLLAMA_VISUAL_CARD=You are a helpful visual assistant
+
+# Ollama Configuration
+ZW_OLLAMA_MODEL=llama2
+ZW_OLLAMA_MODEL_VISUAL=llava
+
+# Twitch Configuration
+# Option 1: Personal Channel (Simple Setup - Recommended)
+TWITCH_TOKEN=your_twitch_oauth_token_here
+TWITCH_CHANNEL=your_channel_name
+TWITCH_BOT_NAME=z_waif_bot
+
+# Option 2: Multiple Channels (Use instead of TWITCH_CHANNEL)
+# TWITCH_CHANNELS=channel1,channel2,channel3
+
+# Option 3: Full Bot App (Advanced - only if using dedicated bot application)
+# TWITCH_CLIENT_ID=your_twitch_client_id_here
+# TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
+
+# Twitch Bot Behavior (Optional - has sensible defaults)
+TWITCH_PERSONALITY=friendly
+TWITCH_AUTO_RESPOND=ON
+TWITCH_RESPONSE_CHANCE=0.8
+TWITCH_COOLDOWN_SECONDS=3
+TWITCH_MAX_MESSAGE_LENGTH=450
+
+# Discord Configuration
+DISCORD_TOKEN=your_discord_bot_token_here
+# Note: For Discord voice support, ensure PyNaCl is installed: pip install PyNaCl
+
+# Additional Configuration
+VTUBE_MODEL_NAME=YourVTubeModel
+VTUBE_FACE_TRACKING=ON
+VTUBE_VIRTUAL_CAMERA=VirtualCameraName
+VTUBE_AVATAR_MODE=UNITY
+
+MODULE_UNITY_AVATAR=ON
+MODULE_REALTIME_AVATAR=ON
+UNITY_AVATAR_QUALITY=HIGH
+UNITY_AVATAR_FPS=30
+UNITY_AVATAR_FALLBACK=AUTO
+
+EMOTION_ANALYSIS_ENABLED=ON
+EMOTION_INTENSITY_SCALING=1.0
+REALTIME_EMOTION_SYNC=ON
+AVATAR_EMOTION_MAPPING=ADVANCED
+
+AVATAR_RENDER_QUALITY=HIGH
+AVATAR_CONTINUOUS_MODE=ON
+VIRTUAL_CAMERA_BACKEND=unitycapture
+AVATAR_AUTO_RESTART=ON
+
+MEMORY_CLEANUP_FREQUENCY=60
+MEMORY_PERSISTENCE=ON 

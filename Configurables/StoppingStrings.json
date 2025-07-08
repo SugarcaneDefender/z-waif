@@ -1,7 +1,10 @@
 [
 	"[System", 
+	"[SYSTEM", 
+	"[End",
+	"[END",
 	"\nUser:", 
-	"---", 
-	"<|", 
-	"###"
+	"\nHuman:",
+	"</s>",
+	"<|im_end|>"
 ]

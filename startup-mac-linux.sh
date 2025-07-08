@@ -20,7 +20,7 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         --update-pip)
-            export UPDATE_PIP=1
+            export UPDATE=1
             shift
             ;;
         --keep-logs)
@@ -52,7 +52,7 @@ if [[ -z "$PY" ]]; then
     export PY="python3.11"
 fi
 # Python version
-PYTHON_VERSION=$($PY --version)
+PYTHON_VERSION="$($PY --version)"
 if [[ -z "$PYTHON_VERSION" ]]; then
     echo "Python is not installed or not found in PATH."
     exit 1
@@ -64,7 +64,26 @@ PYTHON_VERSION=$(echo "$PYTHON_VERSION" | grep "\\..*\\." | cut -d "." -f 2)
 
 # Check python version
 if [[ "$PYTHON_VERSION" != "11" ]]; then    
-    echo "Please use Python 3.11."
+    echo "Please use Python 3.11 (found: $PYTHON_VERSION)."
+    exit 1
+fi
+
+# Check for existence of PortAudio
+export LIBS="/lib:/lib64:/usr/lib:/usr/lib64:/usr/libexec:/usr/include"
+if [[ ! -z "$LD_LIBRARY_PATH" ]]; then
+    export LIBS="$LIBS:$LD_LIBRARY_PATH"
+fi
+# what the hell, bash
+printf %s "$LIBS" | while IFS= read -rd: dir || [ -n "$dir" ]; do
+    # echo DEBUG: Checking $dir
+    if [[ -f "$dir/libportaudio.so" ]]; then
+        # Throw an error, i guess?
+        exit 1
+    fi
+done
+if [[ "$?" != "1" && -z "$SKIP_PORT_AUDIO_CHECK" ]]; then
+    echo "ERROR: PortAudio could not be located on your machine. "
+    echo "       Please install the relevant portaudio package first."
     exit 1
 fi
 
@@ -76,6 +95,10 @@ if [[ -z "$LOG_FILE" ]]; then
 fi
 # Move into the script dir
 cd "$SCRIPT_DIR"
+# Make a .env file if it doesn't exist
+if [[ ! -f ".env" ]]; then
+    cp .env.example .env
+fi
 # Regenerate the log file if it doesn't exist
 if [[ "$KEEP_LOGS" != "1" ]]; then
     # Remove the log file if it exists
@@ -87,9 +110,9 @@ if [[ ! -f "$LOG_FILE" ]]; then
     # Create the log file if it doesn't exist
     touch "$LOG_FILE"
     if [[ "$KEEP_LOGS" != "1" ]]; then
-        echo "Regenerating log file..."
+        echo "Regenerating log file..." | tee -a "$LOG_FILE"
     else 
-        echo "Log file not found, creating one at $LOG_FILE!"
+        echo "Log file not found, creating one at $LOG_FILE!" | tee -a "$LOG_FILE"
     fi
 fi
 # Put the python version into the log file
@@ -102,8 +125,8 @@ fi
 # Python venv
 if [[ ! -d "venv" ]]; then
     # First install
-    echo "Creating venv..."
-    $PY -m venv venv
+    echo "Creating venv..." | tee -a "$LOG_FILE"
+    $PY -m venv venv | tee -a "$LOG_FILE"
     export REINSTALL=1
 fi
 # Load the venv
@@ -111,15 +134,17 @@ source ./venv/bin/activate
 
 # Run the script with --update-pip ./startup.sh to update pip
 if [[ "$UPDATE" == "1" || "$REINSTALL" == "1" ]]; then
-    echo "Updating..."
-    $PY -m pip install --upgrade pip
+    echo "Updating..." | tee -a "$LOG_FILE"
+    $PY -m pip install --upgrade pip | tee -a "$LOG_FILE"
+    # Other requirements have been moved to requirements.txt
+
     # Install PyTorch, torchvision, and torchaudio from a specific index URL
-    $PY -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 >> "$LOG_FILE"
+    # $PY -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 >> "$LOG_FILE"
     # Install openai-whisper from the GitHub repository
-    $PY -m pip install git+https://github.com/openai/whisper.git >> "$LOG_FILE"
+    # $PY -m pip install git+https://github.com/openai/whisper.git >> "$LOG_FILE"
     # Other deps
     # $PY -m pip install -U pywin32 >> "$LOG_FILE"
-    $PY -m pip install -r requirements.txt >> "$LOG_FILE"
+    $PY -m pip install -r requirements.txt | tee -a "$LOG_FILE"
 fi
 
 
@@ -128,12 +153,12 @@ if [[ -z "$MAIN_FILE" ]]; then
     export MAIN_FILE="main.py"
 fi
 # Run the main file
-echo "Running $MAIN_FILE..."
-$PY "$MAIN_FILE" >> "$LOG_FILE"
-echo "Done running $MAIN_FILE!"
+echo "Running $MAIN_FILE..." | tee -a "$LOG_FILE"
+$PY "$MAIN_FILE" | tee -a "$LOG_FILE"
+echo "Done running $MAIN_FILE!" | tee -a "$LOG_FILE"
 # Error handling
-echo Z-Waif has stopped running! Likely from an error causing a crash...
-echo See the log.txt file for more info!
+echo Z-Waif has stopped running! Likely from an error causing a crash... | tee -a "$LOG_FILE"
+echo See the log.txt file for more info! | tee -a "$LOG_FILE"
 # Deactivate venv
 deactivate
 # Pause the script
