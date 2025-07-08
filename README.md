@@ -67,6 +67,29 @@ For nix users, you can also use the nix flake to grab the os dependencies, then 
 
 ## Recent Changelog
 
+v1.14-R3
+
+- Fixed Auto-Chat Toggle Issues
+	- Fixed web UI autochat toggle not working properly
+	- Auto-chat now automatically enables microphone when activated
+	- Improved autochat state synchronization between UI and backend
+	- Added proper validation for autochat sensitivity settings
+	- Fixed autochat sensitivity slider not reflecting current value on startup
+
+- Reduced Auto-Chat Response Delays
+	- Reduced default autochat minimum length from 400 to 100 frames (~1.25 seconds instead of 5 seconds)
+	- This eliminates the long pauses between sentences in autochat mode
+	- Users can still adjust AUTOCHAT_MIN_LENGTH in environment variables if needed
+	- Improved responsiveness for more natural conversation flow
+
+- Enhanced Hotkey System
+	- Fixed sensitivity initialization to properly read from environment variables
+	- Added range validation for sensitivity settings (4-144)
+	- Improved error handling for invalid sensitivity values
+	- Better feedback when changing sensitivity settings
+
+---.---.---.---
+
 v1.14-R2
 
 - Fixed the Web UI port back to using port 7864
