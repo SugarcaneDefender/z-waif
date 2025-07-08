@@ -60,22 +60,102 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.13
+v1.14
 
-- Added API_TYPE_VISUAL in the .env
-	- Allows you to use a different API for your visual requests.
-	- Mostly so you can use Oobabooga as the main, and Ollama as a visual assistant.
+- Complete Twitch Integration System
+	- Full Twitch bot integration with main Z-WAIF application
+	- Support for both single and multiple Twitch channels
+	- Personal channel setup (simple OAuth token) and advanced bot application setup
+	- Platform-aware messaging that adapts responses for Twitch chat context
+	- Automatic removal of streaming-specific language for personal conversations
+	- Enhanced user context and relationship tracking for Twitch users
+	- Built-in safety filtering and spam prevention
+	- Smart response control with configurable response chance and cooldowns
+	- Comprehensive test suite (test_twitch_bot.py) for setup validation
+	- Detailed setup guide (twitch_setup_guide.md) with troubleshooting
 
-- Added Chatpops
-	- Small phrases said before saying their actual message, as the prompt evaluates.
-	- Lowers perceived response time, and let you know that they are responding.
-	- Only works with API_STREAM messages.
-	- Configurable.
+- Enhanced AI Handler System
+	- New AIHandler class for centralized AI response management
+	- Contextual chatpops that adapt based on platform and conversation context
+	- Response caching system to improve performance and reduce API calls
+	- Platform-specific response cleaning and formatting
+	- Personality-based response generation with multiple personality types
+	- Enhanced prompt formatting with relationship and context awareness
 
-- Adjusted the RAG to be faster by storing fewer common words, and by tending to provide shorter memories.
-- Updated requirements.
-- Chat requests that come back blank now add in a " Hmm." at the end of the message.
-	- This is to fix issues with streaming_lm and other issues where repeating the prompt causes soft failures.
+- Advanced User Relationship Management
+	- New user_relationships.py module for tracking user relationships
+	- Dynamic relationship progression system (stranger → acquaintance → friend → close_friend → vip)
+	- Personality trait tracking and analysis
+	- Relationship-based response customization
+	- Automatic relationship level calculation based on interaction patterns
+	- Support for positive/negative interaction tracking
+
+- Comprehensive User Context System
+	- New user_context.py module for storing user preferences and history
+	- Interest tracking and topic analysis
+	- User engagement level monitoring
+	- Platform-specific user data management
+	- Automatic user statistics and analytics
+	- Cleanup system for inactive users
+
+- Platform-Separated Chat History
+	- New chat_history.py module for managing conversation history by platform
+	- Separate conversation tracking for Twitch, Discord, Web UI, Voice, etc.
+	- Automatic history cleanup and management
+	- Conversation summary generation
+	- Topic extraction from conversation history
+	- Platform-specific statistics and analytics
+
+- Enhanced Conversation Analysis
+	- New conversation_analysis.py module for message analysis
+	- Tone and sentiment analysis
+	- Formality level detection
+	- Context and topic extraction
+	- Conversation style classification
+	- Memory requirement detection
+
+- Improved API Integration
+	- Enhanced Oobabooga API with better error handling and retry logic
+	- Persistent HTTP sessions with connection pooling
+	- Improved request formatting and response processing
+	- Better formal language detection and replacement
+	- Enhanced platform context awareness in API calls
+	- Fixed scope issues with regex imports
+
+- Memory Management Improvements
+	- New MemoryManager class for better memory organization
+	- Enhanced RAG integration with user-specific memories
+	- Better memory retrieval and relevance scoring
+	- Improved memory cleanup and maintenance
+
+- System Check and Testing
+	- New system_check.py for comprehensive system validation
+	- Enhanced feature testing for new AI capabilities
+	- Better error detection and reporting
+	- Integration testing for new modules
+
+- Development Environment Improvements
+	- Added Nix flake support for development environment
+	- Enhanced startup scripts with better error handling
+	- Automatic .env file creation from .env.example
+	- Improved pip installation with retry logic
+	- Better dependency management with requirements.txt consolidation
+	- Enhanced logging and debugging capabilities
+
+- Configuration Enhancements
+	- New configuration files for user relationships and contexts
+	- Enhanced chat history management
+	- Better platform-specific settings
+	- Improved configuration validation
+	- Updated environment example with Twitch configuration options
+
+- Bug Fixes and Improvements
+	- Fixed regex import scope issues in API modules
+	- Improved error handling throughout the system
+	- Better logging and debugging capabilities
+	- Enhanced performance with connection pooling
+	- Fixed various memory leaks and resource management issues
+	- Improved startup script reliability and error recovery
 
 
 ## To-Do
