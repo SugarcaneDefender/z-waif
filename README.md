@@ -67,6 +67,38 @@ For nix users, you can also use the nix flake to grab the os dependencies, then 
 
 ## Recent Changelog
 
+v1.14-R2
+
+- Fixed the Web UI port back to using port 7864
+
+- Enhanced Volume Listener System
+	- Improved volume detection and audio processing for better autochat performance
+	- Enhanced sensitivity controls and audio buffer management
+	- Better handling of different audio input sources and microphone configurations
+	- Reduced false triggers and improved response accuracy
+
+- Improved Hotkey System
+	- Enhanced hotkey binding and management for better user control
+	- Improved keyboard input handling and response times
+	- Better integration with gaming controls and VTuber emotes
+	- Fixed hotkey conflicts and improved reliability
+
+- Character Card System Update
+	- IMPORTANT: Use the built-in character card system instead of Oobabooga character cards
+	- The in-house character card system provides better integration and consistency
+	- Oobabooga character cards may cause compatibility issues and reduced functionality
+	- Configure character settings through the Configurables/CharacterCard.yaml file
+	- Updated character card to be more personal and casual, avoiding formal language
+	- Reduced aggressiveness of formal language detection to prevent false positives
+	- Fixed issue where legitimate responses were being replaced with generic fallbacks
+
+- Bug Fixes and Improvements
+	- Fixed various audio processing issues
+	- Improved system stability and performance
+	- Enhanced error handling and user feedback
+
+---.---.---.---
+
 v1.14
 
 - Complete Twitch Integration System
