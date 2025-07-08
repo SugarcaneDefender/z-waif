@@ -49,11 +49,18 @@ If you need help / assistance, please submit a GitHub issue, or feel free to ema
 
 Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I have also set up [a small Discord](https://discord.gg/XDWsAyVasH) for community members to chat as well.
 
+### Running on Mac/Linux
+Z-Waif supports both Mac and Linux using the ollama backend. You can clone the repo, then run the `./startup.sh` script. For more options, try `./startup.sh --help`. You need `glibc`, `portaudio`, `python3.11`, and `libglvnd` installed and on your PATH.
+
+If you need support on Mac or Linux, ask around in the Discord. However you are expected to be able to solve basic problems (i.e. installing the right version of python) yourself.
+
+For nix users, you can also use the nix flake to grab the os dependencies, then use the `startup.sh` script like usual.
+
 ## Diaspora
 #### The Original:
 [TumblerWarren/Virtual_Avatar_ChatBot](https://github.com/TumblerWarren/Virtual_Avatar_ChatBot), this is the original project that this code is spun-off of. Full credit to that project - it provided the skeleton for the many advancements now in place. It has more of a focus on non-local AI, if that is what you need.
 #### Branches & Versions:
-[Drakkadakka/z-waif-experimental-](https://github.com/Drakkadakka/z-waif-experimental-), offers a few upgrades; namely Twitch chat & streaming support, as well as a few other enhancements.
+<!-- [Drakkadakka/z-waif-experimental-](https://github.com/Drakkadakka/z-waif-experimental-), offers a few upgrades; namely Twitch chat & streaming support, as well as a few other enhancements. -->
 
 [MaolinkLife/z-waif-ru-adaptation](https://github.com/MaolinkLife/z-waif-ru-adaptation/tree/z-waif-ru-adaptation-dev), offers Russian language support, lighter-weight edge-tts, lorebook enhancements, ect.
 
