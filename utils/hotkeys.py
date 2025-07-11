@@ -15,6 +15,9 @@ from utils import settings
 from utils import volume_listener
 from utils import zw_logging
 
+# Add missing constants referenced by volume_listener
+SPEAKING_VOLUME_THRESHOLD = getattr(volume_listener, 'SPEAKING_VOLUME_THRESHOLD', 35.0)
+SPEAKING_TIMER_MAX = getattr(volume_listener, 'SPEAKING_TIMER_MAX', 50)
 
 RATE_PRESSED = False
 
@@ -69,15 +72,16 @@ BLANK_MESSAGE_PRESSED = False
 # keyboard.on_press_key("B", lambda _:input_send_blank())
 
 def load_hotkey_bootstate():
+    """Initialize hotkey state at boot"""
+    HOTKEYS_BOOT = os.environ.get("HOTKEYS_BOOT", "OFF")
 
-    HOTKEYS_BOOT = os.environ.get("HOTKEYS_BOOT")
-
-    if HOTKEYS_BOOT == "ON":
-        settings.hotkeys_locked = False
-
-    if HOTKEYS_BOOT == "OFF":
+    # Default to locked (OFF) unless explicitly set to ON
+    if HOTKEYS_BOOT != "ON":
         settings.hotkeys_locked = True
-        print("\nInput System Lock Set To " + str(settings.hotkeys_locked) + " !")
+        print("\nHotkeys disabled by default (HOTKEYS_BOOT is not ON)")
+    else:
+        settings.hotkeys_locked = False
+        print("\nHotkeys enabled (HOTKEYS_BOOT is ON)")
 
     # Also bind all of our needed hotkeys at this point
     bind_all_hotkeys()
@@ -200,7 +204,12 @@ def speak_input_toggle():
     if settings.hotkeys_locked:
         return
 
-    global SPEAK_TOGGLED
+    global SPEAK_TOGGLED, FULL_AUTO_TOGGLED
+
+    # If autochat is enabled, warn the user
+    if FULL_AUTO_TOGGLED:
+        print("Warning: Auto-Chat is enabled. Manual mic toggle may not work as expected.")
+        print("Consider disabling Auto-Chat first for manual mic control.")
 
     SPEAK_TOGGLED = not SPEAK_TOGGLED
     
@@ -211,7 +220,12 @@ def speak_input_toggle():
         print("Microphone Recording toggled OFF")
 
 def speak_input_toggle_from_ui():
-    global SPEAK_TOGGLED
+    global SPEAK_TOGGLED, FULL_AUTO_TOGGLED
+
+    # If autochat is enabled, warn the user
+    if FULL_AUTO_TOGGLED:
+        print("Warning: Auto-Chat is enabled. Manual mic toggle may not work as expected.")
+        print("Consider disabling Auto-Chat first for manual mic control.")
 
     SPEAK_TOGGLED = not SPEAK_TOGGLED
     
@@ -317,7 +331,7 @@ def input_toggle_autochat():
 
 
 def input_toggle_autochat_from_ui():
-    global FULL_AUTO_TOGGLED
+    global FULL_AUTO_TOGGLED, SPEAK_TOGGLED
 
     # Don't allow autochat in hangout mode
     if settings.hangout_mode:
@@ -330,22 +344,38 @@ def input_toggle_autochat_from_ui():
     if FULL_AUTO_TOGGLED:
         print("Auto-Chat toggled ON (Web UI)")
         # Ensure mic is also toggled on for autochat to work
-        global SPEAK_TOGGLED
         if not SPEAK_TOGGLED:
             SPEAK_TOGGLED = True
             print("Microphone automatically enabled for Auto-Chat")
+        else:
+            print("Microphone already enabled for Auto-Chat")
     else:
         print("Auto-Chat toggled OFF (Web UI)")
+        # Keep mic state as-is when disabling autochat
+        # User can manually control mic now
+        print("Microphone state preserved - you can control it manually")
 
 
 def disable_autochat():
     global FULL_AUTO_TOGGLED
 
     FULL_AUTO_TOGGLED = False
+    print("Auto-Chat disabled")
+
+def reset_mic_state():
+    """Reset microphone state - useful for troubleshooting"""
+    global SPEAK_TOGGLED
+    
+    SPEAK_TOGGLED = False
+    print("Microphone state reset to OFF")
+    
+    # Also disable autochat to prevent conflicts
+    if FULL_AUTO_TOGGLED:
+        FULL_AUTO_TOGGLED = False
+        print("Auto-Chat also disabled to prevent conflicts")
 
 def get_autochat_sensitivity():
-    global SPEAKING_VOLUME_SENSITIVITY
-    return SPEAKING_VOLUME_SENSITIVITY
+    return settings.AUTOCHAT_SENSITIVITY
 
 
 def input_change_listener_sensitivity():
@@ -358,13 +388,12 @@ def input_change_listener_sensitivity():
 
 
 def input_change_listener_sensitivity_from_ui(sensitivity_level):
-    global SPEAKING_VOLUME_SENSITIVITY
-
     # Ensure sensitivity is within valid range (4-144)
     if isinstance(sensitivity_level, (int, float)):
         sensitivity_level = max(4, min(144, int(sensitivity_level)))
-        SPEAKING_VOLUME_SENSITIVITY = sensitivity_level
-        print(f"Auto-Chat sensitivity changed to: {sensitivity_level}")
+        settings.AUTOCHAT_SENSITIVITY = sensitivity_level
+        settings.update_env_autochat_sensitivity(sensitivity_level)
+        print(f"Auto-Chat sensitivity changed to: {sensitivity_level} (saved to .env)")
     else:
         print(f"Invalid sensitivity level: {sensitivity_level}")
 
@@ -417,21 +446,13 @@ def get_command_nonblocking():
     if alarm.alarm_check():
         return "ALARM"
 
-    # Check for autochat
-    if FULL_AUTO_TOGGLED and SPEAK_TOGGLED and volume_listener.VAD_RESULT:
-        return "CHAT"
-
-    # Check for standard hotkeys
+    # Check for standard hotkeys first (these should take priority)
     if NEXT_PRESSED:
         NEXT_PRESSED = False
         return "NEXT"
     if REDO_PRESSED:
         REDO_PRESSED = False
         return "REDO"
-    if SPEAK_TOGGLED:
-        # This is a special case. We don't want to consume the toggle,
-        # just report that it's active. The main loop will handle the rest.
-        return "CHAT"
     if SOFT_RESET_PRESSED:
         SOFT_RESET_PRESSED = False
         return "SOFT_RESET"
@@ -441,6 +462,17 @@ def get_command_nonblocking():
     if BLANK_MESSAGE_PRESSED:
         BLANK_MESSAGE_PRESSED = False
         return "BLANK"
+    
+    # Check for autochat - this should take priority over manual mic toggle
+    if FULL_AUTO_TOGGLED and SPEAK_TOGGLED and volume_listener.VAD_RESULT:
+        return "CHAT"
+    
+    # Check for manual mic toggle - only if autochat is OFF
+    if SPEAK_TOGGLED and not FULL_AUTO_TOGGLED:
+        # This is a special case. We don't want to consume the toggle,
+        # just report that it's active. The main loop will handle the rest.
+        return "CHAT"
+    
     if settings.hangout_mode:
         # Similar to SPEAK_TOGGLED, we just report the mode is active.
         return "Hangout"
@@ -448,20 +480,24 @@ def get_command_nonblocking():
     return None
 
 def stack_wipe_inputs():
-
+    """Clear temporary hotkey states but preserve autochat-related states"""
     global NEXT_PRESSED
     global REDO_PRESSED
-    global SPEAK_TOGGLED
     global SOFT_RESET_PRESSED
     global VIEW_IMAGE_PRESSED
     global BLANK_MESSAGE_PRESSED
 
     NEXT_PRESSED = False
     REDO_PRESSED = False
-    SPEAK_TOGGLED = False
     SOFT_RESET_PRESSED = False
     VIEW_IMAGE_PRESSED = False
     BLANK_MESSAGE_PRESSED = False
+    
+    # Don't clear SPEAK_TOGGLED if autochat is enabled
+    # This prevents autochat from being disabled after each chat
+    if not FULL_AUTO_TOGGLED:
+        global SPEAK_TOGGLED
+        SPEAK_TOGGLED = False
 
 
 def input_soft_reset():
@@ -486,13 +522,12 @@ def listener_timer():
     global SPEAKING_TIMER_COOLDOWN
     global FULL_AUTO_TOGGLED
     global SPEAKING_VOLUME_SENSITIVITY_PRESSED
-    global SPEAKING_VOLUME_SENSITIVITY
 
     while True:
 
         # Update volume_listener states
         volume_listener.update_vad_result()
-        volume_listener.update_speaking_state()
+        # volume_listener.update_speaking_state()  # Disabled: function does not exist
 
         # Check for sensitivity button, start a listener if so
         if SPEAKING_VOLUME_SENSITIVITY_PRESSED:
@@ -531,7 +566,6 @@ def cooldown_listener_timer():
 
 
 def get_sensitivity_input():
-    global SPEAKING_VOLUME_SENSITIVITY
     from utils import console_input
 
     print("\n\nPlease enter a new sensitivity value! (1-200)")
@@ -550,7 +584,7 @@ def get_sensitivity_input():
                 if new_sens > 200:
                     new_sens = 200
 
-                SPEAKING_VOLUME_SENSITIVITY = new_sens
+                settings.AUTOCHAT_SENSITIVITY = new_sens
                 print(f"Sensitivity set to {new_sens}!")
                 return
             except ValueError:

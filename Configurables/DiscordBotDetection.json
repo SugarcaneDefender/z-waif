@@ -1,0 +1,39 @@
+{
+  "bot_detection_enabled": true,
+  "bot_flags": [
+    "bot", "ai", "assistant", "helper", "automated", "auto", "chatbot", "waifu", "waif",
+    "gpt", "claude", "bard", "copilot", "siri", "alexa", "cortana", "z-waif", "zwaif"
+  ],
+  "ai_indicators": [
+    "as an ai", "as an assistant", "i am an ai", "i am a bot", "i am an assistant",
+    "language model", "ai assistant", "artificial intelligence", "machine learning",
+    "trained on", "my training", "my knowledge", "my capabilities", "i cannot",
+    "i am not able", "i do not have", "i don't have access", "i am designed",
+    "my purpose is", "my function is", "i am programmed", "my programming"
+  ],
+  "bot_names": [
+    "bot", "ai", "assistant", "helper", "automated", "auto", "chatbot", "waifu", "waif",
+    "gpt", "claude", "bard", "copilot", "siri", "alexa", "cortana", "z-waif", "zwaif",
+    "chatgpt", "openai", "anthropic", "google", "microsoft", "amazon", "apple"
+  ],
+  "ignored_users": [
+    "your_bot_name_here",
+    "another_bot_to_ignore"
+  ],
+  "ignored_channels": [
+    "bot-testing",
+    "ai-chat"
+  ],
+  "detection_settings": {
+    "check_username": true,
+    "check_display_name": true,
+    "check_message_content": true,
+    "check_message_patterns": true,
+    "check_message_length": true,
+    "check_repetitive_words": true,
+    "min_message_length": 3,
+    "max_message_length": 2000,
+    "max_word_repetition": 3,
+    "max_words_for_repetition_check": 20
+  }
+} 

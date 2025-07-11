@@ -2,6 +2,14 @@ import threading
 import queue
 import sys
 
+# Ensure UTF-8 encoding for output
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+
+# Define border character and line
+BORDER_CHAR = "═"
+BORDER_LINE = BORDER_CHAR * 79
+
 # Thread-safe queue for incoming console lines
 _input_queue: "queue.Queue[str]" = queue.Queue()
 _print_queue: "queue.Queue[str]" = queue.Queue()
@@ -33,7 +41,13 @@ def _process_print_queue():
             message = _print_queue.get_nowait()
             # Clear the current line, print the message, and redraw the prompt
             sys.stdout.write(f"\r{' ' * 100}\r")  # Clear line (increased space)
+            sys.stdout.write(f"\n{BORDER_LINE}\n")
+            sys.stdout.write("                                 Z-WAIF")
+            sys.stdout.write(f"\n{BORDER_LINE}\n")
             sys.stdout.write(f"{message}\n")
+            sys.stdout.write(f"\n{BORDER_LINE}\n")
+            sys.stdout.write("                                    Me")
+            sys.stdout.write(f"\n{BORDER_LINE}\n")
             sys.stdout.write(f"You > {_current_input}")
             sys.stdout.flush()
         except queue.Empty:
@@ -46,12 +60,18 @@ def update_input_display(text=""):
     _current_input = text
     # Clear current line and redraw prompt with input
     sys.stdout.write(f"\r{' ' * 100}\r")  # Clear line
+    sys.stdout.write(f"\n{BORDER_LINE}\n")
+    sys.stdout.write("                                    Me")
+    sys.stdout.write(f"\n{BORDER_LINE}\n")
     sys.stdout.write(f"You > {_current_input}")
     sys.stdout.flush()
 
 
 def show_prompt():
     """Show the input prompt"""
+    sys.stdout.write(f"\n{BORDER_LINE}\n")
+    sys.stdout.write("                                    Me")
+    sys.stdout.write(f"\n{BORDER_LINE}\n")
     sys.stdout.write("You > ")
     sys.stdout.flush()
 

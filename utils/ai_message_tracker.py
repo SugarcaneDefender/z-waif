@@ -1,6 +1,8 @@
 import time
 from typing import Any, Dict, Optional, Set, Tuple
 from datetime import datetime, timedelta
+from utils import settings
+from utils.formal_filter import is_formal_response
 
 # Track recent AI messages to prevent self-response loops
 recent_ai_messages: Dict[str, Set[str]] = (
@@ -111,7 +113,12 @@ def is_likely_ai_message(content: str) -> bool:
         if pattern in content_lower:
             return True
 
-    # Check for excessive politeness or formal language (potential AI indicators)
+    # Check for excessive politeness or formal language using configurable filter
+    config = settings.get_formal_filter_config()
+    if is_formal_response(content_lower, config):
+        return True
+    
+    # Additional formal indicators specific to AI detection
     formal_indicators = [
         "please feel free to",
         "i'd be happy to",

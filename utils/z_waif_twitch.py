@@ -24,7 +24,7 @@ from utils.message_processing import clean_response, validate_message_safety, ad
 from utils.ai_message_tracker import should_ai_respond, record_ai_message
 from utils.user_relationships import (
     add_relationship_context_to_response,
-    get_relationship_level,
+    get_user_relationship_level,
     update_relationship,
     get_relationship_data,
     format_message_with_relationship,
@@ -197,125 +197,58 @@ class TwitchBot(commands.Bot):
             except Exception as e:
                 log_error(f"Error handling commands: {e}")
             
-            # Skip if message is a command (commands are handled above)
+            # Skip if message is a command
             if content.startswith('!'):
-                print(f"[TWITCH] Skipping command message: {content}")
+                return
+
+            # Check shadow chat settings
+            if not settings.speak_shadowchats and not content.lower().startswith(settings.char_name.lower()):
+                print(f"[TWITCH] Skipping message due to shadow chat settings")
+                return
+
+            # Check speak only when spoken to
+            if settings.speak_only_spokento and not content.lower().startswith(settings.char_name.lower()):
+                print(f"[TWITCH] Skipping message - not spoken to directly")
                 return
                 
-            # AI-powered spam/safety filtering
+            # Format message with platform context
+            platform_message = f"[Platform: Twitch Chat] {content}"
+            
+            # Send through main system with platform context
             try:
-                is_safe, safety_reason = validate_message_safety(content, "twitch")
-                if not is_safe:
-                    log_info(f"Filtered unsafe message from {username}: {content} - Reason: {safety_reason}")
-                    return
-            except Exception as e:
-                log_error(f"Error in safety validation: {e}")
-                # Continue processing on safety validation error
+                import main
+                clean_reply = main.send_platform_aware_message(platform_message, platform="twitch")
                 
-            # AI message tracking to prevent loops
-            try:
-                should_respond = should_ai_respond(content, "twitch", channel)
-                print(f"[TWITCH] AI response tracking result: {should_respond}")
-                if not should_respond:
-                    log_info(f"AI determined not to respond to: {content}")
-                    return
+                if clean_reply and clean_reply.strip():
+                    # Log the interaction to chat history
+                    try:
+                        from utils.chat_history import add_message_to_history
+                        add_message_to_history(user_id, "user", content, "twitch", {
+                            "username": username,
+                            "channel": channel
+                        })
+                        add_message_to_history(user_id, "assistant", clean_reply, "twitch")
+                    except Exception as e:
+                        log_error(f"Could not log to chat history: {e}")
+                    
+                    # Send the response
+                    await message.channel.send(clean_reply)
+                    print(f"[TWITCH] Sent response to {username}: {clean_reply}")
+                    
+                    # Handle voice if enabled
+                    if settings.speak_shadowchats and not settings.stream_chats:
+                        main.main_message_speak()
+                        
             except Exception as e:
-                log_error(f"Error in AI response tracking: {e}")
-                print(f"[TWITCH] Continuing despite AI tracking error: {e}")
+                log_error(f"Error processing Twitch message: {e}")
+                await message.channel.send("Sorry, I'm having trouble processing messages right now.")
                 
-            # Auto-respond check with personality-based chance
-            auto_respond_decision = self.auto_respond and random.random() <= self.response_chance
-            print(f"[TWITCH] Auto-respond decision: auto_respond={self.auto_respond}, chance={self.response_chance}, decision={auto_respond_decision}")
-            
-            if not auto_respond_decision:
-                # Still update user context and relationships even if not responding
-                print(f"[TWITCH] Not responding but updating user data silently")
-                try:
-                    await self._update_user_data_silently(user_id, username, content, channel)
-                except Exception as e:
-                    log_error(f"Error updating user data silently: {e}")
-                return
-                
-            print(f"[TWITCH] Proceeding with AI response generation for: {content}")
-            
-            # Enhanced user context management
-            try:
-                user_context = await self._get_enhanced_user_context(user_id, username, channel)
-                print(f"[TWITCH] Retrieved user context for {username}")
-            except Exception as e:
-                log_error(f"Error getting user context: {e}")
-                user_context = {"username": username, "channel": channel, "platform": "twitch"}
-            
-            # Conversation analysis
-            try:
-                conversation_context = await self._analyze_conversation_context(channel, content, user_context)
-                print(f"[TWITCH] Analyzed conversation context")
-            except Exception as e:
-                log_error(f"Error analyzing conversation context: {e}")
-                conversation_context = {"channel": channel}
-            
-            # Memory retrieval using RAG
-            try:
-                relevant_memories = await self._get_relevant_memories(user_id, content)
-                print(f"[TWITCH] Retrieved {len(relevant_memories)} relevant memories")
-            except Exception as e:
-                log_error(f"Error retrieving memories: {e}")
-                relevant_memories = []
-            
-            # Enhanced response generation
-            try:
-                print(f"[TWITCH] Generating enhanced response...")
-                response = await self._generate_enhanced_response(
-                    content, user_context, conversation_context, relevant_memories, channel
-                )
-                print(f"[TWITCH] Generated response: {response[:100] if response else 'None'}...")
-            except Exception as e:
-                log_error(f"Error generating enhanced response: {e}")
-                # Fallback to main.py integration
-                print(f"[TWITCH] Falling back to main.py integration")
-                try:
-                    import main
-                    response = main.main_twitch_chat(f"[Platform: Twitch Chat] {content}")
-                except Exception as e2:
-                    log_error(f"Error in main.py fallback: {e2}")
-                    response = "Sorry, I'm having trouble responding right now!"
-            
-            if response and response.strip():
-                # Clean and optimize response
-                try:
-                    response = clean_response(response)
-                    response = add_personality_flavor(response, user_context.get('personality_preference', self.personality))
-                    
-                    # Add relationship context
-                    response = add_relationship_context_to_response(response, username, "twitch")
-                    
-                    # Limit response length for Twitch
-                    if len(response) > self.max_message_length:
-                        response = response[:self.max_message_length-3] + "..."
-                        log_message_length_warning(f"Truncated response for {username}")
-                    
-                    # Send response
-                    await message.channel.send(response)
-                    
-                    # Record AI message to prevent loops
-                    record_ai_message(response, "twitch", channel)
-                    
-                    # Update user relationship
-                    await self._update_user_relationship(user_id, username, content, response)
-                    
-                    # Store in conversation history
-                    await self._store_conversation(user_id, username, content, response, channel)
-                    
-                    # Log successful response
-                    log_info(f"Sent Twitch response to {username} in {channel}: {response}")
-                    
-                except Exception as e:
-                    log_error(f"Error processing response: {e}")
-                    
         except Exception as e:
-            log_error(f"Error processing Twitch message: {e}")
-            import traceback
-            traceback.print_exc()
+            log_error(f"Error in Twitch event_message: {e}")
+            try:
+                await message.channel.send("Sorry, I encountered an error processing your message.")
+            except:
+                pass
 
     async def _update_user_data_silently(self, user_id: str, username: str, content: str, channel: str):
         """Update user data without generating a response"""
@@ -364,7 +297,7 @@ class TwitchBot(commands.Bot):
             user_context = get_user_context(user_id, platform="twitch")
             
             # Add relationship information
-            relationship_level = get_relationship_level(user_id, "twitch")
+            relationship_level = get_user_relationship_level(user_id, "twitch")
             relationship_context = get_relationship_data(user_id, "twitch")
             
             # Enhanced context
@@ -567,7 +500,7 @@ class TwitchBot(commands.Bot):
         try:
             user_id = str(ctx.author.id)
             user_context = get_user_context(user_id, platform="twitch")
-            relationship_level = get_relationship_level(user_id, "twitch")
+            relationship_level = get_user_relationship_level(user_id, "twitch")
             
             status = f"🤖 Status: Online | 💝 Relationship: {relationship_level} | 🧠 AI Modules: Active"
             await ctx.send(status)

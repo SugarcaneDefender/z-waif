@@ -14,7 +14,12 @@ random_memories: bool = True
 
 # Load the configurable alarm message (talomere, comes after the date)
 with open("Configurables/AlarmMessage.json", "r") as openfile:
-    alarm_talomere: str = json.load(openfile)
+    alarm_data = json.load(openfile)
+    # Handle both old string format and new object format
+    if isinstance(alarm_data, dict):
+        alarm_talomere: str = alarm_data.get("message", "Please awaken with an alarm message. Add a random topic or fun theme to start the day as well. Be creative!")
+    else:
+        alarm_talomere: str = alarm_data
 
 
 def alarm_loop():

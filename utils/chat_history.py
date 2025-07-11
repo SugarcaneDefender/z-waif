@@ -211,5 +211,106 @@ def clear_all_histories():
     save_chat_histories()
     log_info("All chat histories cleared")
 
-# Load histories on module import
+def process_chatpops(message_content: str):
+    """
+    Process chatpops from message content.
+    This function handles any chatpop-related processing for messages.
+    
+    Args:
+        message_content: The message content to process for chatpops
+    """
+    try:
+        # For now, this is a placeholder function
+        # In the future, this could handle:
+        # - Extracting chatpops from messages
+        # - Processing chatpop triggers
+        # - Updating chatpop statistics
+        # - Storing chatpop data
+        
+        if message_content and len(message_content.strip()) > 0:
+            # Basic chatpop processing - could be enhanced
+            log_info(f"Processed chatpop from message: {message_content[:50]}...")
+        
+    except Exception as e:
+        log_error(f"Error processing chatpops: {e}")
+
+def get_chat_history_for_webui(user_id: str = "webui_user", platform: str = "webui") -> List[List[str]]:
+    """
+    Get chat history specifically formatted for Web UI display.
+    
+    Args:
+        user_id: The user ID (defaults to webui_user for Web UI)
+        platform: The platform (defaults to webui for Web UI)
+    
+    Returns:
+        List of [user_message, assistant_message] pairs for Web UI
+    """
+    try:
+        history = get_chat_history(user_id, platform)
+        
+        # Convert to the format expected by Gradio chatbot
+        chat_pairs = []
+        current_pair = [None, None]
+        
+        for msg in history:
+            if msg["role"] == "user":
+                # Start a new pair or complete an incomplete one
+                if current_pair[0] is None:
+                    current_pair[0] = msg["content"]
+                else:
+                    # Save previous incomplete pair and start new one
+                    if current_pair[0] is not None:
+                        chat_pairs.append([current_pair[0], current_pair[1] or ""])
+                    current_pair = [msg["content"], None]
+            elif msg["role"] == "assistant":
+                # Complete the current pair
+                current_pair[1] = msg["content"]
+                chat_pairs.append([current_pair[0] or "", current_pair[1]])
+                current_pair = [None, None]
+        
+        # Add any incomplete pair
+        if current_pair[0] is not None:
+            chat_pairs.append([current_pair[0], current_pair[1] or ""])
+        
+        return chat_pairs
+        
+    except Exception as e:
+        log_error(f"Error getting Web UI chat history: {e}")
+        return []
+
+def add_message_to_webui_history(user_message: str, assistant_message: str, user_id: str = "webui_user", platform: str = "webui"):
+    """
+    Add a message pair to Web UI chat history.
+    
+    Args:
+        user_message: The user's message
+        assistant_message: The assistant's response
+        user_id: The user ID (defaults to webui_user for Web UI)
+        platform: The platform (defaults to webui for Web UI)
+    """
+    try:
+        # Add user message
+        if user_message and user_message.strip():
+            add_message_to_history(user_id, "user", user_message, platform, {
+                "source": "webui",
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Add assistant message
+        if assistant_message and assistant_message.strip():
+            add_message_to_history(user_id, "assistant", assistant_message, platform, {
+                "source": "webui",
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        log_info(f"Added Web UI message pair to history for {user_id}")
+        
+    except Exception as e:
+        log_error(f"Error adding Web UI message to history: {e}")
+
+# =============================================================================
+# INITIALIZATION
+# =============================================================================
+# Load chat histories from file on startup to ensure data is available
+# to other modules as soon as this one is imported.
 load_chat_histories() 

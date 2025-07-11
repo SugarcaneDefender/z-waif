@@ -12,11 +12,12 @@ from pythmc import ChatLink
 import API.api_controller
 
 # Local imports - Main module
-import main
+# import main
 
 # Local imports - Utils modules
 from utils import cane_lib
 from utils import settings
+from utils.minecraft import process_minecraft_message
 
 if settings.minecraft_enabled:
     chat = ChatLink()  # Initialises an instance of ChatLink, to take control of the Minecraft Chat.
@@ -29,10 +30,20 @@ with open("Configurables/MinecraftNames.json", 'r') as openfile:
     mc_names = json.load(openfile)
 
 with open("Configurables/MinecraftUsername.json", 'r') as openfile:
-    mc_username = json.load(openfile)
+    username_data = json.load(openfile)
+    # Handle both old string format and new object format
+    if isinstance(username_data, dict):
+        mc_username = username_data.get("username", "BotUsernameHere")
+    else:
+        mc_username = username_data
 
 with open("Configurables/MinecraftUsernameFollow.json", 'r') as openfile:
-    mc_username_follow = json.load(openfile)
+    follow_data = json.load(openfile)
+    # Handle both old string format and new object format
+    if isinstance(follow_data, dict):
+        mc_username_follow = follow_data.get("username", "YourUsernameHere")
+    else:
+        mc_username_follow = follow_data
 
 def check_for_command(message):
 
@@ -135,10 +146,21 @@ def check_mc_chat():
     else:
         last_chat = last_sent
 
+        # Check if we should process this message based on shadow chat settings
         if cane_lib.keyword_check(last_sent, mc_names) and not cane_lib.keyword_check(last_sent, ["<" + mc_username + ">", mc_username + "\u00a7r\u00a7r:"]):
+            
+            # Check shadow chat settings
+            if not settings.speak_shadowchats and not cane_lib.keyword_check(last_sent, [settings.char_name]):
+                print(f"[MINECRAFT] Skipping message due to shadow chat settings")
+                return
+
+            # Check speak only when spoken to
+            if settings.speak_only_spokento and not cane_lib.keyword_check(last_sent, [settings.char_name]):
+                print(f"[MINECRAFT] Skipping message - not spoken to directly")
+                return
 
             # Send a MC specific message
-            main.main_minecraft_chat(combined_message)
+            process_minecraft_message(combined_message)
 
             # make the remembered messages be added to the memory, and set it to be only the past ten messages
 

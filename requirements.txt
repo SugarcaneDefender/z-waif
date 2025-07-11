@@ -1,132 +1,176 @@
+# =============================
+# Core Python & Utilities
+# =============================
 aiofiles==23.2.1
 aiohappyeyeballs==2.4.6
 aiohttp==3.11.12
 aiosignal==1.3.2
-altair==5.5.0
-annotated-types==0.7.0
 anyio==4.8.0
 attrs==25.1.0
-av==14.1.0
 certifi==2025.1.31
-cffi==1.17.1
 charset-normalizer==3.4.1
 click==8.1.8
-colorama==0.4.6
 coloredlogs==15.0.1
-contourpy==1.3.1
-ctranslate2==4.5.0
-cycler==0.12.1
-discord==2.3.2
-discord.py==2.4.0
-emoji==2.9.0
-PyNaCl==1.5.0
-fastapi==0.112.2
-faster-whisper==1.1.1
-ffmpy==0.5.0
 filelock==3.13.1
-flatbuffers==25.1.24
-fonttools==4.56.0
 frozenlist==1.5.0
-fsspec==2024.6.1
-gradio==4.36.1
-gradio_client==1.0.1
-h11==0.14.0
-httpcore==1.0.7
-httpx==0.28.1
-huggingface-hub==0.28.1
-humanfriendly==10.0
-humanize==4.7.0
 idna==3.10
 importlib_resources==6.5.2
-Jinja2==3.1.4
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
-keyboard==0.13.5
-kiwisolver==1.4.8
-llvmlite==0.44.0
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-matplotlib==3.10.0
 mdurl==0.1.2
-more-itertools==10.6.0
-mouse==0.7.1
-MouseInfo==0.1.3
-mpmath==1.3.0
 multidict==6.1.0
-narwhals==1.25.2
 networkx==3.3
-numba==0.61.0
-numpy==1.24.4
-ollama==0.5.1
-onnxruntime==1.20.1
-# openai-whisper
-opencv-python==4.11.0.86
 orjson==3.10.15
 packaging==24.2
-pandas==2.2.3
-pillow==10.4.0
 propcache==0.2.1
-protobuf==5.29.3
-PyAudio==0.2.14
-PyAutoGUI==0.9.54
 pycparser==2.22
-pydantic==2.10.6
-pydantic_core==2.27.2
-pydub==0.25.1
-PyGetWindow==0.0.9
-Pygments==2.19.1
-PyMsgBox==1.0.9
 pyparsing==3.2.1
 pyperclip==1.9.0
 pyreadline3==3.5.4
-PyRect==0.2.0
-PyScreeze==1.0.1
-PythMC==1.2.2
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
-pytweening==1.2.0
 pytz==2025.1
-pyvts==0.3.3
-pywin32==308 ; sys_platform == 'win32'
-PyYAML==6.0.2
 referencing==0.36.2
-regex==2024.11.6
-requests==2.31.0
 rich==13.9.4
 rpds-py==0.22.3
 ruff==0.9.5
 semantic-version==2.10.0
-sentence-transformers==3.3.1
 shellingham==1.5.4
-silero_vad==5.1.2
 six==1.17.0
 sniffio==1.3.1
-sounddevice==0.4.7
-soundfile==0.13.1
-sseclient-py==1.8.0
-starlette==0.38.6
-sympy==1.13.3
-tiktoken==0.8.0
-tokenizers==0.21.0
 tomlkit==0.12.0
-torch==2.7.1+cu118
-torchaudio==2.7.1+cu118
-torchvision==0.22.1+cu118
 tqdm==4.67.1
-twitchio==2.9.1
 typer==0.15.1
 typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.3.0
-uvicorn==0.34.0
-websockets==11.0.3
-yarl==1.18.3
 
-# Extras
+# =============================
+# Web & API Frameworks
+# =============================
+fastapi==0.112.2
+gradio==4.36.1
+gradio_client==1.0.1
+starlette==0.38.6
+uvicorn==0.34.0
+httpcore==1.0.7
+httpx==0.28.1
+websockets==11.0.3
+requests==2.31.0
+sseclient-py==1.8.0
+
+# =============================
+# Data Science & Math
+# =============================
+altair==5.5.0
+contourpy==1.3.1
+cycler==0.12.1
+fonttools==4.56.0
+kiwisolver==1.4.8
+llvmlite==0.44.0
+matplotlib==3.10.0
+mpmath==1.3.0
+more-itertools==10.6.0
+numpy==1.24.4
+pandas==2.2.3
+sympy==1.13.3
+
+# =============================
+# AI/ML & LLMs
+# =============================
+transformers>=4.35.0
+sentence-transformers>=2.2.0
+ctransformers>=0.2.0
+llama-cpp-python>=0.2.0
+ollama==0.5.1
+huggingface-hub==0.28.1
+openai-whisper>=20231117
+faster-whisper==1.1.1
+tiktoken==0.8.0
+tokenizers==0.21.0
+numba==0.61.0
+
+# =============================
+# System Monitoring & Optimization
+# =============================
+psutil>=5.9.0
+GPUtil>=1.4.0
+humanfriendly==10.0
+humanize==4.7.0
+
+# =============================
+# Audio & Speech Processing
+# =============================
+pyaudio>=0.2.11
+PyAudio==0.2.14
+torchaudio==2.7.1+cu118
+sounddevice==0.4.7
+soundfile==0.13.1
+pydub==0.25.1
+silero_vad==5.1.2
+
+# =============================
+# Computer Vision & Image Processing
+# =============================
+opencv-python>=4.8.0
+opencv-python==4.11.0.86
+pillow==10.4.0
+
+# =============================
+# Discord, Twitch, and Chat Integrations
+# =============================
+discord==2.3.2
+discord.py==2.4.0
+PyNaCl==1.5.0
+twitchio==2.9.1
+emoji==2.9.0
+
+# =============================
+# Windows & OS Integration
+# =============================
+pywin32==308 ; sys_platform == 'win32'
+PyGetWindow==0.0.9
+PyMsgBox==1.0.9
+PyRect==0.2.0
+PyScreeze==1.0.1
+pytweening==1.2.0
+mouse==0.7.1
+MouseInfo==0.1.3
+keyboard==0.13.5
+
+# =============================
+# VTube Studio & VTuber
+# =============================
+pyvts==0.3.3
+
+# =============================
+# Minecraft Integration
+# =============================
+PythMC==1.2.2
+
+# =============================
+# YAML & Config
+# =============================
+PyYAML==6.0.2
+
+# =============================
+# Miscellaneous/Other
+# =============================
+av==14.1.0
+flatbuffers==25.1.24
+onnxruntime==1.20.1
+
+# =============================
+# Extras & Editable Installs
+# =============================
 -e git+https://github.com/openai/whisper.git#egg=openai-whisper
 
+# =============================
+# CUDA/PyTorch Index (for GPU support)
+# =============================
 --extra-index-url https://download.pytorch.org/whl/cu118
-torch
-torchvision
-torchaudio
+torch==2.7.1+cu118
+torchvision==0.22.1+cu118

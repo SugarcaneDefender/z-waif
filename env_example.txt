@@ -1,128 +1,205 @@
-# Z-Waif Environment Configuration
-# Copy this file to .env and modify the values as needed
+# =============================================================================
+# Z-WAIF CONFIGURATION FILE
+# =============================================================================
+# All settings marked as REQUIRED must be configured for proper operation
 
-# API Configuration
+# =============================================================================
+# API SETTINGS (REQUIRED)
+# =============================================================================
 HOST_PORT=127.0.0.1:5000
 API_TYPE=Oobabooga
 MODEL_TYPE=chatml
 OOGABOOGA_SUPPORT_HOST=127.0.0.1:5000
+
+# API Fallback Settings
+API_FALLBACK_ENABLED=ON
+API_FALLBACK_MODEL=
+API_FALLBACK_HOST=127.0.0.1:5000
+
+# =============================================================================
+# CHARACTER SETTINGS (REQUIRED)
+# =============================================================================
+CHAR_NAME=NAME OF AI
+CHARACTER_CARD= CARD NAME 
+YOUR_NAME= YOUR NAME 
+PARTNER_NAME= NAME HERE IF THEY ARE PARTNER 
+CHARACTER_CONTEXT= WHAT YOU WANT THE CHARACTER TO DO 
+
+# Optional: Override character context specifically for API calls
+# API_CHARACTER_CONTEXT=
+
+# =============================================================================
+# MODEL CONTEXT SETTINGS
+# =============================================================================
 TOKEN_LIMIT=4096
 MESSAGE_PAIR_LIMIT=40
+TIME_IN_ENCODING=OFF
 
-# Character Configuration
-CHAR_NAME=YourCharacterName
-PARTNER_NAME=PartnerName
-CHARACTER_CARD=
-YOUR_NAME=YourUsername
-CHARACTER_CONTEXT=You are a caring AI companion having a personal conversation. You are warm, friendly, and supportive. Focus on having meaningful one-on-one conversations. Never call yourself a bot, chatbot, assistant or AI. You are not streaming or talking to viewers - this is a private conversation.
+# =============================================================================
+# ANTI-STREAMING SETTINGS (REQUIRED - prevents streaming personality!)
+# =============================================================================
+NEWLINE_CUT_BOOT=ON
+RP_SUP_BOOT=ON
+API_STREAM_CHATS=OFF
+SILERO_VAD=ON
 
-# Whisper/Audio Configuration
+# =============================================================================
+# WHISPER SETTINGS
+# =============================================================================
 WHISPER_MODEL=base.en
 WHISPER_CHOICE=faster-whisper
 WHISPER_CHUNKS_MAX=14
-WHISPER_CHUNKY_RATE=1000
-WHISPER_CHUNKY=OFF
-FASTER_WHISPER=OFF
-FASTER_WHISPER_CPU_TRANSCRIPTION=OFF
-
-# Module Toggles
-MODULE_MINECRAFT=OFF
-MODULE_ALARM=ON
-MODULE_VTUBE=OFF
-MODULE_DISCORD=OFF
-MODULE_TWITCH=ON
-MODULE_RAG=ON
-MODULE_VISUAL=OFF
-MODULE_GAMING=OFF
-
-# Audio Settings
 AUTOCHAT_MIN_LENGTH=10
-SILERO_VAD=ON
 
-# Boot Settings
-HOTKEYS_BOOT=OFF
-NEWLINE_CUT_BOOT=ON
-RP_SUP_BOOT=OFF
-API_STREAM_CHATS=OFF
-
-# Visual/VTube Configuration
-VTUBE_STUDIO_API_HOST=127.0.0.1
-EYES_START_ID=14
-EYES_FOLLOW=None
-IMG_PORT=127.0.0.1:5007
-IMG_SCALE=1.0
-
-# RVC Configuration
+# =============================================================================
+# VOICE SETTINGS (RVC)
+# =============================================================================
 USE_RVC=true
 RVC_HOST=127.0.0.1
 RVC_PORT=7897
-RVC_MODEL=default
+RVC_MODEL=your_model_name
 RVC_SPEAKER=0
 RVC_PITCH=0.0
 RVC_SPEED=1.0
 
-# Model Configuration
-MODEL_NAME=Noromaid-7B-0.4-DPO
-MODEL_TEMPLATE=chatml
-
-# Time Encoding
-TIME_IN_ENCODING=OFF
-
-# Visual Configuration
+# =============================================================================
+# IMAGE/VISION SETTINGS
+# =============================================================================
+IMG_PORT=127.0.0.1:5007
 VISUAL_CHARACTER_NAME=Z-WAIF-VisualAssist
 VISUAL_PRESET_NAME=Z-WAIF-VisualPreset
-OLLAMA_VISUAL_ENCODE_GUIDANCE=Describe what you see in detail
-OLLAMA_VISUAL_CARD=You are a helpful visual assistant
 
-# Ollama Configuration
-ZW_OLLAMA_MODEL=llama2
-ZW_OLLAMA_MODEL_VISUAL=llava
+# Ollama Visual Settings (if using Ollama)
+# ZW_OLLAMA_MODEL=
+# ZW_OLLAMA_MODEL_VISUAL=
+# OLLAMA_VISUAL_ENCODE_GUIDANCE=
+# OLLAMA_VISUAL_CARD=
 
-# Twitch Configuration
-# Option 1: Personal Channel (Simple Setup - Recommended)
-TWITCH_TOKEN=your_twitch_oauth_token_here
-TWITCH_CHANNEL=your_channel_name
+# =============================================================================
+# VTUBE STUDIO SETTINGS
+# =============================================================================
+EYES_FOLLOW=None
+EYES_START_ID=14
+VTUBE_STUDIO_API_HOST=127.0.0.1
+VTUBE_STUDIO_API_PORT=8001
+VTUBE_MODEL_NAME= MODEL NAME HERE
+VTUBE_FACE_TRACKING=ON
+VTUBE_VIRTUAL_CAMERA= CAMERA HERE 
+VTUBE_AVATAR_MODE=UNITY
+
+# =============================================================================
+# UNITY AVATAR SETTINGS
+# =============================================================================
+MODULE_UNITY_AVATAR=OFF
+MODULE_REALTIME_AVATAR=OFF
+UNITY_AVATAR_QUALITY=HIGH
+UNITY_AVATAR_FPS=30
+UNITY_AVATAR_FALLBACK=AUTO
+
+# =============================================================================
+# EMOTION PROCESSING
+# =============================================================================
+EMOTION_ANALYSIS_ENABLED=ON
+EMOTION_INTENSITY_SCALING=1.0
+REALTIME_EMOTION_SYNC=ON
+AVATAR_EMOTION_MAPPING=ADVANCED
+
+# =============================================================================
+# AVATAR PERFORMANCE
+# =============================================================================
+AVATAR_RENDER_QUALITY=HIGH
+AVATAR_CONTINUOUS_MODE=ON
+VIRTUAL_CAMERA_BACKEND=unitycapture
+AVATAR_AUTO_RESTART=ON
+
+# =============================================================================
+# MODULE TOGGLES
+# =============================================================================
+MODULE_MINECRAFT=OFF
+MODULE_ALARM=ON
+MODULE_VTUBE=OFF
+MODULE_DISCORD=OFF
+MODULE_RAG=ON
+MODULE_VISUAL=OFF
+MODULE_TWITCH=OFF
+HOTKEYS_BOOT=OFF
+
+# =============================================================================
+# MEMORY SETTINGS
+# =============================================================================
+MEMORY_CLEANUP_FREQUENCY=60
+MEMORY_PERSISTENCE=ON
+
+# =============================================================================
+# DISCORD SETTINGS
+# =============================================================================
+DISCORD_TOKEN= TOKEN HERE
+# Optional: specific channel (uncomment and set if you want to limit to one channel)
+# DISCORD_CHANNEL=general
+
+# =============================================================================
+# TWITCH SETTINGS
+# =============================================================================
+TWITCH_TOKEN=TOKEN HERE
+TWITCH_CLIENT_ID=TOKEN HERE
+TWITCH_CHANNEL= NAME OF CHANNEL HERE 
 TWITCH_BOT_NAME=z_waif_bot
 
-# Option 2: Multiple Channels (Use instead of TWITCH_CHANNEL)
-# TWITCH_CHANNELS=channel1,channel2,channel3
-
-# Option 3: Full Bot App (Advanced - only if using dedicated bot application)
-# TWITCH_CLIENT_ID=your_twitch_client_id_here
-# TWITCH_CLIENT_SECRET=your_twitch_client_secret_here
-
-# Twitch Bot Behavior (Optional - has sensible defaults)
+# =============================================================================
+# TWITCH BOT BEHAVIOR
+# =============================================================================
 TWITCH_PERSONALITY=friendly
 TWITCH_AUTO_RESPOND=ON
 TWITCH_RESPONSE_CHANCE=0.8
 TWITCH_COOLDOWN_SECONDS=3
 TWITCH_MAX_MESSAGE_LENGTH=450
 
-# Discord Configuration
-DISCORD_TOKEN=your_discord_bot_token_here
-# Note: For Discord voice support, ensure PyNaCl is installed: pip install PyNaCl
+# Instructions for getting Twitch credentials:
+# 1. Go to https://dev.twitch.tv/console/apps
+# 2. Click "Create App" 
+# 3. Give it a name like "Z-WAIF Bot"
+# 4. Set OAuth Redirect URL to: http://localhost:17563
+# 5. Set Category to "Chat Bot"
+# 6. Copy the Client ID
+# 7. Generate a new Client Secret (this becomes your TWITCH_TOKEN)
+# 8. Set TWITCH_CHANNEL to your Twitch username (lowercase)
 
-# Additional Configuration
-VTUBE_MODEL_NAME=YourVTubeModel
-VTUBE_FACE_TRACKING=ON
-VTUBE_VIRTUAL_CAMERA=VirtualCameraName
-VTUBE_AVATAR_MODE=UNITY
+# Settings explanation:
+# MODULE_TWITCH = ON/OFF - Enable/disable the entire Twitch module
+# TWITCH_PERSONALITY = friendly/enthusiastic/sarcastic/supportive/casual/playful - AI personality
+# TWITCH_AUTO_RESPOND = ON/OFF - Whether to automatically respond to chat messages
+# TWITCH_RESPONSE_CHANCE = 0.0-1.0 - Probability of responding to each message (0.8 = 80%)
+# TWITCH_COOLDOWN_SECONDS = Number of seconds between AI responses
+# TWITCH_MAX_MESSAGE_LENGTH = Maximum length for AI responses 
 
-MODULE_UNITY_AVATAR=ON
-MODULE_REALTIME_AVATAR=ON
-UNITY_AVATAR_QUALITY=HIGH
-UNITY_AVATAR_FPS=30
-UNITY_AVATAR_FALLBACK=AUTO
+# =============================================================================
+# VERBOSE DETECTION (Optional)
+# =============================================================================
+# Set to true to print detailed port-by-port server detection output
+VERBOSE_DETECTION=false
 
-EMOTION_ANALYSIS_ENABLED=ON
-EMOTION_INTENSITY_SCALING=1.0
-REALTIME_EMOTION_SYNC=ON
-AVATAR_EMOTION_MAPPING=ADVANCED
+# =============================================================================
+# RELATIONSHIP SETTINGS
+# =============================================================================
+RELATIONSHIP_SYSTEM_ENABLED=ON
+RELATIONSHIP_PARTNER_NAME=
+DEFAULT_RELATIONSHIP_LEVEL=stranger
+RELATIONSHIP_RESPONSES_ENABLED=ON
+RELATIONSHIP_MEMORY_ENABLED=ON
+RELATIONSHIP_PROGRESSION_SPEED=1.0
+RELATIONSHIP_DECAY_RATE=0.1 
 
-AVATAR_RENDER_QUALITY=HIGH
-AVATAR_CONTINUOUS_MODE=ON
-VIRTUAL_CAMERA_BACKEND=unitycapture
-AVATAR_AUTO_RESTART=ON
+# =============================================================================
+# SHADOW CHAT SETTINGS
+# =============================================================================
+# SPEAK_SHADOWCHATS: When ON, the AI will respond to all messages in chat.
+#                   When OFF, only responds to messages starting with its name.
+SPEAK_SHADOWCHATS=ON
 
-MEMORY_CLEANUP_FREQUENCY=60
-MEMORY_PERSISTENCE=ON 
+# SPEAK_ONLY_SPOKENTO: When ON, the AI will only respond when directly addressed
+#                     by name. This overrides SPEAK_SHADOWCHATS if both are ON.
+SPEAK_ONLY_SPOKENTO=OFF
+
+# These settings affect all chat interfaces (Discord, Twitch, Minecraft, etc.)
+# Example: If SPEAK_SHADOWCHATS=OFF and SPEAK_ONLY_SPOKENTO=ON,
+#         the AI will only respond when someone starts their message with its name. 

@@ -12,12 +12,14 @@
 #
 
 import random
+import os
 
-import main
 from utils import cane_lib
 from utils import settings
 import json
 
+# Get character name from environment
+char_name = os.environ.get("CHAR_NAME", "Assistant")
 
 #
 # Hangout control
@@ -108,7 +110,7 @@ def reply_decide(input_text: str):
         reply_speed *= 1 + (replies_skipped_stacking * 0.1)
 
     # Reply will have boosted depth and speed value if waifu detects their name in it.
-    if cane_lib.keyword_check(input_text, keywords=[main.char_name]):
+    if cane_lib.keyword_check(input_text, keywords=[char_name]):
         reply_depth += 20
         reply_speed += 70
 

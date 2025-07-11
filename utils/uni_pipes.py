@@ -213,8 +213,11 @@ def pipe_loop(this_pipe):
 
 def pipe_api_request(this_pipe):
     # Sleep on this while any other request is running
-
     while API.api_controller.is_in_api_request:
-        time.sleep(0.03)
+        time.sleep(0.01)
+
+def get_pipe_counter():
+    """Get the current pipe counter"""
+    return pipe_counter
 
 

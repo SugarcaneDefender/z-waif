@@ -22,7 +22,9 @@ from utils import zw_logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
+# --- Unified API HOST/PORT logic ---
+# Always use 127.0.0.1:5000 as default for all API calls unless overridden by environment
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
 # Handle both URL and host:port formats
 if HOST.startswith("http://"):
     BASE_URI = HOST
@@ -812,3 +814,18 @@ def extract_streaming_chunk(event):
         # Fallback for older/different formats, though less likely now
         pass
     return ""
+
+def refresh_base_uri():
+    """Refresh base URI when environment variables change"""
+    global BASE_URI, HOST
+    try:
+        # Re-read environment variables
+        HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
+        # Handle both URL and host:port formats
+        if HOST.startswith("http://"):
+            BASE_URI = HOST
+        else:
+            BASE_URI = f'http://{HOST}'
+        print(f"[Oobabooga] Base URI refreshed: {BASE_URI}")
+    except Exception as e:
+        print(f"[Oobabooga] Error refreshing base URI: {e}")

@@ -92,4 +92,12 @@ def get_cur_task_description():
         task_loder = yaml.load(openfile, Loader=yaml.FullLoader)
         return task_loder["Description"]
 
+def get_current_tags():
+    """Get the current list of tags"""
+    return settings.cur_tags
+
+def get_all_tags():
+    """Get all available tags"""
+    return settings.all_tag_list
+
 

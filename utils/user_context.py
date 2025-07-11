@@ -44,22 +44,27 @@ def get_user_context(user_id, platform):
     
     return contexts[key]
 
-def update_user_context(user_id: str, platform: str, updates: dict):
-    """Update user context with new information."""
+def update_user_context(user_id, updates, platform="default"):
+    """Update the context for a given user."""
     contexts = load_user_contexts()
-    key = f"{platform}:{user_id}"
-    
+    key = f"{platform}:{user_id}"  # Use consistent key format with get_user_context
     if key not in contexts:
         contexts[key] = get_user_context(user_id, platform)
     
-    # Handle interaction count increment
-    if "interaction_count" in updates:
-        current_count = contexts[key].get("interaction_count", 0)
-        contexts[key]["interaction_count"] = current_count + updates["interaction_count"]
-        del updates["interaction_count"]  # Remove so it doesn't get overwritten below
-    
-    # Update the rest of the fields
-    contexts[key].update(updates)
+    # Ensure 'updates' is a valid dictionary
+    if isinstance(updates, dict):
+        contexts[key].update(updates)
+    else:
+        # Log an error or handle the case where updates is not a dictionary
+        print(f"Warning: update_user_context received non-dict updates: {updates}")
+        # Attempt to handle if it's a list of tuples, otherwise ignore.
+        try:
+            if isinstance(updates, (list, tuple)):
+                contexts[key].update(dict(updates))
+            else:
+                print(f"Error: Could not convert updates to a dictionary.")
+        except (TypeError, ValueError) as e:
+            print(f"Error: Could not convert updates to a dictionary: {e}")
     
     # Save the updated contexts
     save_user_contexts(contexts)
@@ -77,7 +82,7 @@ def analyze_personality_traits(messages):
 
 def add_user_interest(user_id: str, platform: str, interest: str):
     """Add an interest to user's profile"""
-    user_key = f"{platform}_{user_id}"
+    user_key = f"{platform}:{user_id}"  # Use consistent key format
     context = get_user_context(user_id, platform)
     
     if interest not in context["interests"]:
@@ -89,7 +94,7 @@ def add_user_interest(user_id: str, platform: str, interest: str):
 
 def add_user_topic(user_id: str, platform: str, topic: str):
     """Add a recent topic to user's profile"""
-    user_key = f"{platform}_{user_id}"
+    user_key = f"{platform}:{user_id}"  # Use consistent key format
     context = get_user_context(user_id, platform)
     
     if topic not in context["favorite_topics"]:

@@ -30,7 +30,9 @@ from utils import hangout
 
 load_dotenv()
 
-HOST = os.environ.get("OOGABOOGA_SUPPORT_HOST", "127.0.0.1:5000")
+# --- Unified API HOST/PORT logic ---
+# Always use 127.0.0.1:5000 as default for all API calls unless overridden by environment
+HOST = os.environ.get("OOGABOOGA_SUPPORT_HOST", os.environ.get("HOST_PORT", "127.0.0.1:5000"))
 URI = f"http://{HOST}/v1/chat/completions"
 URL_MODEL = f"http://{HOST}/v1/engines/"
 
@@ -132,7 +134,8 @@ def run(user_input, temp_level):
     if settings.model_preset != "Default":
         preset = settings.model_preset
 
-    logging.kelvin_log = preset
+    # kelvin_log functionality should use zw_logging if needed
+    # logging.kelvin_log = preset
 
     # Set what char/task we are sending to, defaulting to the character card if there is none
     char_send = settings.cur_task_char
@@ -182,7 +185,7 @@ def run(user_input, temp_level):
         global stored_received_message
 
         if received_message == stored_received_message:
-            logging.update_debug_log(
+            zw_logging.update_debug_log(
                 "Bad message received; same as last attempted generation. Re-generating the reply..."
             )
             run(user_input, 2)
@@ -192,7 +195,7 @@ def run(user_input, temp_level):
 
         # If her reply is the same as any in the past 20 chats, run another request
         if check_if_in_history(received_message):
-            logging.update_debug_log(
+            zw_logging.update_debug_log(
                 "Bad message received; same as a recent chat. Re-generating the reply..."
             )
             run(user_input, 1)
@@ -200,7 +203,7 @@ def run(user_input, temp_level):
 
         # If her reply is blank, request another run, clearing the previous history add, and escape
         if len(received_message) < 3:
-            logging.update_debug_log(
+            zw_logging.update_debug_log(
                 "Bad message received; chat is a runt or blank entirely. Re-generating the reply..."
             )
             run(user_input, 1)
@@ -298,7 +301,8 @@ def run_streaming(user_input, temp_level):
     if settings.model_preset != "Default":
         preset = settings.model_preset
 
-    logging.kelvin_log = preset
+    # kelvin_log functionality should use zw_logging if needed
+    # logging.kelvin_log = preset
 
     # Set what char/task we are sending to, defaulting to the character card if there is none
     char_send = settings.cur_task_char
@@ -433,7 +437,7 @@ def run_streaming(user_input, temp_level):
     if force_skip_streaming:
         force_skip_streaming = False
         print("\nSkipping message, redoing!\n")
-        logging.update_debug_log(
+        zw_logging.update_debug_log(
             "Got an input to regenerate! Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -469,7 +473,7 @@ def run_streaming(user_input, temp_level):
 
     if received_message == stored_received_message:
         print("\nBad message, redoing!\n")
-        logging.update_debug_log(
+        zw_logging.update_debug_log(
             "Bad message received; same as last attempted generation. Re-generating the reply..."
         )
         run_streaming(user_input, 2)
@@ -480,7 +484,7 @@ def run_streaming(user_input, temp_level):
     # If her reply is the same as any in the past 20 chats, run another request
     if check_if_in_history(received_message):
         print("\nBad message, redoing!\n")
-        logging.update_debug_log(
+        zw_logging.update_debug_log(
             "Bad message received; same as a recent chat. Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -489,7 +493,7 @@ def run_streaming(user_input, temp_level):
     # If her reply is blank, request another run, clearing the previous history add, and escape
     if len(received_message) < 3:
         print("\nBad message, redoing!\n")
-        logging.update_debug_log(
+        zw_logging.update_debug_log(
             "Bad message received; chat is a runt or blank entirely. Re-generating the reply..."
         )
         run_streaming(user_input, 1)
@@ -798,7 +802,8 @@ def summary_memory_run(messages_input, user_sent_message):
     if settings.model_preset != "Default":
         preset = settings.model_preset
 
-    logging.kelvin_log = preset
+    # kelvin_log functionality should use zw_logging if needed
+    # logging.kelvin_log = preset
     cur_tokens_required = retrospect.summary_tokens_count
 
     #
@@ -1278,7 +1283,7 @@ def view_image_streaming(direct_talk_transcript):
         if force_skip_streaming:
             force_skip_streaming = False
             print("\nSkipping message, redoing!\n")
-            logging.update_debug_log(
+            zw_logging.update_debug_log(
                 "Got an input to regenerate! Re-generating the reply..."
             )
             # Just set the message to be small, as this will force a re-run due to our while loop rules

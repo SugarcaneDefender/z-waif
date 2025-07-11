@@ -1779,6 +1779,169 @@ def run_program():
         input("Press Enter to exit...")
         return
 
+    # --- Fallback System Auto-Configuration and VRAM/Model Management ---
+    try:
+        from utils import settings as zw_settings
+        from API import fallback_api
+        from utils.web_ui import auto_configure_fallback, get_current_fallback_status, discover_models
+        import os
+        print(f"{colorama.Fore.CYAN}🔍 Checking fallback system and VRAM/model configuration...{colorama.Fore.RESET}")
+
+        # 1. Auto-configure fallback if enabled or not set
+        fallback_enabled = zw_settings.api_fallback_enabled if hasattr(zw_settings, 'api_fallback_enabled') else True
+        if fallback_enabled:
+            auto_result = auto_configure_fallback()
+            print(f"{colorama.Fore.GREEN}✅ Fallback auto-configuration: {auto_result}{colorama.Fore.RESET}")
+        else:
+            print(f"{colorama.Fore.YELLOW}⚠️ Fallback system is DISABLED. No local backup LLM will be used!{colorama.Fore.RESET}")
+
+        # 2. Validate and persist fallback model order
+        fallback_order = os.environ.get("FALLBACK_MODEL_ORDER", None)
+        if not fallback_order:
+            # Set a sensible default order and persist it
+            models = discover_models()
+            default_order = ','.join(models[:3]) if models else 'TinyLlama-1.1B-Chat-v1.0'
+            os.environ["FALLBACK_MODEL_ORDER"] = default_order
+            # Try to update .env file for persistence
+            try:
+                from dotenv import set_key, find_dotenv
+                dotenv_path = find_dotenv()
+                if dotenv_path:
+                    set_key(dotenv_path, "FALLBACK_MODEL_ORDER", default_order)
+                    print(f"{colorama.Fore.GREEN}✅ Set and persisted default fallback model order: {default_order}{colorama.Fore.RESET}")
+                else:
+                    print(f"{colorama.Fore.YELLOW}⚠️ Could not find .env file to persist fallback model order. Using in-memory only.{colorama.Fore.RESET}")
+            except Exception as e:
+                print(f"{colorama.Fore.YELLOW}⚠️ Could not persist fallback model order to .env: {e}{colorama.Fore.RESET}")
+        else:
+            print(f"{colorama.Fore.GREEN}✅ Persistent fallback model order: {fallback_order}{colorama.Fore.RESET}")
+
+        # 3. Log fallback system status
+        fallback_status = get_current_fallback_status()
+        print(f"{colorama.Fore.CYAN}Fallback System Status:{colorama.Fore.RESET}")
+        for k, v in fallback_status.items():
+            print(f"  {k}: {v}")
+
+        # 4. Print warnings if fallback is not properly configured
+        if not fallback_enabled:
+            print(f"{colorama.Fore.RED}❌ WARNING: Fallback system is disabled! No local LLM backup will be available if main API fails.{colorama.Fore.RESET}")
+        if not fallback_status.get("fallback_enabled", False):
+            print(f"{colorama.Fore.RED}❌ WARNING: Fallback system is not enabled in environment!{colorama.Fore.RESET}")
+        if not fallback_status.get("current_model"):
+            print(f"{colorama.Fore.RED}❌ WARNING: No fallback model is currently set!{colorama.Fore.RESET}")
+        if fallback_status.get("error"):
+            print(f"{colorama.Fore.RED}❌ Fallback system error: {fallback_status['error']}{colorama.Fore.RESET}")
+        if fallback_status.get("gpu_available") and fallback_status.get("gpu_vram_gb", 0) < 2:
+            print(f"{colorama.Fore.YELLOW}⚠️ GPU VRAM is very low. Only the smallest fallback models will work reliably.{colorama.Fore.RESET}")
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ Fallback/VRAM/model auto-configuration failed: {e}{colorama.Fore.RESET}")
+        if 'zw_logging' in globals():
+            zw_logging.log_error(f"Fallback/VRAM/model auto-configuration failed: {e}")
+    # ... existing code ...
+
+    # --- Auto Environment Detection and Daemon Management ---
+    try:
+        print(f"{colorama.Fore.CYAN}🔧 Running auto environment detection and daemon management...{colorama.Fore.RESET}")
+        
+        # 1. Auto-detect and configure Oobabooga server
+        try:
+            detected_oobabooga = zw_settings.auto_detect_oobabooga()
+            if detected_oobabooga:
+                print(f"{colorama.Fore.GREEN}✅ Oobabooga server auto-configured on port {detected_oobabooga}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Oobabooga server not detected - API calls may fail{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Oobabooga auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 2. Auto-detect and configure RVC server
+        try:
+            detected_rvc = zw_settings.auto_detect_rvc()
+            if detected_rvc:
+                print(f"{colorama.Fore.GREEN}✅ RVC server auto-configured on port {detected_rvc}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ RVC server not detected - voice cloning may not work{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ RVC auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 3. Auto-detect and configure model name
+        try:
+            detected_model = zw_settings.auto_detect_model_name()
+            if detected_model:
+                print(f"{colorama.Fore.GREEN}✅ Model name auto-configured: {detected_model}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Model name not detected - using default{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Model name auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 4. Auto-detect and configure character names
+        try:
+            detected_chars = zw_settings.auto_detect_character_names()
+            if detected_chars:
+                print(f"{colorama.Fore.GREEN}✅ Character names auto-configured{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Character names not detected - using defaults{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Character names auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 5. Auto-detect and configure VTube Studio
+        try:
+            detected_vtube = zw_settings.auto_detect_vtube()
+            if detected_vtube:
+                print(f"{colorama.Fore.GREEN}✅ VTube Studio auto-configured on port {detected_vtube}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ VTube Studio not detected - avatar features may not work{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ VTube Studio auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 6. Auto-detect and configure image generation
+        try:
+            detected_img = zw_settings.auto_detect_img()
+            if detected_img:
+                print(f"{colorama.Fore.GREEN}✅ Image generation auto-configured on port {detected_img}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Image generation not detected - vision features may not work{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Image generation auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 7. Auto-detect and configure Ollama models
+        try:
+            detected_ollama = zw_settings.auto_detect_and_set_ollama_model()
+            if detected_ollama:
+                print(f"{colorama.Fore.GREEN}✅ Ollama model auto-configured: {detected_ollama}{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Ollama model not detected - using default{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Ollama auto-detection failed: {e}{colorama.Fore.RESET}")
+        
+        # 8. Check all daemons and ensure they're running
+        try:
+            daemon_status = zw_settings.check_all_daemons_and_print_status()
+            if daemon_status:
+                print(f"{colorama.Fore.GREEN}✅ All required daemons are running{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ Some daemons may not be running - check status above{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ Daemon status check failed: {e}{colorama.Fore.RESET}")
+        
+        # 9. Auto-configure API priority
+        try:
+            api_priority = zw_settings.auto_configure_api_priority()
+            if api_priority:
+                print(f"{colorama.Fore.GREEN}✅ API priority auto-configured{colorama.Fore.RESET}")
+            else:
+                print(f"{colorama.Fore.YELLOW}⚠️ API priority configuration failed{colorama.Fore.RESET}")
+        except Exception as e:
+            print(f"{colorama.Fore.RED}❌ API priority auto-configuration failed: {e}{colorama.Fore.RESET}")
+        
+        print(f"{colorama.Fore.GREEN}✅ Auto environment detection and daemon management complete!{colorama.Fore.RESET}")
+        
+    except Exception as e:
+        print(f"{colorama.Fore.RED}❌ Auto environment detection failed: {e}{colorama.Fore.RESET}")
+        if 'zw_logging' in globals():
+            zw_logging.log_error(f"Auto environment detection failed: {e}")
+
+    # ... existing code ...
+
     #
     # Startup Prep
     #

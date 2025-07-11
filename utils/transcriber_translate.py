@@ -156,3 +156,7 @@ def chunky_get_merge():
 
     transcription_chunks = []   # reset it
     return final_chunky_message
+
+def get_transcription_chunks():
+    """Get the current transcription chunks"""
+    return transcription_chunks

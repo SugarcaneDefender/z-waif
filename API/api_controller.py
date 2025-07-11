@@ -21,7 +21,12 @@ from ollama import chat, ChatResponse
 import API.character_card as character_card
 
 # Dynamic API import based on API_TYPE
-load_dotenv()  # Load environment variables first
+try:
+    load_dotenv()  # Load environment variables first
+except Exception as e:
+    print(f"Warning: Could not load .env file in API controller: {e}")
+    print("Using default API settings")
+
 API_TYPE = os.environ.get("API_TYPE", "Oobabooga")
 
 if API_TYPE == "Ollama":
@@ -49,8 +54,9 @@ from utils import zw_logging
 # Import enhanced AI handler
 from utils.ai_handler import AIHandler
 
-HOST = os.environ.get("HOST_PORT", "127.0.0.1:49493")
-# Handle both URL and host:port formats (http only, no https support yet)
+# --- Unified API HOST/PORT logic ---
+# Always use 127.0.0.1:5000 as default for all API calls unless overridden by environment
+HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
 if HOST.startswith("http://"):
     URI = f'{HOST}/v1/chat/completions'
     URL_MODEL = f'{HOST}/v1/engines/'
@@ -68,8 +74,8 @@ received_message = ""
 CHARACTER_CARD = os.environ.get("CHARACTER_CARD", None)
 YOUR_NAME = os.environ.get("YOUR_NAME")
 
-API_TYPE = os.environ.get("API_TYPE")
-API_TYPE_VISUAL = os.environ.get("API_TYPE_VISUAL")
+API_TYPE = os.environ.get("API_TYPE", "Oobabooga")  # Keep the default value
+API_TYPE_VISUAL = os.environ.get("API_TYPE_VISUAL", "Oobabooga")  # Add default for visual too
 
 history_loaded = False
 
@@ -121,6 +127,21 @@ with open("Configurables/SoftReset.json", 'r') as openfile:
 with open("Configurables/StoppingStrings.json", 'r') as openfile:
     settings.stopping_strings = json.load(openfile)
 
+def refresh_uris():
+    """Refresh API URIs when environment variables change"""
+    global URI, URL_MODEL, HOST
+    try:
+        # Re-read environment variables
+        HOST = os.environ.get("HOST_PORT", "127.0.0.1:5000")
+        if HOST.startswith("http://"):
+            URI = f'{HOST}/v1/chat/completions'
+            URL_MODEL = f'{HOST}/v1/engines/'
+        else:
+            URI = f'http://{HOST}/v1/chat/completions'
+            URL_MODEL = f'http://{HOST}/v1/engines/'
+        print(f"[API] URIs refreshed: {URI}")
+    except Exception as e:
+        print(f"[API] Error refreshing URIs: {e}")
 
 def run(user_input, temp_level):
     global received_message
@@ -252,7 +273,8 @@ def run(user_input, temp_level):
         print(f"[API] API_TYPE: {API_TYPE}")
         print(f"[API] URI would be: http://{HOST}/v1/chat/completions")
         
-        # Simple API call using unified interface
+        # Simple API call using unified interface with fallback support
+        primary_api_success = False
         try:
             print(f"[API] About to call API.api_call with user_input: '{user_input[:50]}...'")
             
@@ -265,9 +287,51 @@ def run(user_input, temp_level):
             )
             
             print(f"[API] API.api_call returned: '{received_message[:50] if received_message else 'None'}...'")
+            
+            # Check if we got a valid response
+            if received_message and isinstance(received_message, str) and len(received_message.strip()) > 0:
+                primary_api_success = True
+                print(f"[API] Primary API succeeded")
+            else:
+                print(f"[API] Primary API returned empty/invalid response")
+                primary_api_success = False
+                
         except Exception as e:
             print(f"[API] Exception in API.api_call: {e}")
-            zw_logging.log_error(f"API request failed: {e}")
+            zw_logging.log_error(f"Primary API request failed: {e}")
+            primary_api_success = False
+
+        # Fallback to local LLM if primary API failed and fallback is enabled
+        if not primary_api_success and settings.api_fallback_enabled:
+            try:
+                print(f"[API] Primary API failed, attempting fallback...")
+                from API.fallback_api import try_fallbacks
+                
+                # Prepare request for fallback
+                fallback_request = {
+                    "messages": encode_for_oobabooga_chat(user_input) if API_TYPE == "Oobabooga" else encode_new_api_ollama(user_input),
+                    "max_tokens": settings.max_tokens,
+                    "temperature": temp_level,
+                    "stop": settings.stopping_strings
+                }
+                
+                # Try fallback models
+                fallback_response = try_fallbacks(fallback_request)
+                
+                if isinstance(fallback_response, dict) and "choices" in fallback_response:
+                    received_message = fallback_response["choices"][0]["message"]["content"]
+                    print(f"[API] Fallback API succeeded: '{received_message[:50]}...'")
+                    zw_logging.update_debug_log("Used fallback API successfully")
+                else:
+                    print(f"[API] Fallback API failed: {fallback_response}")
+                    received_message = "Sorry, I'm having connection issues right now."
+                    
+            except Exception as fallback_error:
+                print(f"[API] Fallback API also failed: {fallback_error}")
+                zw_logging.log_error(f"Fallback API failed: {fallback_error}")
+                received_message = "Sorry, I'm having connection issues right now."
+        elif not primary_api_success:
+            # Primary API failed and fallback is disabled
             received_message = "Sorry, I'm having connection issues right now."
 
         # Simple post-processing
@@ -423,16 +487,87 @@ def run_streaming(user_input, temp_level, recursion_depth=0):
         # Reset the ticker (starts counting at 1)
         streaming_sentences_ticker = 1
 
-        # Send the actual API Request using unified interface
-        streamed_api_stringpuller = API.api_call(
-            user_input=user_input,
-            temp_level=temp_level,
-            max_tokens=cur_tokens_required,
-            streaming=True,
-            preset=preset,
-            char_send=char_send,
-            stop=stop
-        )
+        # Send the actual API Request using unified interface with fallback support
+        primary_streaming_success = False
+        try:
+            streamed_api_stringpuller = API.api_call(
+                user_input=user_input,
+                temp_level=temp_level,
+                max_tokens=cur_tokens_required,
+                streaming=True,
+                preset=preset,
+                char_send=char_send,
+                stop=stop
+            )
+            
+            # Check if we got a valid streaming response
+            if streamed_api_stringpuller and hasattr(streamed_api_stringpuller, '__iter__'):
+                primary_streaming_success = True
+                print(f"[API] Primary streaming API succeeded")
+            else:
+                print(f"[API] Primary streaming API returned invalid response")
+                primary_streaming_success = False
+                
+        except Exception as e:
+            print(f"[API] Exception in streaming API.api_call: {e}")
+            zw_logging.log_error(f"Primary streaming API request failed: {e}")
+            primary_streaming_success = False
+
+        # Fallback to non-streaming if primary streaming failed and fallback is enabled
+        if not primary_streaming_success and settings.api_fallback_enabled:
+            try:
+                print(f"[API] Primary streaming API failed, attempting fallback...")
+                from API.fallback_api import try_fallbacks
+                
+                # Prepare request for fallback (non-streaming)
+                fallback_request = {
+                    "messages": encode_for_oobabooga_chat(user_input) if API_TYPE == "Oobabooga" else encode_new_api_ollama(user_input),
+                    "max_tokens": cur_tokens_required,
+                    "temperature": temp_level,
+                    "stop": stop
+                }
+                
+                # Try fallback models (non-streaming)
+                fallback_response = try_fallbacks(fallback_request)
+                
+                if isinstance(fallback_response, dict) and "choices" in fallback_response:
+                    # Convert non-streaming response to streaming-like format
+                    fallback_content = fallback_response["choices"][0]["message"]["content"]
+                    
+                    # Create a simple streaming-like iterator
+                    class FallbackStreamIterator:
+                        def __init__(self, content):
+                            self.content = content
+                            self.sent = False
+                        
+                        def __iter__(self):
+                            return self
+                        
+                        def __next__(self):
+                            if not self.sent:
+                                self.sent = True
+                                # Return a mock event with the content
+                                return type('MockEvent', (), {'data': json.dumps({"choices": [{"delta": {"content": self.content}}]})})()
+                            raise StopIteration
+                    
+                    streamed_api_stringpuller = FallbackStreamIterator(fallback_content)
+                    print(f"[API] Fallback API succeeded (non-streaming): '{fallback_content[:50]}...'")
+                    zw_logging.update_debug_log("Used fallback API successfully (non-streaming)")
+                else:
+                    print(f"[API] Fallback API failed: {fallback_response}")
+                    # Create empty iterator to prevent errors
+                    streamed_api_stringpuller = iter([])
+                    
+            except Exception as fallback_error:
+                print(f"[API] Fallback API also failed: {fallback_error}")
+                zw_logging.log_error(f"Fallback API failed: {fallback_error}")
+                # Create empty iterator to prevent errors
+                streamed_api_stringpuller = iter([])
+        elif not primary_streaming_success:
+            # Primary streaming failed and fallback is disabled
+            print(f"[API] Primary streaming failed and fallback is disabled")
+            # Create empty iterator to prevent errors
+            streamed_api_stringpuller = iter([])
 
         # Clear streamed emote list
         vtube_studio.clear_streaming_emote_list()
@@ -1250,7 +1385,39 @@ def view_image(direct_talk_transcript):
             received_cam_message = response.json()['choices'][0]['message']['content']
         except Exception as e:
             zw_logging.log_error(f"Oobabooga image API request failed: {e}")
-            received_cam_message = f"Error processing image: {e}"
+            
+            # Try fallback if enabled
+            if settings.api_fallback_enabled:
+                try:
+                    print(f"[API] Primary image API failed, attempting fallback...")
+                    from API.fallback_api import generate_image_response
+                    
+                    # Create a simple text-based image description request
+                    fallback_messages = [
+                        {"role": "system", "content": "You are a helpful assistant that describes images. When you can't see an image, provide a friendly response about what you would typically see in images."},
+                        {"role": "user", "content": f"{base_prompt} (Note: Image processing is unavailable, but I can help with general conversation about images)"}
+                    ]
+                    
+                    fallback_response = generate_image_response(
+                        messages=fallback_messages,
+                        image_path="LiveImage.png",
+                        max_tokens=300,
+                        temperature=0.7,
+                        stop_sequences=stop
+                    )
+                    
+                    if fallback_response and isinstance(fallback_response, str):
+                        received_cam_message = fallback_response
+                        print(f"[API] Fallback image API succeeded: '{received_cam_message[:50]}...'")
+                        zw_logging.update_debug_log("Used fallback API for image processing")
+                    else:
+                        received_cam_message = "I can see you're trying to show me an image, but I'm having trouble processing it right now. What would you like to talk about?"
+                        
+                except Exception as fallback_error:
+                    print(f"[API] Fallback image API also failed: {fallback_error}")
+                    received_cam_message = "I can see you're trying to show me an image, but I'm having trouble processing it right now. What would you like to talk about?"
+            else:
+                received_cam_message = f"Error processing image: {e}"
 
     elif API_TYPE_VISUAL == "Ollama":
 
@@ -1262,7 +1429,39 @@ def view_image(direct_talk_transcript):
             received_cam_message = API.api_standard_image(history=past_messages)
         except Exception as e:
             zw_logging.log_error(f"Ollama image API request failed: {e}")
-            received_cam_message = f"Error processing image: {e}"
+            
+            # Try fallback if enabled
+            if settings.api_fallback_enabled:
+                try:
+                    print(f"[API] Primary Ollama image API failed, attempting fallback...")
+                    from API.fallback_api import generate_image_response
+                    
+                    # Create a simple text-based image description request
+                    fallback_messages = [
+                        {"role": "system", "content": "You are a helpful assistant that describes images. When you can't see an image, provide a friendly response about what you would typically see in images."},
+                        {"role": "user", "content": f"{base_prompt} (Note: Image processing is unavailable, but I can help with general conversation about images)"}
+                    ]
+                    
+                    fallback_response = generate_image_response(
+                        messages=fallback_messages,
+                        image_path="LiveImage.png",
+                        max_tokens=300,
+                        temperature=0.7,
+                        stop_sequences=stop
+                    )
+                    
+                    if fallback_response and isinstance(fallback_response, str):
+                        received_cam_message = fallback_response
+                        print(f"[API] Fallback image API succeeded: '{received_cam_message[:50]}...'")
+                        zw_logging.update_debug_log("Used fallback API for Ollama image processing")
+                    else:
+                        received_cam_message = "I can see you're trying to show me an image, but I'm having trouble processing it right now. What would you like to talk about?"
+                        
+                except Exception as fallback_error:
+                    print(f"[API] Fallback image API also failed: {fallback_error}")
+                    received_cam_message = "I can see you're trying to show me an image, but I'm having trouble processing it right now. What would you like to talk about?"
+            else:
+                received_cam_message = f"Error processing image: {e}"
     
     else:
         zw_logging.log_error(f"Unknown API_TYPE for image processing: {API_TYPE}")
@@ -1462,7 +1661,55 @@ def view_image_streaming(direct_talk_transcript):
             streamed_api_stringpuller = client.events()
         except Exception as e:
             zw_logging.log_error(f"Oobabooga streaming image API request failed: {e}")
-            streamed_api_stringpuller = []
+            
+            # Try fallback if enabled
+            if settings.api_fallback_enabled:
+                try:
+                    print(f"[API] Primary streaming image API failed, attempting fallback...")
+                    from API.fallback_api import generate_image_response
+                    
+                    # Create a simple text-based image description request
+                    fallback_messages = [
+                        {"role": "system", "content": "You are a helpful assistant that describes images. When you can't see an image, provide a friendly response about what you would typically see in images."},
+                        {"role": "user", "content": f"{base_prompt} (Note: Image processing is unavailable, but I can help with general conversation about images)"}
+                    ]
+                    
+                    fallback_response = generate_image_response(
+                        messages=fallback_messages,
+                        image_path="LiveImage.png",
+                        max_tokens=300,
+                        temperature=0.7,
+                        stop_sequences=stop
+                    )
+                    
+                    if fallback_response and isinstance(fallback_response, str):
+                        # Create a simple streaming-like iterator for the fallback response
+                        class FallbackImageStreamIterator:
+                            def __init__(self, content):
+                                self.content = content
+                                self.sent = False
+                            
+                            def __iter__(self):
+                                return self
+                            
+                            def __next__(self):
+                                if not self.sent:
+                                    self.sent = True
+                                    # Return a mock event with the content
+                                    return type('MockEvent', (), {'data': json.dumps({"choices": [{"delta": {"content": self.content}}]})})()
+                                raise StopIteration
+                        
+                        streamed_api_stringpuller = FallbackImageStreamIterator(fallback_response)
+                        print(f"[API] Fallback streaming image API succeeded: '{fallback_response[:50]}...'")
+                        zw_logging.update_debug_log("Used fallback API for streaming image processing")
+                    else:
+                        streamed_api_stringpuller = []
+                        
+                except Exception as fallback_error:
+                    print(f"[API] Fallback streaming image API also failed: {fallback_error}")
+                    streamed_api_stringpuller = []
+            else:
+                streamed_api_stringpuller = []
 
     elif API_TYPE_VISUAL == "Ollama":
         try:
@@ -1473,7 +1720,55 @@ def view_image_streaming(direct_talk_transcript):
             streamed_api_stringpuller = API.api_stream_image(history=past_messages)
         except Exception as e:
             zw_logging.log_error(f"Ollama streaming image API request failed: {e}")
-            streamed_api_stringpuller = []
+            
+            # Try fallback if enabled
+            if settings.api_fallback_enabled:
+                try:
+                    print(f"[API] Primary Ollama streaming image API failed, attempting fallback...")
+                    from API.fallback_api import generate_image_response
+                    
+                    # Create a simple text-based image description request
+                    fallback_messages = [
+                        {"role": "system", "content": "You are a helpful assistant that describes images. When you can't see an image, provide a friendly response about what you would typically see in images."},
+                        {"role": "user", "content": f"{base_prompt} (Note: Image processing is unavailable, but I can help with general conversation about images)"}
+                    ]
+                    
+                    fallback_response = generate_image_response(
+                        messages=fallback_messages,
+                        image_path="LiveImage.png",
+                        max_tokens=300,
+                        temperature=0.7,
+                        stop_sequences=stop
+                    )
+                    
+                    if fallback_response and isinstance(fallback_response, str):
+                        # Create a simple streaming-like iterator for the fallback response
+                        class FallbackImageStreamIterator:
+                            def __init__(self, content):
+                                self.content = content
+                                self.sent = False
+                            
+                            def __iter__(self):
+                                return self
+                            
+                            def __next__(self):
+                                if not self.sent:
+                                    self.sent = True
+                                    # Return a mock event with the content
+                                    return type('MockEvent', (), {'data': json.dumps({"choices": [{"delta": {"content": self.content}}]})})()
+                                raise StopIteration
+                        
+                        streamed_api_stringpuller = FallbackImageStreamIterator(fallback_response)
+                        print(f"[API] Fallback Ollama streaming image API succeeded: '{fallback_response[:50]}...'")
+                        zw_logging.update_debug_log("Used fallback API for Ollama streaming image processing")
+                    else:
+                        streamed_api_stringpuller = []
+                        
+                except Exception as fallback_error:
+                    print(f"[API] Fallback Ollama streaming image API also failed: {fallback_error}")
+                    streamed_api_stringpuller = []
+            else:
+                streamed_api_stringpuller = []
     
     else:
         zw_logging.log_error(f"Unknown API_TYPE for streaming image processing: {API_TYPE}")
