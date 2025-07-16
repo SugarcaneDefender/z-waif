@@ -20,31 +20,31 @@
 		"Speak Toggle"
     ],
 	[
-		"CTRL+A",
+		"A",
 		"Autochat"
     ],
 	[
-		"CTRL+S",
+		"S",
 		"Autochat Sensitivity"
     ],
 	[
-		"CTRL+R",
+		"R",
 		"Soft Reset"
     ],
 	[
-		"ALT+V",
+		"C",
 		"View Image"
     ],
 	[
-		"ALT+X",
+		"X",
 		"Cancel Image"
     ],
 	[
-		"CTRL+B",
+		"B",
 		"Send Blank"
     ],
 	[
-		"CTRL+Q",
+		"Q",
 		"Semi Auto Chat"
     ]
 ]

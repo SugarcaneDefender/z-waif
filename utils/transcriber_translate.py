@@ -7,7 +7,7 @@ import torch
 from dotenv import load_dotenv
 load_dotenv()
 
-from utils import cane_lib
+import utils.cane_lib
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -83,7 +83,7 @@ def faster_transcribe(voice):
         nresult += segment.text + " "
 
     # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
-    nresult = cane_lib.remove_repeats(nresult)
+    nresult = utils.cane_lib.remove_repeats(nresult)
 
     return nresult
 
@@ -98,7 +98,7 @@ def classical_transcribe(voice):
         nresult += mem['text']+" "
 
     # Remove repeats (whisper glitch can cause repeated phrases at transcribed ends)
-    nresult = cane_lib.remove_repeats(nresult)
+    nresult = utils.cane_lib.remove_repeats(nresult)
 
     return nresult
 
@@ -156,7 +156,3 @@ def chunky_get_merge():
 
     transcription_chunks = []   # reset it
     return final_chunky_message
-
-def get_transcription_chunks():
-    """Get the current transcription chunks"""
-    return transcription_chunks

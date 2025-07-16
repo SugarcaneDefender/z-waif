@@ -6,9 +6,9 @@ from tkinter import filedialog
 import os
 import pyautogui
 
-from utils import settings
-from utils import vtube_studio
-from utils import hotkeys
+import utils.settings
+import utils.vtube_studio
+import utils.hotkeys
 import random
 
 # initialize the camera
@@ -18,18 +18,18 @@ import random
 
 vision_enabled_string = os.environ.get("MODULE_VISUAL")
 if vision_enabled_string == "ON":
-    settings.vision_enabled = True
+    utils.settings.vision_enabled = True
 else:
-    settings.vision_enabled = False
+    utils.settings.vision_enabled = False
 
-if settings.vision_enabled:
+if utils.settings.vision_enabled:
     cam_port = 0
     cam = cv2.VideoCapture(cam_port)
 
 root = tkinter.Tk()
 root.withdraw() #use to hide tkinter window
 
-IMG_SCALE = float(os.environ.get("IMG_SCALE", "1.0"))
+img_scale = float(os.environ.get("IMG_SCALE"))
 
 
 def capture_pic():
@@ -41,15 +41,15 @@ def capture_pic():
     # show result
     if result:
 
-        image = cv2.resize(image,(int(320*IMG_SCALE), int(240*IMG_SCALE)))
+        image = cv2.resize(image,(int(320*img_scale), int(240*img_scale)))
         # saving image in local storage
         cv2.imwrite("LiveImage.png", image)
 
         # Show it to us, if we are previewing! (not during hangout mode, though, never preview there)
-        if settings.cam_image_preview and not settings.hangout_mode:
+        if utils.settings.cam_image_preview and not utils.settings.hangout_mode:
 
             # Loop to wait for image preview
-            while (hotkeys.VIEW_IMAGE_PRESSED is not True) and (hotkeys.CANCEL_IMAGE_PRESSED is not True):
+            while (utils.hotkeys.VIEW_IMAGE_PRESSED is not True) and (utils.hotkeys.CANCEL_IMAGE_PRESSED is not True):
                 cv2.imshow("Z-Waif Image Preview", image)
                 cv2.waitKey(6000)
                 cv2.destroyAllWindows()
@@ -68,8 +68,8 @@ def use_image_feed():
     image = cv2.imread(browse_feed_image())
 
     # Resize it accoring to max width/height
-    maxwidth = int(360*IMG_SCALE)
-    maxheight = int(360*IMG_SCALE)
+    maxwidth = int(360*img_scale)
+    maxheight = int(360*img_scale)
 
     f1 = maxwidth / image.shape[1]
     f2 = maxheight / image.shape[0]
@@ -98,8 +98,8 @@ def capture_screenshot():
                          cv2.COLOR_RGB2BGR)
 
     # Resize it accoring to max width/height
-    maxwidth = int(400*IMG_SCALE)
-    maxheight = int(400*IMG_SCALE)
+    maxwidth = int(400*img_scale)
+    maxheight = int(400*img_scale)
 
     f1 = maxwidth / image.shape[1]
     f2 = maxheight / image.shape[0]
@@ -122,7 +122,7 @@ def loop_random_look():
 
         rand_look_value = random.uniform(-0.47, 0.47) + random.uniform(-0.47, 0.47)
 
-        vtube_studio.change_look_level(rand_look_value)
+        utils.vtube_studio.change_look_level(rand_look_value)
 
 def loop_follow_look():
 
@@ -167,7 +167,7 @@ def capture_follow_pic():
                 face_spot = x + (w/2)
 
         face_span = (face_spot - 290) / -300
-        vtube_studio.change_look_level(face_span)
+        utils.vtube_studio.change_look_level(face_span)
 
 
 

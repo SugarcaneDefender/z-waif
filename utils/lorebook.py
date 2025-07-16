@@ -1,6 +1,6 @@
-from utils import cane_lib
+import utils.cane_lib
 import json
-from utils import zw_logging
+import utils.zw_logging
 
 do_log_lore = True
 total_lore_default = "Here is some lore about the current topics from your lorebook, please reference them;\n\n"
@@ -22,7 +22,7 @@ with open("Configurables/Lorebook.json", 'r') as openfile:
 #
 #     # Search for new ones
 #     for lore in LORE_BOOK:
-#         if cane_lib.keyword_check(message, [" " + lore['0']]) and lore['2'] == 0:
+#         if utils.cane_lib.keyword_check(message, [" " + lore['0']]) and lore['2'] == 0:
 #             # Set our lockout
 #             lore['2'] += 9
 #
@@ -55,7 +55,7 @@ def lorebook_gather(messages, sent_message):
     for message in reformed_messages:
         # Search for new ones
         for lore in LORE_BOOK:
-            if cane_lib.keyword_check(message, [" " + lore['0'] + " ", " " + lore['0'] + "\'", " " + lore['0'] + "s",
+            if utils.cane_lib.keyword_check(message, [" " + lore['0'] + " ", " " + lore['0'] + "\'", " " + lore['0'] + "s",
                                                       " " + lore['0'] + "!", " " + lore['0'] + ".", " " + lore['0'] + ",", " " + lore['0'] + "?",
                                                       ]) and lore['2'] == 0:
 
@@ -63,7 +63,7 @@ def lorebook_gather(messages, sent_message):
                 lore['2'] = 7   # lore has procced, prevent dupes
 
     if do_log_lore and total_lore != total_lore_default:
-        zw_logging.update_debug_log(total_lore)
+        utils.zw_logging.update_debug_log(total_lore)
 
 
     return total_lore
