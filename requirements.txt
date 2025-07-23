@@ -16,7 +16,6 @@ coloredlogs==15.0.1
 contourpy==1.3.1
 ctranslate2==4.5.0
 cycler==0.12.1
-discord==2.3.2
 discord.py==2.4.0
 emoji==2.9.0
 fastapi==0.112.2
@@ -80,7 +79,7 @@ pyperclip==1.9.0
 pyreadline3==3.5.4
 PyRect==0.2.0
 PyScreeze==1.0.1
-PythMC==1.2.2
+PythMC==1.2.2 ; sys_platform == "win32"
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
@@ -119,3 +118,12 @@ websockets==11.0.3
 yarl==1.18.3
 silero_vad==5.1.2
 soundfile==0.13.1
+# TODO: fix the extras for nix builds
+#
+# Extras
+#-e git+https://github.com/openai/whisper.git#egg=openai-whisper
+#
+#--extra-index-url https://download.pytorch.org/whl/cu118
+#torch
+#torchvision
+#torchaudio
