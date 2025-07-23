@@ -1,5 +1,4 @@
 .env
-.direnv
 venv/
 **/*.pyc
 **/*.bak
@@ -18,3 +17,7 @@ RAG_Database/
 
 # Voice input files
 utils/resource/voice_in/
+
+# Nix
+.direnv
+result-*

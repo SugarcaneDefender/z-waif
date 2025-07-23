@@ -1,7 +1,13 @@
 {
   description = "Development flake for z-waif.";
+  nixConfig = {
+    extra-substituters = "https://sugarcanedefender.cachix.org";
+    extra-trusted-public-keys = "sugarcanedefender.cachix.org-1:CCD6KwegzXZ2WhtIP6YPjDMU44/eNFz2OnHW1eBCpXg=";
+    download-buffer-size = 2147483648; # 2 GiB
+  };
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    # e2fspkgs.url = "github:NixOS/nixpkgs/nixos-unstable?rev=d8c8ccaeca94ed9da559170ee77d6d13a6649212";
     flake-utils.url = "github:numtide/flake-utils";
     pyproject-nix.url = "github:pyproject-nix/pyproject.nix";
   };
@@ -14,7 +20,12 @@
           overlays = [
             # e2fsprogs
             (final: prev: {
-              e2fsprogs = pkgs.e2fsprogs;
+              # e2fsprogs = (import inputs.e2fspkgs {inherit system;}).e2fsprogs;
+              e2fsprogs = ((prev.e2fsprogs.override { withFuse = true; }).overrideAttrs (final: prev: {
+                postInstall = (prev.postInstall or "") + ''
+                  cp $fuse2fs/bin/fuse2fs $bin/bin
+                '';
+              }));
             })
             # Python
             (final: prev: rec {
@@ -103,7 +114,7 @@
         };
         # This really should be a seperate file lmao
         packages = with pkgs; rec {
-          inherit python3 e2fsprogs;
+          inherit python3 python311Packages e2fsprogs;
           python = python3;
           python311 = python3;
         } // pythonPackages;
