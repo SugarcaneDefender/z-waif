@@ -1,8 +1,8 @@
 {
   description = "Development flake for z-waif.";
   nixConfig = {
-    extra-substituters = "https://sugarcanedefender.cachix.org";
-    extra-trusted-public-keys = "sugarcanedefender.cachix.org-1:CCD6KwegzXZ2WhtIP6YPjDMU44/eNFz2OnHW1eBCpXg=";
+    extra-substituters = "https://z-waif.cachix.org";
+    extra-trusted-public-keys = "z-waif.cachix.org-1:w4aiXXlhHNzyrV/tkrQvJHnBLLw8eWoYiPwJiNMcmI0=";
     download-buffer-size = 2147483648; # 2 GiB
   };
   inputs = {
@@ -25,6 +25,7 @@
                 postInstall = (prev.postInstall or "") + ''
                   cp $fuse2fs/bin/fuse2fs $bin/bin
                 '';
+                doCheck = false; # tests fail on btrfs
               }));
             })
             # Python
@@ -114,7 +115,7 @@
         };
         # This really should be a seperate file lmao
         packages = with pkgs; rec {
-          inherit python3 python311Packages e2fsprogs;
+          inherit python3 python311Packages e2fsprogs pythonEnv;
           python = python3;
           python311 = python3;
         } // pythonPackages;

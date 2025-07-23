@@ -20,4 +20,5 @@ utils/resource/voice_in/
 
 # Nix
 .direnv
+result
 result-*
