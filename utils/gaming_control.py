@@ -1,10 +1,10 @@
 import time
 
 import keyboard
-from utils import tag_task_controller as tag
-from utils import settings
+import utils.tag_task_controller as tag
+import utils.settings
 import re
-from utils import zw_logging
+import utils.zw_logging
 import json
 
 #
@@ -16,11 +16,11 @@ import json
 def gaming_step():
 
     # Ensure we have all the settings prepared here
-    settings.cam_use_image_feed = False
-    settings.cam_direct_talk = False
-    settings.cam_reply_after = True
-    settings.cam_image_preview = False
-    settings.cam_reply_after = True
+    utils.settings.cam_use_image_feed = False
+    utils.settings.cam_direct_talk = False
+    utils.settings.cam_reply_after = True
+    utils.settings.cam_image_preview = False
+    utils.settings.cam_reply_after = True
 
     # Run this VIEW in loop
     return "VIEW"
@@ -42,7 +42,7 @@ def message_inputs(message):
 
         # Cancel the loop if RIPOUT is sent (This is for if your bot has a crisis and wants to stop experiencing (humane))
         if press == "(ripout)":
-            settings.is_gaming_loop = False
+            utils.settings.is_gaming_loop = False
 
 
 
@@ -58,7 +58,7 @@ def do_button_press(press, game):
         if buttons[0] == str.lower(press):
 
             keyboard.press(buttons[1])
-            zw_logging.update_debug_log("Pressed " + buttons[1] + "!")
+            utils.zw_logging.update_debug_log("Pressed " + buttons[1] + "!")
             time.sleep(0.07)
             keyboard.release(buttons[1])
             time.sleep(0.67)

@@ -18,7 +18,6 @@ ctranslate2==4.5.0
 cycler==0.12.1
 discord.py==2.4.0
 emoji==2.9.0
-PyNaCl==1.5.0
 fastapi==0.112.2
 faster-whisper==1.1.1
 ffmpy==0.5.0
@@ -58,7 +57,7 @@ numba==0.61.0
 numpy==1.24.4
 ollama==0.5.1
 onnxruntime==1.20.1
-# openai-whisper
+openai-whisper
 opencv-python==4.11.0.86
 orjson==3.10.15
 packaging==24.2
@@ -77,16 +76,17 @@ Pygments==2.19.1
 PyMsgBox==1.0.9
 pyparsing==3.2.1
 pyperclip==1.9.0
+pyreadline3==3.5.4
 PyRect==0.2.0
 PyScreeze==1.0.1
-PythMC==1.2.2 ; sys_platform == 'win32'
+PythMC==1.2.2 ; sys_platform == "win32"
 python-dateutil==2.9.0.post0
 python-dotenv==1.0.1
 python-multipart==0.0.20
 pytweening==1.2.0
 pytz==2025.1
 pyvts==0.3.3
-pywin32==308 ; sys_platform == 'win32'
+pywin32==308
 PyYAML==6.0.2
 referencing==0.36.2
 regex==2024.11.6
@@ -95,13 +95,10 @@ rich==13.9.4
 rpds-py==0.22.3
 ruff==0.9.5
 semantic-version==2.10.0
-sentence-transformers==3.3.1
 shellingham==1.5.4
-silero_vad==5.1.2
 six==1.17.0
 sniffio==1.3.1
 sounddevice==0.4.7
-soundfile==0.13.1
 sseclient-py==1.8.0
 starlette==0.38.6
 sympy==1.13.3
@@ -112,7 +109,6 @@ torch==2.7.1+cu118
 torchaudio==2.7.1+cu118
 torchvision==0.22.1+cu118
 tqdm==4.67.1
-twitchio==2.9.1
 typer==0.15.1
 typing_extensions==4.12.2
 tzdata==2025.1
@@ -120,6 +116,8 @@ urllib3==2.3.0
 uvicorn==0.34.0
 websockets==11.0.3
 yarl==1.18.3
+silero_vad==5.1.2
+soundfile==0.13.1
 # TODO: fix the extras for nix builds
 #
 # Extras

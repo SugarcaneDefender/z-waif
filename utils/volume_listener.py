@@ -3,8 +3,8 @@ import sounddevice as sd
 #from numba.cuda.libdevice import trunc
 #from sympy import false
 
-from utils import hotkeys
-from utils import settings
+import utils.hotkeys
+from utils.settings import use_silero_vad
 
 duration = 10 #in seconds
 
@@ -32,9 +32,9 @@ def audio_callback(indata, frames, time, status):
     # take a rolling average, be more aggressive for if the sound is louder
 
     if (volume_norm > VOL_LISTENER_LEVEL):
-        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + (0.024 * hotkeys.SPEAKING_VOLUME_SENSITIVITY) + 0.01) / 2
+        VOL_LISTENER_LEVEL = (VOL_LISTENER_LEVEL + volume_norm + (0.024 * utils.hotkeys.SPEAKING_VOLUME_SENSITIVITY) + 0.01) / 2
     else:
-        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 8) + volume_norm - (0.0044 * hotkeys.SPEAKING_VOLUME_SENSITIVITY)) / 9
+        VOL_LISTENER_LEVEL = ((VOL_LISTENER_LEVEL * 8) + volume_norm - (0.0044 * utils.hotkeys.SPEAKING_VOLUME_SENSITIVITY)) / 9
 
 
 def get_vol_level():
@@ -45,7 +45,7 @@ def get_vol_level():
 def run_volume_listener():
 
     # Do not run this if we are using Silero VAD instead!
-    if settings.use_silero_vad == True:
+    if utils.settings.use_silero_vad == True:
         return
 
     allow_mic = False

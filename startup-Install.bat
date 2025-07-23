@@ -10,20 +10,9 @@ set "LOG_FILE=%SCRIPT_DIR%\log.txt"
 REM Change to the script directory
 cd /d "%SCRIPT_DIR%"
 
-REM Add current directory to Python path
-set "PYTHONPATH=%SCRIPT_DIR%;%PYTHONPATH%"
-
 REM Create and activate the main virtual environment
 python -m venv venv
 call venv\Scripts\activate
-
-REM Copy the .env file
-IF NOT EXIST ".env" (
-    echo Copying .env file...
-    copy ".env.example" ".env"
-) ELSE (
-    echo .env file already exists, skipping copy.
-)
 
 REM Install PyTorch, torchvision, and torchaudio from a specific index URL
 python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
@@ -54,13 +43,13 @@ python -m ensurepip --upgrade
 python -m pip install --upgrade pip
 
 REM Install PyTorch, torchvision, and torchaudio from a specific index URL
-REM python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
+python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 2>> "%LOG_FILE%"
 
 REM Install openai-whisper from the GitHub repository
-REM python -m pip install git+https://github.com/openai/whisper.git 2>> "%LOG_FILE%"
+python -m pip install git+https://github.com/openai/whisper.git 2>> "%LOG_FILE%"
 
 REM Needed upgrades that won't install normally
-REM python -m pip install --upgrade pywin32
+python -m pip install --upgrade pywin32
 
 REM Install the remaining dependencies from requirements.txt
 python -m pip install -r requirements.txt 2>> "%LOG_FILE%"

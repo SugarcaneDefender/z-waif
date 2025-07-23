@@ -70,14 +70,13 @@ from ollama import chat
 
 # Testing the no repeat voice rule (whisper patch) to make sure it actually works
 
-# from utils import cane_lib
+# import utils.cane_lib
 #
 #
-# WHY IS THIS HERE. WHAT HAVE YOU DONE, SUGARCANE?
-# stringy = cane_lib.remove_repeats("Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft ")
-# # stringy = cane_lib.super_remove_repeats("Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama")
-# # stringy = cane_lib.super_remove_repeats(" blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah")
-# # stringy = cane_lib.super_remove_repeats("Darling, yeah. Oh yeah, my mom got me a Finch sock. Do you know what a Finch sock is? ")
+# stringy = utils.cane_lib.remove_repeats("Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft Jex in minecraft ")
+# # stringy = utils.cane_lib.super_remove_repeats("Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama, Alabama")
+# # stringy = utils.cane_lib.super_remove_repeats(" blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah blah")
+# # stringy = utils.cane_lib.super_remove_repeats("Darling, yeah. Oh yeah, my mom got me a Finch sock. Do you know what a Finch sock is? ")
 # print(stringy)
 
 # Silero VAD Time
@@ -97,9 +96,9 @@ from ollama import chat
 # )
 # print(speech_timestamps)
 
-# from utils import audio
+# import utils.audio
 #
-# audio.record_vad_loop()
+# utils.audio.record_vad_loop()
 
 #
 # Testing new keyword speech checking

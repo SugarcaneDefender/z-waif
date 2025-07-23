@@ -17,25 +17,25 @@ import API.api_controller
 import main
 import threading
 
-from utils import settings
-from utils import hotkeys
-from utils import hangout
-from utils import zw_logging
+import utils.settings
+import utils.hotkeys
+import utils.hangout
+import utils.zw_logging
 
 pipe_counter = 0 # This is just the total number of pipes created this session. Appends as pipe id
 main_pipe_running = False
 
-def start_new_pipe(desired_process, is_main_pipe, data=None):
+def start_new_pipe(desired_process, is_main_pipe):
     global pipe_counter, main_pipe_running
     pipe_counter += 1
 
-    # Make our pipe - add data field at index 5
-    this_pipe = ["Init", "None", pipe_counter, desired_process, is_main_pipe, data]
+    # Make our pipe
+    this_pipe = ["Init", "None", pipe_counter, desired_process, is_main_pipe]
     if is_main_pipe:
         main_pipe_running = True
 
     # Make it and run in another thread for us
-    new_pipe = threading.Thread(target=pipe_loop, args=(this_pipe,))
+    new_pipe = threading.Thread(target=pipe_loop(this_pipe))
     new_pipe.daemon = True
     new_pipe.start()
 
@@ -75,14 +75,6 @@ def pipe_loop(this_pipe):
             main.main_view_image()
             this_pipe[0] = "BAKED"
 
-        elif this_pipe[3] == "Main-Text-Chat":
-            # Pass the data to main_text_chat if available
-            if len(this_pipe) > 5 and this_pipe[5] is not None:
-                main.main_text_chat(this_pipe[5])
-            else:
-                main.main_text_chat()
-            this_pipe[0] = "BAKED"
-
         elif this_pipe[3] == "Main-Blank":
             main.main_send_blank()
             this_pipe[0] = "BAKED"
@@ -97,12 +89,12 @@ def pipe_loop(this_pipe):
             #
 
             # Begin with awaiting input
-            while not hotkeys.SPEAK_TOGGLED:
+            while not utils.hotkeys.SPEAK_TOGGLED:
                 time.sleep(0.01)
 
                 # Breakout of this if we have ended hangout mode
-                if not settings.hangout_mode:
-                    if not settings.hangout_mode:
+                if not utils.settings.hangout_mode:
+                    if not utils.settings.hangout_mode:
                         this_pipe[0] = "BAKED"
                     continue
 
@@ -115,12 +107,12 @@ def pipe_loop(this_pipe):
                 continue
 
             # add our appendables, if any
-            this_hangout_input = hangout.hangout_interrupts_appendables + this_hangout_input
+            this_hangout_input = utils.hangout.hangout_interrupts_appendables + this_hangout_input
 
             #
             # Decide on how to reply to this message
-            decided_reply_style = hangout.reply_decide(this_hangout_input)
-            zw_logging.update_debug_log("Hangout reply has been decided as: " + decided_reply_style)
+            decided_reply_style = utils.hangout.reply_decide(this_hangout_input)
+            utils.zw_logging.update_debug_log("Hangout reply has been decided as: " + decided_reply_style)
 
             #
             # Breakdown for what to do next
@@ -129,7 +121,7 @@ def pipe_loop(this_pipe):
                 # make sure that we append the skipped message!
                 # implement this at some point ^^^
                 print("Chose not to speak - skipping...")
-                hangout.add_to_appendables(this_hangout_input)
+                utils.hangout.add_to_appendables(this_hangout_input)
                 continue
 
             elif decided_reply_style == "Think":
@@ -172,16 +164,16 @@ def pipe_loop(this_pipe):
                 cur_waiting_time += gen_time_bonus
 
                 # wait for a while (in a loop, waiting for input to be detected)
-                while (not hotkeys.SPEAK_TOGGLED) and (cur_waiting_time < waiting_time):
+                while (not utils.hotkeys.SPEAK_TOGGLED) and (cur_waiting_time < waiting_time):
                     cur_waiting_time += 0.0001
                     time.sleep(0.0001)
 
                 # Case for speaking toggled (we go on, someone has started talking)
-                if hotkeys.SPEAK_TOGGLED:
+                if utils.hotkeys.SPEAK_TOGGLED:
                     # make sure that we append the skipped message!
                     # implement this at some point ^^^
                     print("Audio heard - skipping...")
-                    hangout.add_to_appendables(this_hangout_input)
+                    utils.hangout.add_to_appendables(this_hangout_input)
 
                     # Clear out the latest chat if it is the one we just sent (it can slip in)
                     API.api_controller.pop_if_sent_is_latest(this_hangout_input)
@@ -197,7 +189,7 @@ def pipe_loop(this_pipe):
 
 
             # Breakout of this if we have ended hangout mode
-            if not settings.hangout_mode:
+            if not utils.settings.hangout_mode:
                 this_pipe[0] = "BAKED"
 
         # Minirest for loop
