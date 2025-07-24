@@ -54,7 +54,7 @@
                   }
                 )
               ];
-              python311 =
+              newPython311 =
                 let
                   self = prev.python311.override {
                     inherit self;
@@ -62,11 +62,11 @@
                   };
                 in
                 self;
-              python311Packages = python311.pkgs;
+              newPython311Packages = newPython311.pkgs;
             })
           ];
         };
-        python3 = pypkgs.python311;
+        python3 = pypkgs.newPython311;
         libs = with pkgs; [
           portaudio
           libglvnd
