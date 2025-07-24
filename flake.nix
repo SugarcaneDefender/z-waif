@@ -2,7 +2,8 @@
   description = "Development flake for z-waif.";
   nixConfig = {
     extra-substituters = "https://z-waif.cachix.org";
-    extra-trusted-public-keys = "z-waif.cachix.org-1:w4aiXXlhHNzyrV/tkrQvJHnBLLw8eWoYiPwJiNMcmI0=";
+    extra-trusted-public-keys =
+      "z-waif.cachix.org-1:w4aiXXlhHNzyrV/tkrQvJHnBLLw8eWoYiPwJiNMcmI0=";
     download-buffer-size = 2147483648; # 2 GiB
   };
   inputs = {
@@ -21,26 +22,31 @@
             # e2fsprogs
             (final: prev: {
               # e2fsprogs = (import inputs.e2fspkgs {inherit system;}).e2fsprogs;
-              e2fsprogs = ((prev.e2fsprogs.override { withFuse = true; }).overrideAttrs (final: prev: {
-                postInstall = (prev.postInstall or "") + ''
-                  cp $fuse2fs/bin/fuse2fs $bin/bin
-                '';
-                doCheck = false; # tests fail on btrfs
-              }));
+              e2fsprogs =
+                ((prev.e2fsprogs.override { withFuse = true; }).overrideAttrs
+                  (final: prev: {
+                    postInstall = (prev.postInstall or "") + ''
+                      cp $fuse2fs/bin/fuse2fs $bin/bin
+                    '';
+                    doCheck = false; # tests fail on btrfs
+                  }));
             })
             # Python
             (final: prev: rec {
               pythonPackagesOverlays = (prev.pythonPackagesOverlays or [ ]) ++ [
-                (python-final: python-prev: with python3.pkgs; pythonPackages // {
-                  # Package renames
-                  discord-py = discordpy;
-                  silero-vad = pysilero-vad;
-                })
+                (python-final: python-prev:
+                  with python3.pkgs;
+                  pythonPackages // {
+                    # Package renames
+                    discord-py = discordpy;
+                    silero-vad = pysilero-vad;
+                  })
               ];
               python3 = let
                 self = prev.python311.override {
                   inherit self;
-                  packageOverrides = prev.lib.composeManyExtensions final.pythonPackagesOverlays;
+                  packageOverrides =
+                    prev.lib.composeManyExtensions final.pythonPackagesOverlays;
                 };
               in self;
               python = python3;
@@ -55,11 +61,12 @@
           requirements = builtins.readFile ./requirements.txt;
           projectRoot = ./.;
         };
-        pythonEnv = 
+        pythonEnv =
           # assert project.validators.validateVersionConstraints { python = python3; } == { };
-          (
-            python3.withPackages (project.renderers.withPackages { python = python3; pythonPackages = python3.pkgs; })
-          );
+          (python3.withPackages (project.renderers.withPackages {
+            python = python3;
+            pythonPackages = python3.pkgs;
+          }));
         pythonPackages = with pkgs; {
           # mouse package for requirements.txt
           mouse = let
@@ -100,7 +107,7 @@
             };
             propagatedBuildInputs = [ ];
           };
-      };
+        };
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs;
@@ -114,10 +121,11 @@
           # Load the venv in the .envrc file
         };
         # This really should be a seperate file lmao
-        packages = with pkgs; rec {
-          inherit python3 python311Packages e2fsprogs pythonEnv;
-          python = python3;
-          python311 = python3;
-        } // pythonPackages;
+        packages = with pkgs;
+          rec {
+            inherit python3 python311Packages e2fsprogs pythonEnv;
+            python = python3;
+            python311 = python3;
+          } // pythonPackages;
       });
 }
