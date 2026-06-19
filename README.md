@@ -62,22 +62,39 @@ Z-Waif has [a basic website](https://zwaif.neocities.org/) that you can visit. I
 
 ## Recent Changelog
 
-v1.13
+v1.15
 
-- Added API_TYPE_VISUAL in the .env
-	- Allows you to use a different API for your visual requests.
-	- Mostly so you can use Oobabooga as the main, and Ollama as a visual assistant.
+- Added rolling summaries.
+	- Will automatically generate every 10 message pairs, spaced back by 10 message pairs.
+		- No need to summarize things still in live memory, so it is spaced back.
+	- Toggleable in env.
+	- Can configure the total messages summarized per summary chunk (SEARCH_POINT_SIZE).
+	- Can configure the max size of these summaries (SUMMARY_TOKENS_MAX_COUNT).
+	- RAG should probably be on, might break if not! So turn on after a few days of use.
 
-- Added Chatpops
-	- Small phrases said before saying their actual message, as the prompt evaluates.
-	- Lowers perceived response time, and let you know that they are responding.
-	- Only works with API_STREAM messages.
-	- Configurable.
+- Added LMStudio API access option.
+	- Works with image access, too.
+	- Can change model configs in Configurables.
+	- Pretty much the same config style as the Ollama.
+	- Best new loader, I personally think.
 
-- Adjusted the RAG to be faster by storing fewer common words, and by tending to provide shorter memories.
-- Updated requirements.
-- Chat requests that come back blank now add in a " Hmm." at the end of the message.
-	- This is to fix issues with streaming_lm and other issues where repeating the prompt causes soft failures.
+- Added an option to remove quotation marks from being saved to memory, so the bot doesn't loop.
+
+- Backups are now saved to their own folder. There are also now two backups - the ususal one on boot, and one that runs every 8 messages.
+	- There is also a backup option for the new rolling summaries, too.
+
+- New Discord API commands.
+	- /help will list all commands
+	- /allow_newlines and /disallow_newlines can turn on and off the cuts for newline.
+	- Still have the /reroll command, by the way.
+
+- Enhanced detection for blank messages in the case autochat is left on to be skipped.
+
+- Note: For anyone using the image API, it can help to turn on "Multiple-access" in windows camera settings.
+	- This will allow you to keep a preview of what is being taken by opening the Camera app, Obs, or anything that lets you see.
+	- Leaving another app open also improves image quality, I notice.
+- Fixed a bug where the mic would stay recording during semi-auto chat improperly.
+- Fixed a bug where toggling on newline cut would leave it on, even if turned off.
 
 
 ## To-Do
