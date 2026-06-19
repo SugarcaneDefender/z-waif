@@ -7,6 +7,8 @@ import humanize, os, threading
 import emoji
 import asyncio
 
+from numba.core.cgutils import false_bit
+
 import utils.audio
 import utils.hotkeys
 import utils.transcriber_translate
@@ -39,6 +41,9 @@ import utils.uni_pipes
 import utils.zw_logging
 
 from dotenv import load_dotenv
+
+from utils.settings import semi_auto_chat
+
 load_dotenv()
 
 TT_CHOICE = os.environ.get("WHISPER_CHOICE")
@@ -54,6 +59,10 @@ is_live_pipe = False
 live_pipe_no_speak = False
 live_pipe_force_speak_on_response = False
 live_pipe_use_streamed_interrupt_watchdog = False
+
+summary_skip_speak = False
+
+turn_off_autochat_count = 0
 
 
 # noinspection PyBroadException
@@ -147,9 +156,31 @@ def main_converse():
 
         transcript = utils.transcriber_translate.transcribe_voice_to_text(audio_buffer)
 
-        if len(transcript) < 2:
+        # Check if this has anything
+        dotless_transcript = transcript.replace(".", "")
+        dotless_transcript = dotless_transcript.replace(" ", "")
+        dotless_transcript = dotless_transcript.replace("\n", "")
+
+        if len(dotless_transcript) < 2:
             print("Transcribed chat is blank - cancelling...")
             utils.zw_logging.update_debug_log("Transcribed chat is blank. Assuming anomaly and not actual speech...")
+
+            global turn_off_autochat_count
+
+            #
+            # Turn off semi-autochat / autochat if we get a full blank reply
+
+            if utils.settings.semi_auto_chat or utils.hotkeys.get_autochat_toggle():
+
+                turn_off_autochat_count += 1
+
+                if turn_off_autochat_count > 1:
+                    turn_off_autochat_count = 0
+                    utils.settings.semi_auto_chat = False
+
+            else:
+                turn_off_autochat_count = 0
+
             return
 
 
@@ -168,6 +199,13 @@ def main_converse():
     # Store the message, for cycling purposes
     global stored_transcript
     stored_transcript = transcript
+
+    # Check if we should be recording as we generate, if we are in a semi-auto chat and not speaking
+    utils.audio.run_chatgen_recording_loop = False
+
+    if utils.settings.semi_auto_chat and utils.settings.speak_only_spokento and not API.api_controller.check_for_name_in_message(stored_transcript):
+        #print("\n\n\nGathering audio...")
+        utils.audio.run_chatgen_recording_loop = True
 
 
     # Actual sending of the message, waits for reply automatically
@@ -191,6 +229,7 @@ def main_converse():
 
 def main_message_speak():
     global live_pipe_force_speak_on_response
+    global summary_skip_speak
 
     #
     #   Message is received Here
@@ -202,6 +241,11 @@ def main_message_speak():
     # Stop this if the message was streamed- we have already read it!
     if API.api_controller.last_message_streamed and not live_pipe_force_speak_on_response:
         live_pipe_force_speak_on_response = False
+        return
+
+    # Stop this if we ran a summary; it breaks if we have streaming on and repeats twice!
+    if summary_skip_speak:
+        summary_skip_speak = False
         return
 
     #
@@ -275,6 +319,24 @@ def message_checks(message):
         print("\n\nBot is knowingly closing the program! This is typically done as a last resort! Please re-evaluate your actions! :(\n\n")
         sys.exit("Closing...")
         exit()
+
+
+    #
+    #   Update our summarized, and run the summarizer again if needed.
+    #
+
+    if utils.retrospect.use_rolling_summaries:
+        utils.retrospect.search_point_current_count += 1
+        if utils.retrospect.search_point_current_count >= utils.retrospect.search_point_size:
+
+            # If we have autochat or full auto toggled, begin listening before we generate, that way we still can listen
+            if utils.settings.semi_auto_chat or utils.hotkeys.get_autochat_toggle():
+                utils.audio.run_chatgen_recording_loop = True
+
+            # Summarize
+            utils.retrospect.search_point_current_count = 0
+            utils.retrospect.retrospect_current_messages()
+
 
 
 
@@ -954,6 +1016,15 @@ def run_program():
     else:
         utils.settings.stream_chats = False
 
+    rolling_summaries_enabled_string = os.environ.get("USE_ROLLING_SUMMARIES")
+    if rolling_summaries_enabled_string == "ON":
+        utils.retrospect.use_rolling_summaries = True
+    else:
+        utils.retrospect.use_rolling_summaries = False
+
+    utils.retrospect.search_point_size = int(os.environ.get("SEARCH_POINT_SIZE"))
+    utils.retrospect.summary_tokens_max_count = int(os.environ.get("SUMMARY_TOKENS_MAX_COUNT"))
+
 
     # Load in our char name
     utils.settings.char_name = char_name
@@ -966,6 +1037,9 @@ def run_program():
 
     # Load the previous chat history, and make a backup of it
     API.api_controller.check_load_past_chat()
+
+    # Load the past summarizations
+    utils.retrospect.load_past_summaries()
 
     # Load in our chatpops
     chatpops_enabled_string = os.environ.get("USE_CHATPOPS")
@@ -1005,6 +1079,11 @@ def run_program():
     vad_listener = threading.Thread(target=utils.audio.record_vad_loop)
     vad_listener.daemon = True
     vad_listener.start()
+
+    # Collect any active speech while generation is active
+    chatgen_listener = threading.Thread(target=utils.audio.chatgen_audio_buffer_record)
+    chatgen_listener.daemon = True
+    chatgen_listener.start()
 
     listener_toggle = threading.Thread(target=utils.hotkeys.listener_timer)
     listener_toggle.daemon = True

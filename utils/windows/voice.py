@@ -1,6 +1,8 @@
 import time
 import os
 
+from sympy import false
+
 assert os.name == 'nt' # type: ignore
 
 import win32com.client
@@ -10,6 +12,7 @@ import utils.zw_logging
 import utils.soundboard
 import utils.settings
 import API.api_controller
+import utils.audio
 
 is_speaking = False
 cut_voice = False
@@ -34,10 +37,15 @@ def speak_line(s_message, refuse_pause):
             pure_chunk = pure_chunk.replace("*", "")
 
             # Change any !!! or other multi-exclamations to single use
+            # NOTE: Run this multiple times! So that any "super long" ones will get compressed down.
+            # I used a system where it would replace "!!", then "!!!", then "!!!!", which caused it to miss due to order.
+
             pure_chunk = pure_chunk.replace("!!", "!")
-            pure_chunk = pure_chunk.replace("!!!", "!")
-            pure_chunk = pure_chunk.replace("!!!!", "!")
-            pure_chunk = pure_chunk.replace("!!!!!", "!")
+            pure_chunk = pure_chunk.replace("!!", "!")
+            pure_chunk = pure_chunk.replace("!!", "!")
+            pure_chunk = pure_chunk.replace("!!", "!")
+            pure_chunk = pure_chunk.replace("!!", "!")
+
 
             # Speak
             speaker = win32com.client.Dispatch("SAPI.SpVoice")
@@ -62,6 +70,17 @@ def speak_line(s_message, refuse_pause):
     # Reset the volume cooldown so she don't pickup on herself
     utils.hotkeys.cooldown_listener_timer()
 
+    # also reset our chatgen frames after speaking, so she don't pickup on herself
+    # Delete the chatgen speech, unless we are unable to speak
+    if utils.settings.speak_only_spokento:
+        if API.api_controller.last_message_received_has_own_name:
+            utils.audio.chatgen_buffer_frames = []
+            utils.audio.run_chatgen_recording_loop = False
+    else:
+        utils.audio.chatgen_buffer_frames = []
+        utils.audio.run_chatgen_recording_loop = False
+
+
     set_speaking(False)
 
     return
@@ -73,6 +92,7 @@ def check_if_speaking() -> bool:
 def set_speaking(set: bool):
     global is_speaking
     is_speaking = set
+
 
 def force_cut_voice():
     global cut_voice

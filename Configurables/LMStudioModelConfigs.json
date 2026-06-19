@@ -1,0 +1,20 @@
+[
+    {
+        "temperature": 0.77,
+        "min_p": 0.047,
+        "top_k": 67,
+        "repeat_penalty": 1.1
+    },
+    {
+        "temperature": 0.97,
+		"min_p": 0.03,
+        "top_k": 94,
+        "repeat_penalty": 1.17
+    },
+    {
+        "temperature": 1.67,
+        "min_p": 0.02,
+        "top_k": 199,
+        "repeat_penalty": 1.27
+    }
+]

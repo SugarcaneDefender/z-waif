@@ -33,6 +33,8 @@ SAVE_PATH_ORDUS = os.path.join(current_directory, "resource", "voice_in", "inter
 SAVE_PATH_VAD = os.path.join(current_directory, "resource", "voice_in", "vad_voice.wav")
 
 chat_buffer_frames = []
+chatgen_buffer_frames = []
+run_chatgen_recording_loop = False
 
 latest_chat_frame_count = 0
 
@@ -119,6 +121,19 @@ def record():
     if len(chat_buffer_frames) > 1:
         frames = chat_buffer_frames.copy()
 
+
+    # Check if we want to add in our chatgen
+    # NOTE: This now gets cleared after every time she speaks, so she won't pickup on herself.
+    global chatgen_buffer_frames
+    global run_chatgen_recording_loop
+
+    if len(chatgen_buffer_frames) > 1:
+        frames += chatgen_buffer_frames.copy()
+        chatgen_buffer_frames = []
+        run_chatgen_recording_loop = False
+    #
+
+
     while utils.hotkeys.get_speak_input():
         data = stream.read(CHUNK)
         frames.append(data)
@@ -195,6 +210,16 @@ def record_chunky():
     if len(chat_buffer_frames) > 1:
         frames = chat_buffer_frames.copy()
 
+    # Check if we want to add in our chatgen
+    global chatgen_buffer_frames
+    global run_chatgen_recording_loop
+
+    if len(chatgen_buffer_frames) > 1:
+        frames += chatgen_buffer_frames.copy()
+        chatgen_buffer_frames = []
+        run_chatgen_recording_loop = False
+    #
+
     # Loop through until done recording, and limit it to X frames
     while utils.hotkeys.get_speak_input() and (1 + len(utils.transcriber_translate.transcription_chunks)) < MAX_CHUNKS:
         p = pyaudio.PyAudio()
@@ -268,6 +293,39 @@ def autochat_audio_buffer_record():
             # Clearing anything over the buffer
             if len(chat_buffer_frames) > 91:
                 chat_buffer_frames.pop(0)
+
+
+
+def chatgen_audio_buffer_record():
+
+    global chatgen_buffer_frames
+    time.sleep(7)   # 7 second rest to ensure there is time to boot up
+
+    # Make sure we have an actual audio device, return otherwise
+    if utils.volume_listener.no_mic:
+        return
+
+
+    # Main recording buffer
+    p = pyaudio.PyAudio()
+    stream = p.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+
+    while True:
+
+        # If there is no autochat, or we are actively in the middle of a chat, clear it
+        if run_chatgen_recording_loop == False:
+            time.sleep(0.002)     # Rest here a bit, no need to hotloop it
+
+
+        # If there is autochat, and no active chat, record it
+        elif run_chatgen_recording_loop == True:
+
+            # Record
+            data = stream.read(CHUNK)
+            chatgen_buffer_frames.append(data)
+
+            # Do not clean the buffer until needed!
+
 
 def record_vad_loop():
     global vad_voice_detected

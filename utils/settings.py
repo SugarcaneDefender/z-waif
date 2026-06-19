@@ -10,6 +10,7 @@ newline_cut = False
 asterisk_ban = False
 supress_rp = False
 stopping_strings = ["[System", "\nUser:", "---", "<|", "###"]
+removal_quotes_from_hist = False
 
 semi_auto_chat = False
 hangout_mode = False
@@ -24,7 +25,7 @@ model_preset = "Default"
 
 cam_use_image_feed = False
 cam_direct_talk = True
-cam_image_preview = True
+cam_image_preview = False
 cam_use_screenshot = False
 # cam_reply_after = False
 
@@ -41,9 +42,9 @@ cur_task_char = "None"
 is_gaming_loop = False
 
 minecraft_enabled = False
-gaming_enabled = True
-alarm_enabled = True
-vtube_enabled = True
-discord_enabled = True
-rag_enabled = True
-vision_enabled = True
+gaming_enabled = False
+alarm_enabled = False
+vtube_enabled = False
+discord_enabled = False
+rag_enabled = False
+vision_enabled = False

@@ -1,3 +1,4 @@
+import copy
 import datetime
 import os
 import html
@@ -29,7 +30,11 @@ import utils.hangout
 
 import API.oobaooga_api
 import API.ollama_api
+import API.lmstudio_api
+
 import API.character_card
+
+import lmstudio
 
 from ollama import chat
 from ollama import ChatResponse
@@ -49,6 +54,7 @@ IMG_URI = f'http://{IMG_PORT}/v1/chat/completions'
 IMG_URL_MODEL = f'http://{IMG_PORT}/v1/engines/'
 
 received_message = ""
+received_summary = ""
 CHARACTER_CARD = os.environ.get("CHARACTER_CARD")
 YOUR_NAME = os.environ.get("YOUR_NAME")
 
@@ -77,7 +83,7 @@ last_message_streamed = False
 streaming_sentences_ticker = 0
 
 regenerate_requests_count = 0
-regenerate_requests_limit = 5
+regenerate_requests_limit = 4
 
 force_skip_streaming = False
 flag_end_streaming = False
@@ -176,7 +182,7 @@ def run(user_input, temp_level):
 
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = copy.deepcopy(utils.settings.stopping_strings)
     if utils.settings.newline_cut:
         stop.append("\n")
     if utils.settings.asterisk_ban:
@@ -204,6 +210,8 @@ def run(user_input, temp_level):
     elif API_TYPE == "Ollama":
         received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
+    elif API_TYPE == "LMStudio":
+        received_message = API.lmstudio_api.api_standard(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
 
     # Translate issues with the received message
@@ -350,7 +358,7 @@ def run_streaming(user_input, temp_level):
 
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = copy.deepcopy(utils.settings.stopping_strings)
     if utils.settings.newline_cut:
         stop.append("\n")
     if utils.settings.asterisk_ban:
@@ -401,7 +409,8 @@ def run_streaming(user_input, temp_level):
     elif API_TYPE == "Ollama":
         streamed_api_stringpuller = API.ollama_api.api_stream(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
-
+    elif API_TYPE == "LMStudio":
+        streamed_api_stringpuller = API.lmstudio_api.api_stream(history=messages_to_send, temp_level=temp_level, stop=stop, max_tokens=cur_tokens_required)
 
     # Clear streamed emote list
     utils.vtube_studio.clear_streaming_emote_list()
@@ -427,6 +436,8 @@ def run_streaming(user_input, temp_level):
         elif API_TYPE == "Ollama":
             chunk = event['message']['content']
 
+        elif API_TYPE == "LMStudio":
+            chunk = event.content
 
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)
@@ -713,19 +724,25 @@ def check_load_past_chat():
         ooga_history_old = []
 
         try:
-            with open("LiveLogBackup.bak", 'r') as twopenfile:
+            with open("Backups/LiveLogBackupOnBoot.bak", 'r') as twopenfile:
                 ooga_history_old = json.load(twopenfile)
         except:
             pass
 
         if len(ooga_history) > len(ooga_history_old):
             # Export to JSON
-            with open("LiveLogBackup.bak", 'w') as outfile:
+            with open("Backups/LiveLogBackupOnBoot.bak", 'w') as outfile:
                 json.dump(ooga_history, outfile, indent=4)
 
 
 
 def save_histories():
+
+    # Strip out any quotation marks from the most recent history if we have the setting on
+    if utils.settings.removal_quotes_from_hist:
+        # This targets straight quotes, opening curly quotes, and closing curly quotes
+        cleaned_text = ooga_history[-1][1].replace('"', '').replace('“', '').replace('”', '')
+        ooga_history[-1][1] = cleaned_text
 
     # Export to JSON
     with open("LiveLog.json", 'w') as outfile:
@@ -733,6 +750,12 @@ def save_histories():
 
     # Save RAG database too
     utils.based_rag.store_rag_history()
+
+    # Make a manual backup every 10 messages
+    if len(ooga_history) % 8 == 0:
+        with open("Backups/LiveLogBackupContinual.bak", 'w') as soutfile:
+            json.dump(ooga_history, soutfile, indent=4)
+
 
 
 
@@ -811,7 +834,8 @@ def prune_deletables():
 #   Other API Access
 #
 
-def summary_memory_run(messages_input, user_sent_message):
+# Summarizes classic style, meaning injecting into the history directly
+def summary_memory_run_hard(messages_input, user_sent_message):
     global received_message
     global ooga_history
     global forced_token_level
@@ -844,14 +868,14 @@ def summary_memory_run(messages_input, user_sent_message):
         preset = utils.settings.model_preset
 
     utils.zw_logging.kelvin_log = preset
-    cur_tokens_required = utils.retrospect.summary_tokens_count
+    cur_tokens_required = utils.retrospect.summary_tokens_max_count
 
     #
     # NOTE: Does not use the character-task at the moment, be aware.
     #
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = copy.deepcopy(utils.settings.stopping_strings)
 
     # Encode
     messages_to_send = messages_input
@@ -875,6 +899,8 @@ def summary_memory_run(messages_input, user_sent_message):
     elif API_TYPE == "Ollama":
         received_message = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
 
+    elif API_TYPE == "LMStudio":
+        received_summary = API.lmstudio_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
 
     # Translate issues with the received message
     received_message = html.unescape(received_message)
@@ -887,17 +913,17 @@ def summary_memory_run(messages_input, user_sent_message):
     global stored_received_message
 
     if received_message == stored_received_message:
-        summary_memory_run(messages_input, user_sent_message)
+        summary_memory_run_hard(messages_input, user_sent_message)
         return
 
     # If her reply is the same as any in the past 20 chats, run another request
     if check_if_in_history(received_message):
-        summary_memory_run(messages_input, user_sent_message)
+        summary_memory_run_hard(messages_input, user_sent_message)
         return
 
     # If her reply is blank, request another run, clearing the previous history add, and escape
     if len(received_message) < 3:
-        summary_memory_run(messages_input, user_sent_message)
+        summary_memory_run_hard(messages_input, user_sent_message)
         return
 
     stored_received_message = received_message
@@ -923,7 +949,123 @@ def summary_memory_run(messages_input, user_sent_message):
     # We are ending our API request!
     is_in_api_request = False
 
+# Summarizes new-type, meaning we generate it and then feed it back into a memory/summary log for more digestive use
+def summary_memory_run_soft(messages_input, user_sent_message):
+    global received_summary
+    global ooga_history
+    global forced_token_level
+    global force_token_count
+    global currently_sending_message
+    global last_message_streamed
+    global currently_streaming_message
+    global is_in_api_request
 
+    # We are starting our API request!
+    is_in_api_request = True
+
+    # Set the currently sending message
+    currently_sending_message = user_sent_message
+
+    # Clear the old streaming message, also we are not streaming so set it so
+    currently_streaming_message = ""
+    last_message_streamed = False
+
+    # Load the history from JSON, to clean up the quotation marks
+    #
+    # with open("LiveLog.json", 'r') as openfile:
+    #     ooga_history = json.load(openfile)
+
+    # Determine what preset we want to load in with
+
+    preset = 'Z-Waif-ADEF-Standard'
+
+    if utils.settings.model_preset != "Default":
+        preset = utils.settings.model_preset
+
+    utils.zw_logging.kelvin_log = preset
+    cur_tokens_required = utils.retrospect.summary_tokens_max_count
+
+    #
+    # NOTE: Does not use the character-task at the moment, be aware.
+    #
+
+    # Set the stop right
+    stop = copy.deepcopy(utils.settings.stopping_strings)
+
+    # Encode
+    messages_to_send = messages_input
+
+
+    # Send the actual API Request
+    if API_TYPE == "Oobabooga":
+        request = {
+            "messages": messages_to_send,
+            'max_tokens': cur_tokens_required,
+            'mode': 'chat',  # Valid options: 'chat', 'chat-instruct', 'instruct'
+            'character': CHARACTER_CARD,
+            'truncation_length': max_context,
+            'stop': stop,
+
+            'preset': preset
+        }
+
+        received_summary = API.oobaooga_api.api_standard(request)
+
+    elif API_TYPE == "Ollama":
+        received_summary = API.ollama_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+
+    elif API_TYPE == "LMStudio":
+        received_summary = API.lmstudio_api.api_standard(history=messages_to_send, temp_level=0, stop=stop, max_tokens=cur_tokens_required)
+
+    # Translate issues with the received message
+    received_summary = html.unescape(received_summary)
+
+    # If her reply contains RP-ing as other people, supress it form the message
+    if utils.settings.supress_rp:
+        received_summary = supress_rp_as_others(received_summary)
+
+    # If her reply is the same as the last stored one, run another request
+    global stored_received_message
+    global regenerate_requests_count
+
+    regenerate_requests_count += 1
+    if regenerate_requests_count < regenerate_requests_limit:
+
+        if received_summary == stored_received_message:
+            summary_memory_run_soft(messages_input, user_sent_message)
+            return
+
+        # If her reply is the same as any in the past 20 chats, run another request
+        if check_if_in_history(received_summary):
+            summary_memory_run_soft(messages_input, user_sent_message)
+            return
+
+        # If her reply is blank, request another run, clearing the previous history add, and escape
+        if len(received_summary) < 3:
+            summary_memory_run_soft(messages_input, user_sent_message)
+            return
+
+    log_received_message = "{0}".format(received_summary)
+    received_summary = log_received_message
+
+
+
+    # Clear the currently sending message variable
+    currently_sending_message = ""
+
+    # Clear any token forcing
+    force_token_count = False
+
+    # We are ending our API request!
+    is_in_api_request = False
+
+    # Set it so we don't do double speak
+    if utils.settings.stream_chats:
+        main.summary_skip_speak = True
+
+
+def receive_summary_via_oogabooga():
+    return received_summary
 
 # def swap_language_model(model_ID):
 #
@@ -1041,6 +1183,25 @@ def view_image(direct_talk_transcript):
         if system_message != "":
             past_messages.append({"role": "system", "content": system_message})
     #
+    #
+
+    if API_TYPE_VISUAL == "LMStudio":
+
+        system_message = ""
+
+        if OLLAMA_VISUAL_ENCODE_GUIDANCE == "ON":
+            system_message += vision_guidance_message + "\n\n"
+
+        if OLLAMA_VISUAL_CARD == "BASE":
+            system_message += API.character_card.character_card
+
+        if OLLAMA_VISUAL_CARD == "VISUAL":
+            system_message += API.character_card.visual_character_card
+
+        # If we have any visual message to append, go for it!
+        if system_message != "":
+            past_messages.append({"role": "system", "content": system_message})
+    #
 
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
@@ -1064,7 +1225,7 @@ def view_image(direct_talk_transcript):
         base_prompt = direct_talk_transcript
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = copy.deepcopy(utils.settings.stopping_strings)
     if utils.settings.newline_cut:
         stop.append("\n")
     if utils.settings.asterisk_ban:
@@ -1110,6 +1271,11 @@ def view_image(direct_talk_transcript):
 
         received_cam_message = API.ollama_api.api_standard_image(history=past_messages)
 
+    elif API_TYPE_VISUAL == "LMStudio":
+        # yes, it also works like this in LMStudio, SLIME :D
+        # gucci maine dog wife gets slimed live on kik tv
+        received_cam_message = API.lmstudio_api.api_standard_image(history=past_messages, text_input=base_prompt,
+                                                                      temp_level=0, max_tokens=300, stop=stop)
 
     # Translate issues with the received message
     received_cam_message = html.unescape(received_cam_message)
@@ -1226,6 +1392,24 @@ def view_image_streaming(direct_talk_transcript):
             past_messages.append({"role": "system", "content": system_message})
     #
 
+    if API_TYPE_VISUAL == "LMStudio":
+
+        system_message = ""
+
+        if OLLAMA_VISUAL_ENCODE_GUIDANCE == "ON":
+            system_message += vision_guidance_message + "\n\n"
+
+        if OLLAMA_VISUAL_CARD == "BASE":
+            system_message += API.character_card.character_card
+
+        if OLLAMA_VISUAL_CARD == "VISUAL":
+            system_message += API.character_card.visual_character_card
+
+        # If we have any visual message to append, go for it!
+        if system_message != "":
+            past_messages.append({"role": "system", "content": system_message})
+    #
+
     past_messages.append({"role": "user", "content": ooga_history[message_marker][0]})
     past_messages.append({"role": "assistant", "content": ooga_history[message_marker][1]})
 
@@ -1248,7 +1432,7 @@ def view_image_streaming(direct_talk_transcript):
         base_prompt = direct_talk_transcript
 
     # Set the stop right
-    stop = utils.settings.stopping_strings
+    stop = copy.deepcopy(utils.settings.stopping_strings)
     if utils.settings.newline_cut:
         stop.append("\n")
     if utils.settings.asterisk_ban:
@@ -1313,6 +1497,11 @@ def view_image_streaming(direct_talk_transcript):
         streamed_api_stringpuller = API.ollama_api.api_stream_image(history=past_messages)
 
 
+    elif API_TYPE_VISUAL == "LMStudio":
+        # yes, it also works like this in LMStudio, SLIME :D
+        # gucci maine dog wife gets slimed live on kik tv
+        streamed_api_stringpuller = API.lmstudio_api.api_stream_image(history=past_messages, text_input=base_prompt, temp_level=0, max_tokens=300, stop=stop)
+
     # Clear streamed emote list
     utils.vtube_studio.clear_streaming_emote_list()
 
@@ -1336,6 +1525,8 @@ def view_image_streaming(direct_talk_transcript):
         elif API_TYPE_VISUAL == "Ollama":
             chunk = event['message']['content']
 
+        elif API_TYPE == "LMStudio":
+            chunk = event.content
 
         assistant_message += chunk
         streamed_response_check = streamed_update_handler(chunk, assistant_message)
@@ -1512,6 +1703,11 @@ def encode_new_api(user_input):
     if API_TYPE == "Ollama":
         return encode_new_api_ollama(user_input)
 
+    #
+    # Check for LMStudio - if so, send it!
+    if API_TYPE == "LMStudio":
+        return encode_new_api_lmstudio(user_input)
+
     messages_to_send = []
 
     message_marker = len(ooga_history) - marker_length
@@ -1558,6 +1754,16 @@ def encode_new_api(user_input):
             if utils.settings.rag_enabled:
                 messages_to_send.append({"role": "user", "content": utils.based_rag.call_rag_message()})
 
+            #
+            # Also append the summary #2 as it will be good spacing to be placed here
+            #
+
+            if utils.retrospect.use_rolling_summaries:
+                if len(utils.retrospect.live_summarization_log) > 1:
+                    messages_to_send.append({"role": "assistant", "content": utils.retrospect.live_summarization_log[-2]})
+
+
+
         i = i + 1
 
 
@@ -1566,6 +1772,9 @@ def encode_new_api(user_input):
     #
 
     messages_to_send.append({"role": "user", "content": user_input})
+
+    # Debug
+    # print(messages_to_send)
 
     return messages_to_send
 
@@ -1594,6 +1803,12 @@ def encode_new_api_ollama(user_input):
     # RAG Messegg
     if utils.settings.rag_enabled:
         ollama_composite_content += utils.based_rag.call_rag_message() + "\n\n"
+
+    # Also append the summary #2 here, as it will be good spacing to be placed here
+    if utils.retrospect.use_rolling_summaries:
+        if len(utils.retrospect.live_summarization_log) > 1:
+            messages_to_send.append({"role": "assistant", "content": utils.retrospect.live_summarization_log[-2]})
+
 
     # Lorebook Gathering
     lore_gathered = utils.lorebook.lorebook_gather(ooga_history[-3:], user_input)
@@ -1635,26 +1850,60 @@ def encode_new_api_ollama(user_input):
 
     return messages_to_send
 
-
-# encodes a given input to the new API, with no additives
-def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length):
+def encode_new_api_lmstudio(user_input):
     #
-    # Append 30 of the most recent history pairs (however long our raw marker length is)
+    # Append 40 of the most recent history pairs (however long our marker length is)
     #
 
-    message_marker = len(user_messages_input) - raw_marker_length
+    global ooga_history
+
+    messages_to_send = []
+
+    # Append our system message, if we are using OLLAMA
+
+    #
+    # Gather and send our composite metadata!
+
+    # Char card
+    lmstudio_composite_content = API.character_card.character_card + "\n\n"
+
+    # Task
+    if utils.settings.cur_task_char != "" and utils.settings.cur_task_char != "None":
+        lmstudio_composite_content += utils.tag_task_controller.get_cur_task_description() + "\n\n"
+
+    # RAG Messegg
+    if utils.settings.rag_enabled:
+        lmstudio_composite_content += utils.based_rag.call_rag_message() + "\n\n"
+
+    # Lorebook Gathering
+    lore_gathered = utils.lorebook.lorebook_gather(ooga_history[-3:], user_input)
+
+    if lore_gathered != utils.lorebook.total_lore_default:
+        lmstudio_composite_content += lore_gathered + "\n\n"
+
+    # Time
+    if ENCODE_TIME:
+        timestamp_string = "The current time now is "
+        current_time = datetime.datetime.now()
+        timestamp_string += current_time.strftime("%d %B, %Y at %I:%M %p")
+        timestamp_string += "."
+        lmstudio_composite_content += timestamp_string + "\n\n"
+
+    # Appandage!
+    messages_to_send.append({"role": "system", "content": lmstudio_composite_content})
+
+    message_marker = len(ooga_history) - marker_length
     if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
         message_marker = 0
 
-    messages_to_send = [
-        {"role": "user", "content": user_messages_input[message_marker][0]},
-        {"role": "assistant", "content": user_messages_input[message_marker][1]},
-    ]
+    messages_to_send.append({"role": "user", "content": ooga_history[message_marker][0]})
+    messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker][1]})
 
     i = 1
-    while i < raw_marker_length and i < len(user_messages_input):
-        messages_to_send.append({"role": "user", "content": user_messages_input[message_marker + i][0]})
-        messages_to_send.append({"role": "assistant", "content": user_messages_input[message_marker + i][1]})
+    while i < marker_length and i < len(ooga_history):
+        messages_to_send.append({"role": "user", "content": ooga_history[message_marker + i][0]})
+        messages_to_send.append({"role": "assistant", "content": ooga_history[message_marker + i][1]})
+
 
         i = i + 1
 
@@ -1662,8 +1911,45 @@ def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length
     # Append our most recent message
     #
 
-    if user_message_last != "":
-        messages_to_send.append({"role": "user", "content": user_message_last})
+    messages_to_send.append({"role": "user", "content": user_input})
+
+    return messages_to_send
+
+
+# encodes a given input to the new API, with no additives (except the summary, SLIME)
+def encode_raw_new_api(user_messages_input, user_message_last, raw_marker_length):
+    #
+    # Append all of the messages in our provided history scope (user_messages_input)
+    #
+
+    message_marker = len(user_messages_input) - raw_marker_length
+    if message_marker < 0:  # if we bottom out, then we would want to start at 0 and go down. we check if i is less than, too
+        message_marker = 0
+
+    messages_to_send = []
+
+    if utils.retrospect.use_rolling_summaries:
+        if len(utils.retrospect.live_summarization_log) > 1:
+            messages_to_send.append({"role": "user", "content": "Here is a history for you to summarize!"})
+            messages_to_send.append({"role": "assistant", "content": str(utils.retrospect.live_summarization_log[-2] + "\n\n" + utils.retrospect.live_summarization_log[-1])})
+
+
+    messages_to_send.append({"role": "user", "content": user_messages_input[message_marker][0]})
+    messages_to_send.append({"role": "assistant", "content": user_messages_input[message_marker][1]})
+
+    i = 1
+    while i < raw_marker_length and i < len(user_messages_input):
+        messages_to_send.append({"role": "user", "content": user_messages_input[message_marker + i][0]})
+        messages_to_send.append({"role": "assistant", "content": user_messages_input[message_marker + i][1]})
+
+
+        i = i + 1
+
+    #
+    # DO NOT Append our most recent message - no double messages
+    #
+
+    messages_to_send.append({"role": "user", "content": user_message_last})
 
     return messages_to_send
 

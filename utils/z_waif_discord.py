@@ -7,6 +7,7 @@ import time
 import discord
 import main
 import API.api_controller
+import utils.settings
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -44,6 +45,42 @@ async def on_message(message):
 
         # Send it!
         await message.channel.send(message_reply)
+        return
+
+    if (message.content == "/allow_newlines"):
+
+        # Toggle it
+        utils.settings.newline_cut = False
+
+        # Send it!
+        await message.channel.send("New lines are toggled on!")
+        return
+
+    if (message.content == "/disallow_newlines") or (message.content == "/cut_newlines"):
+
+        # Toggle it
+        utils.settings.newline_cut = True
+
+        # Send it!
+        await message.channel.send("New lines are toggled on!")
+        return
+
+    # NOTE: Goes last in the order, as a catch-all for any faulty commands
+    if (message.content == "/help") or (message.content[0] == "/") or (message.content[0] == "\\"):
+
+        # Send it!
+        await message.channel.send("Here is a list of the commands you can use:\n"
+                                   "\n/regen = Regenerate the last message."
+                                   "\n/reroll = Regenerate the last message."
+                                   "\n/redo = Regenerate the last message."
+                                   "\n"
+                                   "\n/allow_newlines = Allow newline to be generated in the message."
+                                   "\n/disallow_newlines = Disallow newline to be generated in the message."
+                                   "\n/cut_newlines = Disallow newline to be generated in the message."
+                                   "\n"
+                                   "\n/help = List out usable commands."
+                                   )
+
         return
 
 
